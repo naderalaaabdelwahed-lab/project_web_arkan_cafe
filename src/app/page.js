@@ -1,69 +1,98 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import MenuCard from "@/components/MenuCard";
+import { menuItems } from "@/lib/menuData";
 
 export default function Home() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.js</code> file.
-          </h1>
+    <main dir="rtl">
+      <Navbar />
+
+      <section className="hero" id="home">
+        <div className="hero-content">
+          <span className="eyebrow">WELCOME TO ARKAN</span>
+          <h1>طعم مختلف،<br /><span>وتجربة تستحق</span></h1>
           <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
+            استمتع بأجواء مميزة وأطباق محضرة بعناية،
+            في كافيه ومطعم أركان.
           </p>
+
+          <div className="hero-actions">
+            <Link href="/menu" className="primary-button">
+              اكتشف المنيو ↙
+            </Link>
+            <Link href="/#about" className="secondary-button">
+              اعرف قصتنا
+            </Link>
+          </div>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="hero-decoration">
+          <div className="hero-circle">
+            <span>ARKAN</span>
+            <strong>GOOD FOOD<br />GOOD MOOD</strong>
+            <small>EST. 2026</small>
+          </div>
         </div>
-      </main>
-    </div>
+
+        <div className="hero-bottom">
+          QUALITY · TASTE · EXPERIENCE
+        </div>
+      </section>
+
+      <section className="features">
+        <div>
+          <span>✦</span>
+          <h3>جودة مميزة</h3>
+          <p>مكونات مختارة بعناية</p>
+        </div>
+        <div>
+          <span>♨</span>
+          <h3>طازج يومياً</h3>
+          <p>تحضير باهتمام في كل مرة</p>
+        </div>
+        <div>
+          <span>✧</span>
+          <h3>أجواء مختلفة</h3>
+          <p>مكان يجمع الأصدقاء والعائلة</p>
+        </div>
+      </section>
+
+      <section className="menu-section">
+        <div className="section-heading">
+          <span className="eyebrow">OUR MENU</span>
+          <h2>اختار <span>مفضلتك</span></h2>
+          <p>مجموعة من اختياراتنا المميزة</p>
+        </div>
+
+        <div className="menu-grid">
+          {menuItems.slice(0, 3).map((item) => (
+            <MenuCard key={item.id} item={item} />
+          ))}
+        </div>
+
+        <div className="menu-more">
+          <Link href="/menu" className="primary-button">
+            عرض المنيو بالكامل
+          </Link>
+        </div>
+      </section>
+
+      <section className="about-section" id="about">
+        <span className="eyebrow">ABOUT ARKAN</span>
+        <h2>أركان مش مجرد مكان،<br /><span>دي تجربة متكاملة</span></h2>
+        <p>
+          بنؤمن إن الأكل الحلو بيبدأ من التفاصيل الصغيرة،
+          من جودة المكونات لحد اللحظة اللي بتستمتع فيها بوقتك معانا.
+        </p>
+        <Link href="/menu" className="primary-button">
+          اكتشف المنيو
+        </Link>
+      </section>
+
+      <Footer />
+    </main>
   );
 }

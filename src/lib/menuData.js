@@ -1,0 +1,51 @@
+
+export const menuItems = [
+  {
+    id: 1,
+    name: "Classic Burger",
+    category: "برجر",
+    price: 180,
+    description: "برجر لحم بقري، جبنة شيدر، خس وصوص أركان",
+    emoji: "🍔",
+  },
+  {
+    id: 2,
+    name: "Crispy Chicken",
+    category: "وجبات",
+    price: 160,
+    description: "دجاج مقرمش مع البطاطس وصوص خاص",
+    emoji: "🍗",
+  },
+  {
+    id: 3,
+    name: "Margherita Pizza",
+    category: "بيتزا",
+    price: 190,
+    description: "موزاريلا، صلصة طماطم وريحان",
+    emoji: "🍕",
+  },
+  {
+    id: 4,
+    name: "Spanish Latte",
+    category: "مشروبات",
+    price: 95,
+    description: "إسبريسو مع الحليب المكثف",
+    emoji: "☕",
+  },
+  {
+    id: 5,
+    name: "Chocolate Cake",
+    category: "حلويات",
+    price: 110,
+    description: "كيك شوكولاتة غني بصوص الشوكولاتة",
+    emoji: "🍰",
+  },
+  {
+    id: 6,
+    name: "Fresh Mojito",
+    category: "مشروبات",
+    price: 85,
+    description: "ليمون ونعناع وانتعاش",
+    emoji: "🍹",
+  },
+];
