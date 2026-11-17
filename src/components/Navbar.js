@@ -13,6 +13,8 @@ export default function Navbar() {
         <Link href="/menu">المنيو</Link>
         <Link href="/#about">عن أركان</Link>
         <Link href="/#contact">تواصل معنا</Link>
+        <Link href="/reservations">احجز ترابيزتك</Link>
+        <Link href="/order-status">استعلام عن الطلب</Link>
       </div>
 
       <Link href="/cart" className="nav-button">
