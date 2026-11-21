@@ -1,55 +1,183 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { supabase } from "@/lib/supabase";
+
+const initialForm = {
+  name: "",
+  phone: "",
+  date: "",
+  time: "",
+  guests: "2",
+  seatingArea: "indoor",
+  notes: "",
+};
 
 export default function ReservationsPage() {
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    date: "",
-    time: "",
-    guests: "2",
-    notes: "",
-  });
-
+  const [form, setForm] = useState(initialForm);
+  const [settings, setSettings] = useState(null);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  async function loadSettings() {
+    setLoadingSettings(true);
+
+    const { data, error } = await supabase
+      .from("restaurant_settings")
+      .select("indoor_tables, outdoor_tables, seats_per_table")
+      .eq("id", 1)
+      .single();
+
+    if (error) {
+      console.error("Settings error:", error);
+      setMessage("تعذر تحميل إعدادات الصالة. حاول تحديث الصفحة.");
+      setMessageType("error");
+    } else {
+      setSettings(data);
+    }
+
+    setLoadingSettings(false);
+  }
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setMessage("");
   }
 
-  function handleSubmit(e) {
+  function getLocalDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
 
-    const reservations = JSON.parse(
-      localStorage.getItem("arkan-reservations") || "[]"
-    );
+    if (submitting) return;
 
-    const newReservation = {
-      id: Date.now(),
-      ...form,
-      createdAt: new Date().toISOString(),
-      status: "pending",
-    };
+    if (!settings) {
+      setMessage("إعدادات الصالة غير متاحة حاليًا.");
+      setMessageType("error");
+      return;
+    }
 
-    localStorage.setItem(
-      "arkan-reservations",
-      JSON.stringify([...reservations, newReservation])
-    );
+    if (form.date < getLocalDate()) {
+      setMessage("لا يمكن اختيار تاريخ سابق.");
+      setMessageType("error");
+      return;
+    }
 
-    setMessage("تم استلام طلب الحجز بنجاح! سنتواصل معك لتأكيد الحجز.");
-    setForm({
-      name: "",
-      phone: "",
-      date: "",
-      time: "",
-      guests: "2",
-      notes: "",
-    });
+    setSubmitting(true);
+    setMessage("");
+
+    try {
+      const guests = Number(form.guests);
+
+      const tables =
+        form.seatingArea === "indoor"
+          ? settings.indoor_tables
+          : settings.outdoor_tables;
+
+      const capacity = tables * settings.seats_per_table;
+
+      if (capacity < guests) {
+        setMessage("عدد الأفراد أكبر من السعة المتاحة في هذه الصالة.");
+        setMessageType("error");
+        return;
+      }
+
+      // جلب الحجوزات النشطة لنفس التاريخ والوقت والمنطقة
+      const { data: existingReservations, error: reservationsError } =
+        await supabase
+          .from("reservations")
+          .select("guests")
+          .eq("reservation_date", form.date)
+          .eq("reservation_time", form.time)
+          .eq("seating_area", form.seatingArea)
+          .in("status", ["pending", "confirmed"]);
+
+      if (reservationsError) {
+        throw reservationsError;
+      }
+
+      const reservedGuests = (existingReservations || []).reduce(
+        (total, reservation) => total + Number(reservation.guests || 0),
+        0
+      );
+
+      const availableSeats = Math.max(0, capacity - reservedGuests);
+
+      if (guests > availableSeats) {
+        setMessage(
+          availableSeats > 0
+            ? `عذرًا، المتاح حاليًا ${availableSeats} فرد فقط في هذا الموعد.`
+            : "عذرًا، هذا الموعد مكتمل الحجز. اختار موعدًا آخر."
+        );
+        setMessageType("error");
+        return;
+      }
+
+      // تسجيل الحجز في Supabase
+      const { error: insertError } = await supabase
+        .from("reservations")
+        .insert({
+          customer_name: form.name.trim(),
+          phone: form.phone.trim(),
+          reservation_date: form.date,
+          reservation_time: form.time,
+          guests,
+          notes: form.notes.trim(),
+          seating_area: form.seatingArea,
+          status: "pending",
+        });
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      setMessage(
+        "تم استلام طلب الحجز بنجاح! سنتواصل معك لتأكيد الحجز."
+      );
+      setMessageType("success");
+      setForm(initialForm);
+    } catch (error) {
+      console.error("Reservation error:", error);
+
+      setMessage(
+        "حصلت مشكلة أثناء تسجيل الحجز. حاول مرة أخرى."
+      );
+      setMessageType("error");
+    } finally {
+      setSubmitting(false);
+    }
   }
+
+  const selectedTables =
+    settings && form.seatingArea === "indoor"
+      ? settings.indoor_tables
+      : settings?.outdoor_tables;
+
+  const totalCapacity = settings
+    ? selectedTables * settings.seats_per_table
+    : 0;
 
   return (
     <main dir="rtl">
@@ -70,7 +198,11 @@ export default function ReservationsPage() {
         <div className="reservation-container">
           <div className="reservation-info">
             <span className="eyebrow">YOUR TABLE IS WAITING</span>
-            <h2>لحظات حلوة<br />بتبدأ من أركان</h2>
+            <h2>
+              لحظات حلوة
+              <br />
+              بتبدأ من أركان
+            </h2>
             <p>
               سواء خروجة مع أصحابك أو وقت مميز مع العيلة،
               احجز مكانك واستمتع بتجربتك.
@@ -91,6 +223,16 @@ export default function ReservationsPage() {
                 <p>هنراجع طلبك ونتواصل معاك للتأكيد</p>
               </div>
             </div>
+
+            {settings && (
+              <div className="reservation-detail">
+                <span>♧</span>
+                <div>
+                  <strong>اختيار مكانك</strong>
+                  <p>متاح الحجز داخل المطعم أو في الهواء الطلق</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <form className="reservation-form" onSubmit={handleSubmit}>
@@ -125,13 +267,40 @@ export default function ReservationsPage() {
               </label>
 
               <label>
+                نوع الصالة
+                <select
+                  name="seatingArea"
+                  value={form.seatingArea}
+                  onChange={handleChange}
+                  required
+                  disabled={loadingSettings || !settings}
+                >
+                  <option value="indoor">الصالة الداخلية Indoor</option>
+                  <option value="outdoor">الصالة الخارجية Outdoor</option>
+                </select>
+              </label>
+
+              {settings && (
+                <div className="reservation-detail">
+                  <span>♧</span>
+                  <div>
+                    <strong>سعة الصالة المختارة</strong>
+                    <p>
+                      {selectedTables} طاولة × {settings.seats_per_table} أفراد
+                      = {totalCapacity} فرد
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <label>
                 تاريخ الحجز
                 <input
                   type="date"
                   name="date"
                   value={form.date}
                   onChange={handleChange}
-                  min={new Date().toLocaleDateString("en-CA")}
+                  min={getLocalDate()}
                   required
                 />
               </label>
@@ -175,12 +344,27 @@ export default function ReservationsPage() {
               </label>
             </div>
 
-            <button type="submit" className="primary-button reservation-submit">
-              تأكيد طلب الحجز
+            <button
+              type="submit"
+              className="primary-button reservation-submit"
+              disabled={submitting || loadingSettings || !settings}
+            >
+              {loadingSettings
+                ? "جاري تحميل الإعدادات..."
+                : submitting
+                ? "جاري تسجيل الحجز..."
+                : "تأكيد طلب الحجز"}
             </button>
 
             {message && (
-              <div className="reservation-success" role="status">
+              <div
+                className={
+                  messageType === "success"
+                    ? "reservation-success"
+                    : "reservation-error"
+                }
+                role="status"
+              >
                 {message}
               </div>
             )}

@@ -15,32 +15,76 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [cancelOrder, setCancelOrder] = useState(null);
+  const [cancelReason, setCancelReason] = useState("");
   const [loading, setLoading] = useState(true);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [permissions, setPermissions] = useState({
+    canCancel: false,
+    canViewClosing: false,
+  });
+
+  const fetchPermissions = useCallback(async () => {
+    const { data: cancel } = await supabase.rpc("has_permission", {
+      requested_permission: "orders.cancel",
+    });
+
+    const { data: closing } = await supabase.rpc("has_permission", {
+      requested_permission: "daily_closing.view",
+    });
+
+    const { data: admin } = await supabase.rpc("is_admin");
+
+    setPermissions({
+      canCancel: Boolean(admin || cancel),
+      canViewClosing: Boolean(admin || closing),
+    });
+  }, []);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*, order_items(*)")
-      .order("created_at", { ascending: false });
+    try {
+      const { data: businessDay, error: dayError } = await supabase
+        .from("business_days")
+        .select("id")
+        .eq("status", "open")
+        .order("opened_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (error) {
-      console.error("Fetch Orders Error:", error);
-      setError("تعذر تحميل الطلبات. تأكد من اتصال Supabase وصلاحيات المسؤول.");
-      setOrders([]);
-    } else {
+      if (dayError) throw dayError;
+
+      if (!businessDay) {
+        setOrders([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*, order_items(*)")
+        .eq("business_day_id", businessDay.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
       setOrders(data || []);
+    } catch (error) {
+      console.error("Fetch Orders Error:", error);
+      setError("تعذر تحميل الطلبات: " + error.message);
+      setOrders([]);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchOrders();
-  }, [fetchOrders]);
+    fetchPermissions();
+  }, [fetchOrders, fetchPermissions]);
 
   const filteredOrders =
     filter === "all"
@@ -79,165 +123,188 @@ export default function OrdersPage() {
       : parsed.toLocaleString("ar-EG");
   }
 
+  async function handleCancelOrder() {
+    if (!cancelOrder || !cancelReason.trim()) {
+      setError("اكتب سبب إلغاء الطلب.");
+      return;
+    }
+
+    setCancelLoading(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const { error: cancelError } = await supabase.rpc("cancel_order", {
+        p_order_id: cancelOrder.id,
+        p_reason: cancelReason.trim(),
+      });
+
+      if (cancelError) throw cancelError;
+
+      setMessage(`تم إلغاء الطلب #ARK-${cancelOrder.id} بنجاح.`);
+      setCancelOrder(null);
+      setCancelReason("");
+      setSelectedOrder(null);
+
+      await fetchOrders();
+    } catch (err) {
+      setError("تعذر إلغاء الطلب: " + err.message);
+    } finally {
+      setCancelLoading(false);
+    }
+  }
+
   return (
-    <main className="admin-layout" dir="rtl">
-      <aside className="admin-sidebar">
-        <Link href="/" className="admin-logo">
-          ARKAN<span>.</span>
-        </Link>
-
-        <p className="admin-menu-title">القائمة الرئيسية</p>
-
-        <nav className="admin-nav">
-          <Link href="/admin">▦ لوحة التحكم</Link>
-          <Link href="/admin/orders" className="active">
-            ▤ الطلبات
-          </Link>
-          <Link href="/admin/reservations">▣ الحجوزات</Link>
-          <Link href="/admin/menu">☷ إدارة المنيو</Link>
-          <Link href="/">↩ العودة للموقع</Link>
-        </nav>
-
-        <div className="admin-sidebar-footer">
-          <span>ARKAN MANAGEMENT</span>
-          <small>Admin Dashboard</small>
+    <div dir="rtl">
+      <header className="admin-header">
+        <div>
+          <span className="admin-eyebrow">ORDER MANAGEMENT</span>
+          <h1>إدارة الطلبات</h1>
+          <p>متابعة طلبات العملاء وعرض تفاصيلها</p>
         </div>
-      </aside>
 
-      <section className="admin-main">
-        <header className="admin-header">
-          <div>
-            <span className="admin-eyebrow">ORDER MANAGEMENT</span>
-            <h1>إدارة الطلبات</h1>
-            <p>متابعة طلبات العملاء وعرض تفاصيلها</p>
-          </div>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="order-details-button"
+            onClick={fetchOrders}
+            disabled={loading}
+          >
+            {loading ? "جاري التحديث..." : "↻ تحديث الطلبات"}
+          </button>
 
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="order-details-button"
-              onClick={fetchOrders}
-              disabled={loading}
-            >
-              {loading ? "جاري التحديث..." : "↻ تحديث الطلبات"}
-            </button>
-
-            <Link href="/admin" className="orders-back-link">
-              العودة للوحة التحكم
+          {permissions.canViewClosing && (
+            <Link href="/admin/daily-closing" className="orders-back-link">
+              الإقفال اليومي
             </Link>
-          </div>
-        </header>
+          )}
+        </div>
+      </header>
 
-        <div className="orders-summary">
-          <div>
-            <span>كل الطلبات</span>
-            <strong>{orders.length}</strong>
-          </div>
-
-          <div>
-            <span>طلبات جديدة</span>
-            <strong>
-              {orders.filter((o) => o.status === "pending").length}
-            </strong>
-          </div>
-
-          <div>
-            <span>تم التسليم</span>
-            <strong>
-              {orders.filter((o) => o.status === "delivered").length}
-            </strong>
-          </div>
-
-          <div>
-            <span>طلبات ملغية</span>
-            <strong>
-              {orders.filter((o) => o.status === "cancelled").length}
-            </strong>
-          </div>
+      <div className="orders-summary">
+        <div>
+          <span>كل الطلبات</span>
+          <strong>{orders.length}</strong>
         </div>
 
-        <section className="admin-panel orders-panel">
-          <div className="orders-toolbar">
-            <div>
-              <h2>قائمة الطلبات</h2>
-              <p>الطلبات المسجلة في قاعدة البيانات</p>
-            </div>
+        <div>
+          <span>طلبات جديدة</span>
+          <strong>
+            {orders.filter((o) => o.status === "pending").length}
+          </strong>
+        </div>
 
-            <select
-              className="orders-filter"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            >
-              <option value="all">كل الطلبات</option>
+        <div>
+          <span>تم التسليم</span>
+          <strong>
+            {orders.filter((o) => o.status === "delivered").length}
+          </strong>
+        </div>
 
-              {statuses.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
+        <div>
+          <span>طلبات ملغية</span>
+          <strong>
+            {orders.filter((o) => o.status === "cancelled").length}
+          </strong>
+        </div>
+      </div>
+
+      {error && <p className="form-error">{error}</p>}
+      {message && <p>{message}</p>}
+
+      <section className="admin-panel orders-panel">
+        <div className="orders-toolbar">
+          <div>
+            <h2>قائمة الطلبات</h2>
+            <p>طلبات اليومية المفتوحة الحالية</p>
           </div>
 
-          {error && <p className="form-error">{error}</p>}
+          <select
+            className="orders-filter"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">كل الطلبات</option>
 
-          {loading ? (
-            <div className="admin-empty">جاري تحميل الطلبات...</div>
-          ) : filteredOrders.length === 0 ? (
-            <div className="admin-empty">
-              لا توجد طلبات في هذا القسم حتى الآن.
-            </div>
-          ) : (
-            <div className="orders-list">
-              {filteredOrders.map((order) => (
-                <article className="order-card" key={order.id}>
-                  <div className="order-card-top">
-                    <div>
-                      <span className="order-number">
-                        طلب #ARK-{order.id}
-                      </span>
+            {statuses.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-                      <h3>{order.customer_name || "غير محدد"}</h3>
-                      <p>{order.phone || "—"}</p>
-                    </div>
-
-                    <span className={`order-status status-${order.status}`}>
-                      {getStatusLabel(order.status)}
+        {loading ? (
+          <div className="admin-empty">جاري تحميل الطلبات...</div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="admin-empty">
+            لا توجد طلبات في اليومية الحالية.
+          </div>
+        ) : (
+          <div className="orders-list">
+            {filteredOrders.map((order) => (
+              <article className="order-card" key={order.id}>
+                <div className="order-card-top">
+                  <div>
+                    <span className="order-number">
+                      طلب #ARK-{order.id}
                     </span>
+
+                    <h3>{order.customer_name || "غير محدد"}</h3>
+                    <p>{order.phone || "—"}</p>
                   </div>
 
-                  <div className="order-card-info">
-                    <div>
-                      <span>الإجمالي</span>
-                      <strong>
-                        {getTotal(order).toLocaleString("en-US")} ج.م
-                      </strong>
-                    </div>
+                  <span className={`order-status status-${order.status}`}>
+                    {getStatusLabel(order.status)}
+                  </span>
+                </div>
 
-                    <div>
-                      <span>عدد القطع</span>
-                      <strong>{getItemsCount(order)}</strong>
-                    </div>
-
-                    <div>
-                      <span>تاريخ الطلب</span>
-                      <strong>{formatDate(order.created_at)}</strong>
-                    </div>
+                <div className="order-card-info">
+                  <div>
+                    <span>الإجمالي</span>
+                    <strong>
+                      {getTotal(order).toLocaleString("en-US")} ج.م
+                    </strong>
                   </div>
 
-                  <div className="order-card-actions">
+                  <div>
+                    <span>عدد القطع</span>
+                    <strong>{getItemsCount(order)}</strong>
+                  </div>
+
+                  <div>
+                    <span>تاريخ الطلب</span>
+                    <strong>{formatDate(order.created_at)}</strong>
+                  </div>
+                </div>
+
+                <div className="order-card-actions">
+                  <button
+                    type="button"
+                    className="order-details-button"
+                    onClick={() => setSelectedOrder(order)}
+                  >
+                    تفاصيل الطلب
+                  </button>
+
+                  {permissions.canCancel && order.status !== "cancelled" && (
                     <button
                       type="button"
                       className="order-details-button"
-                      onClick={() => setSelectedOrder(order)}
+                      onClick={() => {
+                        setCancelOrder(order);
+                        setCancelReason("");
+                        setError("");
+                      }}
                     >
-                      تفاصيل الطلب
+                      إلغاء الطلب
                     </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       {selectedOrder && (
@@ -262,77 +329,39 @@ export default function OrdersPage() {
             </div>
 
             <div className="order-modal-info">
-              <p>
-                <strong>العميل:</strong>{" "}
-                {selectedOrder.customer_name || "—"}
-              </p>
-
-              <p>
-                <strong>الموبايل:</strong>{" "}
-                {selectedOrder.phone || "—"}
-              </p>
-
-              <p>
-                <strong>العنوان:</strong>{" "}
-                {selectedOrder.address || "—"}
-              </p>
-
-              <p>
-                <strong>نوع الطلب:</strong>{" "}
-                {selectedOrder.order_type || "—"}
-              </p>
-
-              <p>
-                <strong>طريقة الدفع:</strong>{" "}
-                {selectedOrder.payment_method || "—"}
-              </p>
-
-              <p>
-                <strong>رسوم التوصيل:</strong>{" "}
-                {Number(selectedOrder.delivery_fee || 0)} ج.م
-              </p>
-
-              <p>
-                <strong>التاريخ:</strong>{" "}
-                {formatDate(selectedOrder.created_at)}
-              </p>
-
-              <p>
-                <strong>ملاحظات الطلب:</strong>{" "}
-                {selectedOrder.notes || "لا توجد"}
-              </p>
+              <p><strong>العميل:</strong> {selectedOrder.customer_name || "—"}</p>
+              <p><strong>الموبايل:</strong> {selectedOrder.phone || "—"}</p>
+              <p><strong>العنوان:</strong> {selectedOrder.address || "—"}</p>
+              <p><strong>نوع الطلب:</strong> {selectedOrder.order_type || "—"}</p>
+              <p><strong>طريقة الدفع:</strong> {selectedOrder.payment_method || "—"}</p>
+              <p><strong>رسوم التوصيل:</strong> {Number(selectedOrder.delivery_fee || 0)} ج.م</p>
+              <p><strong>التاريخ:</strong> {formatDate(selectedOrder.created_at)}</p>
+              <p><strong>ملاحظات الطلب:</strong> {selectedOrder.notes || "لا توجد"}</p>
 
               {selectedOrder.status === "cancelled" && (
                 <p>
-                  <strong>سبب إلغاء الطلب:</strong>{" "}
-                  {selectedOrder.cancellation_reason ||
-                    "لم يتم تسجيل سبب الإلغاء"}
+                  <strong>سبب الإلغاء:</strong>{" "}
+                  {selectedOrder.cancellation_reason || "غير مسجل"}
                 </p>
               )}
             </div>
 
             <h3 className="order-items-title">الأصناف</h3>
 
-            {getItems(selectedOrder).length === 0 ? (
-              <p className="admin-empty">لا توجد أصناف مسجلة.</p>
-            ) : (
-              <div className="order-items-list">
-                {getItems(selectedOrder).map((item) => (
-                  <div className="order-item-row" key={item.id}>
-                    <span>{item.product_name}</span>
-                    <span>× {item.quantity}</span>
-
-                    <strong>
-                      {Number(item.subtotal || 0).toLocaleString("en-US")} ج.م
-                    </strong>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="order-items-list">
+              {getItems(selectedOrder).map((item) => (
+                <div className="order-item-row" key={item.id}>
+                  <span>{item.product_name}</span>
+                  <span>× {item.quantity}</span>
+                  <strong>
+                    {Number(item.subtotal || 0).toLocaleString("en-US")} ج.م
+                  </strong>
+                </div>
+              ))}
+            </div>
 
             <div className="order-modal-total">
-              الإجمالي:{" "}
-              {getTotal(selectedOrder).toLocaleString("en-US")} ج.م
+              الإجمالي: {getTotal(selectedOrder).toLocaleString("en-US")} ج.م
             </div>
 
             <div className="order-modal-status">
@@ -344,6 +373,58 @@ export default function OrdersPage() {
           </section>
         </div>
       )}
-    </main>
+
+      {cancelOrder && (
+        <div className="order-modal-overlay">
+          <section className="order-modal">
+            <div className="order-modal-heading">
+              <h2>إلغاء الطلب #ARK-{cancelOrder.id}</h2>
+              <button
+                type="button"
+                onClick={() => setCancelOrder(null)}
+                aria-label="إغلاق"
+              >
+                ×
+              </button>
+            </div>
+
+            <p>هل أنت متأكد من إلغاء طلب {cancelOrder.customer_name}؟</p>
+
+            <label>
+              سبب الإلغاء
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="اكتب سبب إلغاء الطلب..."
+                rows={4}
+                style={{ width: "100%", marginTop: "10px" }}
+              />
+            </label>
+
+            {error && <p className="form-error">{error}</p>}
+
+            <div className="order-card-actions">
+              <button
+                type="button"
+                className="order-details-button"
+                onClick={() => setCancelOrder(null)}
+                disabled={cancelLoading}
+              >
+                رجوع
+              </button>
+
+              <button
+                type="button"
+                className="order-details-button"
+                onClick={handleCancelOrder}
+                disabled={cancelLoading || !cancelReason.trim()}
+              >
+                {cancelLoading ? "جاري الإلغاء..." : "تأكيد الإلغاء"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
   );
 }
