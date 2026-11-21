@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function HallManagementPage() {
@@ -11,39 +11,101 @@ export default function HallManagementPage() {
     seats_per_table: 4,
   });
 
+  const [permissions, setPermissions] = useState({
+    canView: false,
+    canUpdate: false,
+  });
+
   const [loading, setLoading] = useState(true);
+  const [accessLoading, setAccessLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadSettings();
+  const fetchPermissions = useCallback(async () => {
+    setAccessLoading(true);
+    setError("");
+
+    try {
+      const [
+        { data: admin, error: adminError },
+        { data: view, error: viewError },
+        { data: update, error: updateError },
+      ] = await Promise.all([
+        supabase.rpc("is_admin"),
+        supabase.rpc("has_permission", {
+          requested_permission: "hall.view",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "hall.update",
+        }),
+      ]);
+
+      if (adminError) throw adminError;
+      if (viewError) throw viewError;
+      if (updateError) throw updateError;
+
+      const isAdmin = Boolean(admin);
+
+      const currentPermissions = {
+        canView: isAdmin || Boolean(view),
+        canUpdate: isAdmin || Boolean(update),
+      };
+
+      setPermissions(currentPermissions);
+      return currentPermissions;
+    } catch (err) {
+      console.error("Hall Permissions Error:", err);
+      setError("تعذر التحقق من الصلاحيات: " + err.message);
+      return null;
+    } finally {
+      setAccessLoading(false);
+    }
   }, []);
 
-  async function loadSettings() {
+  const loadSettings = useCallback(async () => {
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase
-      .from("restaurant_settings")
-      .select("*")
-      .eq("id", 1)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("restaurant_settings")
+        .select("*")
+        .eq("id", 1)
+        .single();
 
-    if (error) {
-      setError("فشل تحميل إعدادات الصالة: " + error.message);
-    } else {
+      if (error) throw error;
+
       setSettings({
         indoor_tables: data.indoor_tables,
         outdoor_tables: data.outdoor_tables,
         seats_per_table: data.seats_per_table,
       });
+    } catch (err) {
+      setError("فشل تحميل إعدادات الصالة: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    async function initializePage() {
+      const currentPermissions = await fetchPermissions();
+
+      if (currentPermissions?.canView) {
+        await loadSettings();
+      } else {
+        setLoading(false);
+      }
     }
 
-    setLoading(false);
-  }
+    initializePage();
+  }, [fetchPermissions, loadSettings]);
 
   function updateSetting(name, value) {
+    if (!permissions.canUpdate) return;
+
     setSettings((previous) => ({
       ...previous,
       [name]: value,
@@ -54,6 +116,11 @@ export default function HallManagementPage() {
   }
 
   async function saveSettings() {
+    if (!permissions.canUpdate) {
+      setError("ليس لديك صلاحية تعديل إعدادات الصالة.");
+      return;
+    }
+
     const indoor = Number(settings.indoor_tables);
     const outdoor = Number(settings.outdoor_tables);
     const seats = Number(settings.seats_per_table);
@@ -76,28 +143,31 @@ export default function HallManagementPage() {
     setMessage("");
     setError("");
 
-    const { error } = await supabase
-      .from("restaurant_settings")
-      .update({
-        indoor_tables: indoor,
-        outdoor_tables: outdoor,
-        seats_per_table: seats,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", 1);
+    try {
+      const { error } = await supabase
+        .from("restaurant_settings")
+        .update({
+          indoor_tables: indoor,
+          outdoor_tables: outdoor,
+          seats_per_table: seats,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", 1);
 
-    if (error) {
-      setError("فشل حفظ الإعدادات: " + error.message);
-    } else {
+      if (error) throw error;
+
       setSettings({
         indoor_tables: indoor,
         outdoor_tables: outdoor,
         seats_per_table: seats,
       });
-      setMessage("تم حفظ إعدادات الصالة بنجاح.");
-    }
 
-    setSaving(false);
+      setMessage("تم حفظ إعدادات الصالة بنجاح.");
+    } catch (err) {
+      setError("فشل حفظ الإعدادات: " + err.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const totalTables =
@@ -106,6 +176,33 @@ export default function HallManagementPage() {
 
   const totalCapacity =
     totalTables * Number(settings.seats_per_table || 0);
+
+  if (accessLoading) {
+    return (
+      <div dir="rtl" className="admin-empty">
+        جاري التحقق من الصلاحيات...
+      </div>
+    );
+  }
+
+  if (!permissions.canView) {
+    return (
+      <div dir="rtl">
+        <header className="admin-header">
+          <div>
+            <span className="admin-eyebrow">HALL MANAGEMENT</span>
+            <h1>إدارة الصالة</h1>
+          </div>
+        </header>
+
+        <div className="admin-empty">
+          ليس لديك صلاحية عرض إعدادات الصالة.
+        </div>
+
+        {error && <p className="form-error">{error}</p>}
+      </div>
+    );
+  }
 
   return (
     <div dir="rtl">
@@ -187,7 +284,11 @@ export default function HallManagementPage() {
             <div className="admin-panel-heading">
               <div>
                 <h2>إعدادات الطاولات</h2>
-                <p>يمكنك تعديل الأعداد حسب سعة المطعم الفعلية</p>
+                <p>
+                  {permissions.canUpdate
+                    ? "يمكنك تعديل الأعداد حسب سعة المطعم الفعلية"
+                    : "يمكنك الاطلاع على إعدادات الطاولات"}
+                </p>
               </div>
             </div>
 
@@ -195,64 +296,81 @@ export default function HallManagementPage() {
               <article className="admin-stat-card">
                 <span className="stat-icon">⌂</span>
                 <p>عدد طاولات Indoor</p>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={settings.indoor_tables}
-                  onChange={(e) =>
-                    updateSetting("indoor_tables", e.target.value)
-                  }
-                />
+
+                {permissions.canUpdate ? (
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={settings.indoor_tables}
+                    onChange={(e) =>
+                      updateSetting("indoor_tables", e.target.value)
+                    }
+                  />
+                ) : (
+                  <h2>{settings.indoor_tables}</h2>
+                )}
               </article>
 
               <article className="admin-stat-card">
                 <span className="stat-icon">☀</span>
                 <p>عدد طاولات Outdoor</p>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={settings.outdoor_tables}
-                  onChange={(e) =>
-                    updateSetting("outdoor_tables", e.target.value)
-                  }
-                />
+
+                {permissions.canUpdate ? (
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={settings.outdoor_tables}
+                    onChange={(e) =>
+                      updateSetting("outdoor_tables", e.target.value)
+                    }
+                  />
+                ) : (
+                  <h2>{settings.outdoor_tables}</h2>
+                )}
               </article>
 
               <article className="admin-stat-card">
                 <span className="stat-icon">♙</span>
                 <p>الأفراد لكل طاولة</p>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={settings.seats_per_table}
-                  onChange={(e) =>
-                    updateSetting("seats_per_table", e.target.value)
-                  }
-                />
+
+                {permissions.canUpdate ? (
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={settings.seats_per_table}
+                    onChange={(e) =>
+                      updateSetting("seats_per_table", e.target.value)
+                    }
+                  />
+                ) : (
+                  <h2>{settings.seats_per_table}</h2>
+                )}
               </article>
             </div>
 
-            <button
-              type="button"
-              onClick={saveSettings}
-              disabled={saving}
-              style={{
-                marginTop: 24,
-                padding: "13px 30px",
-                border: "none",
-                borderRadius: 8,
-                background: "#b88946",
-                color: "#fff",
-                fontWeight: "bold",
-                cursor: saving ? "not-allowed" : "pointer",
-                opacity: saving ? 0.7 : 1,
-              }}
-            >
-              {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
-            </button>
+            {permissions.canUpdate && (
+              <button
+                type="button"
+                onClick={saveSettings}
+                disabled={saving}
+                style={{
+                  marginTop: 24,
+                  padding: "13px 30px",
+                  border: "none",
+                  borderRadius: 8,
+                  background: "#b88946",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  cursor: saving ? "not-allowed" : "pointer",
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? "جاري الحفظ..." : "حفظ الإعدادات"}
+              </button>
+            )}
           </section>
 
           <section className="admin-panel" style={{ marginTop: 25 }}>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -15,15 +14,99 @@ export default function AdminPage() {
     seats_per_table: 4,
   });
 
+  const [permissions, setPermissions] = useState({
+    dashboardView: false,
+    ordersView: false,
+    reservationsView: false,
+    hallView: false,
+    hallUpdate: false,
+  });
+
+  const [accessLoading, setAccessLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
+  const can = (permission) => permissions[permission] === true;
+
   useEffect(() => {
-    loadDashboard();
+    initializeDashboard();
   }, []);
 
-  async function loadDashboard() {
+  async function initializeDashboard() {
+    setAccessLoading(true);
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const [
+        adminResult,
+        dashboardResult,
+        ordersResult,
+        reservationsResult,
+        hallViewResult,
+        hallUpdateResult,
+      ] = await Promise.all([
+        supabase.rpc("is_admin"),
+        supabase.rpc("has_permission", {
+          requested_permission: "dashboard.view",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "orders.view",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "reservations.view",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "hall.view",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "hall.update",
+        }),
+      ]);
+
+      const results = [
+        adminResult,
+        dashboardResult,
+        ordersResult,
+        reservationsResult,
+        hallViewResult,
+        hallUpdateResult,
+      ];
+
+      const failedResult = results.find((result) => result.error);
+      if (failedResult) throw failedResult.error;
+
+      const isAdmin = Boolean(adminResult.data);
+
+      const currentPermissions = {
+        dashboardView: isAdmin || Boolean(dashboardResult.data),
+        ordersView: isAdmin || Boolean(ordersResult.data),
+        reservationsView: isAdmin || Boolean(reservationsResult.data),
+        hallView: isAdmin || Boolean(hallViewResult.data),
+        hallUpdate: isAdmin || Boolean(hallUpdateResult.data),
+      };
+
+      setPermissions(currentPermissions);
+      setAccessLoading(false);
+
+      if (!currentPermissions.dashboardView) {
+        setLoading(false);
+        return;
+      }
+
+      await loadDashboard(currentPermissions);
+    } catch (error) {
+      console.error("Dashboard permissions error:", error);
+      setMessage("حصل خطأ أثناء التحقق من الصلاحيات: " + error.message);
+      setAccessLoading(false);
+      setLoading(false);
+    }
+  }
+
+  async function loadDashboard(currentPermissions = permissions) {
+    if (!currentPermissions.dashboardView) return;
+
     setLoading(true);
     setMessage("");
 
@@ -38,16 +121,20 @@ export default function AdminPage() {
             .limit(1)
             .maybeSingle(),
 
-          supabase
-            .from("reservations")
-            .select("*")
-            .order("created_at", { ascending: false }),
+          currentPermissions.reservationsView
+            ? supabase
+                .from("reservations")
+                .select("*")
+                .order("created_at", { ascending: false })
+            : Promise.resolve({ data: [], error: null }),
 
-          supabase
-            .from("restaurant_settings")
-            .select("*")
-            .eq("id", 1)
-            .single(),
+          currentPermissions.hallView
+            ? supabase
+                .from("restaurant_settings")
+                .select("*")
+                .eq("id", 1)
+                .single()
+            : Promise.resolve({ data: null, error: null }),
         ]);
 
       if (dayResult.error) throw dayResult.error;
@@ -59,7 +146,7 @@ export default function AdminPage() {
 
       let currentOrders = [];
 
-      if (currentDay) {
+      if (currentDay && currentPermissions.ordersView) {
         const ordersResult = await supabase
           .from("orders")
           .select("*")
@@ -74,11 +161,13 @@ export default function AdminPage() {
       setOrders(currentOrders);
       setReservations(reservationsResult.data || []);
 
-      setSettings({
-        indoor_tables: settingsResult.data.indoor_tables,
-        outdoor_tables: settingsResult.data.outdoor_tables,
-        seats_per_table: settingsResult.data.seats_per_table,
-      });
+      if (settingsResult.data) {
+        setSettings({
+          indoor_tables: settingsResult.data.indoor_tables,
+          outdoor_tables: settingsResult.data.outdoor_tables,
+          seats_per_table: settingsResult.data.seats_per_table,
+        });
+      }
 
       if (!currentDay) {
         setMessage(
@@ -94,6 +183,11 @@ export default function AdminPage() {
   }
 
   async function saveSettings() {
+    if (!can("hallUpdate")) {
+      setMessage("ليس لديك صلاحية تعديل إعدادات الصالة.");
+      return;
+    }
+
     const indoor = Number(settings.indoor_tables);
     const outdoor = Number(settings.outdoor_tables);
     const seats = Number(settings.seats_per_table);
@@ -204,6 +298,22 @@ export default function AdminPage() {
       : parsed.toLocaleDateString("ar-EG");
   };
 
+  if (accessLoading) {
+    return (
+      <div className="admin-panel">
+        جاري التحقق من الصلاحيات...
+      </div>
+    );
+  }
+
+  if (!can("dashboardView")) {
+    return (
+      <div className="admin-panel">
+        ليس لديك صلاحية الوصول إلى لوحة التحكم.
+      </div>
+    );
+  }
+
   return (
     <>
       <header className="admin-header">
@@ -243,7 +353,7 @@ export default function AdminPage() {
 
               <button
                 type="button"
-                onClick={loadDashboard}
+                onClick={() => loadDashboard()}
                 style={{
                   padding: "10px 18px",
                   border: "none",
@@ -259,220 +369,247 @@ export default function AdminPage() {
             </div>
           </section>
 
-          <div className="admin-stats">
-            <article className="admin-stat-card">
-              <span className="stat-icon">▤</span>
-              <p>إجمالي الطلبات</p>
-              <h2>{orders.length}</h2>
-              <small>طلبات اليومية الحالية</small>
-            </article>
+          {can("ordersView") && (
+            <>
+              <div className="admin-stats">
+                <article className="admin-stat-card">
+                  <span className="stat-icon">▤</span>
+                  <p>إجمالي الطلبات</p>
+                  <h2>{orders.length}</h2>
+                  <small>طلبات اليومية الحالية</small>
+                </article>
 
-            <article className="admin-stat-card">
-              <span className="stat-icon">◷</span>
-              <p>طلبات قيد الانتظار</p>
-              <h2>{pendingOrders}</h2>
-              <small>تحتاج إلى متابعة</small>
-            </article>
+                <article className="admin-stat-card">
+                  <span className="stat-icon">◷</span>
+                  <p>طلبات قيد الانتظار</p>
+                  <h2>{pendingOrders}</h2>
+                  <small>تحتاج إلى متابعة</small>
+                </article>
 
-            <article className="admin-stat-card">
-              <span className="stat-icon">✕</span>
-              <p>الطلبات الملغاة</p>
-              <h2>{cancelledOrders.length}</h2>
-              <small>مستبعدة من المبيعات</small>
-            </article>
+                <article className="admin-stat-card">
+                  <span className="stat-icon">✕</span>
+                  <p>الطلبات الملغاة</p>
+                  <h2>{cancelledOrders.length}</h2>
+                  <small>مستبعدة من المبيعات</small>
+                </article>
 
-            <article className="admin-stat-card">
-              <span className="stat-icon">ج.م</span>
-              <p>إجمالي المبيعات</p>
-              <h2>{formatMoney(totalSales)}</h2>
-              <small>طلبات اليومية غير الملغاة</small>
-            </article>
-          </div>
-
-          <section className="admin-panel" style={{ marginBottom: 25 }}>
-            <div className="admin-panel-heading">
-              <div>
-                <h2>مبيعات حسب نوع الطلب</h2>
-                <p>تشمل طلبات اليومية الحالية غير الملغاة</p>
+                <article className="admin-stat-card">
+                  <span className="stat-icon">ج.م</span>
+                  <p>إجمالي المبيعات</p>
+                  <h2>{formatMoney(totalSales)}</h2>
+                  <small>طلبات اليومية غير الملغاة</small>
+                </article>
               </div>
-            </div>
 
-            <div className="admin-stats">
-              <article className="admin-stat-card">
-                <p>Delivery</p>
-                <h2>{formatMoney(salesByType.delivery)}</h2>
-              </article>
+              <section className="admin-panel" style={{ marginBottom: 25 }}>
+                <div className="admin-panel-heading">
+                  <div>
+                    <h2>مبيعات حسب نوع الطلب</h2>
+                    <p>تشمل طلبات اليومية الحالية غير الملغاة</p>
+                  </div>
+                </div>
 
-              <article className="admin-stat-card">
-                <p>Takeaway</p>
-                <h2>{formatMoney(salesByType.takeaway)}</h2>
-              </article>
+                <div className="admin-stats">
+                  <article className="admin-stat-card">
+                    <p>Delivery</p>
+                    <h2>{formatMoney(salesByType.delivery)}</h2>
+                  </article>
 
-              <article className="admin-stat-card">
-                <p>Dine In</p>
-                <h2>{formatMoney(salesByType.dine_in)}</h2>
-              </article>
-            </div>
-          </section>
+                  <article className="admin-stat-card">
+                    <p>Takeaway</p>
+                    <h2>{formatMoney(salesByType.takeaway)}</h2>
+                  </article>
 
-          <section className="admin-panel" style={{ marginBottom: 25 }}>
-            <div className="admin-panel-heading">
-              <div>
-                <h2>إعدادات الصالة</h2>
-                <p>تحكم في سعة الصالة الداخلية والخارجية</p>
+                  <article className="admin-stat-card">
+                    <p>Dine In</p>
+                    <h2>{formatMoney(salesByType.dine_in)}</h2>
+                  </article>
+                </div>
+              </section>
+            </>
+          )}
+
+          {can("hallView") && (
+            <section className="admin-panel" style={{ marginBottom: 25 }}>
+              <div className="admin-panel-heading">
+                <div>
+                  <h2>إعدادات الصالة</h2>
+                  <p>سعة الصالة الداخلية والخارجية</p>
+                </div>
               </div>
-            </div>
 
-            <div className="admin-stats">
-              <article className="admin-stat-card">
-                <span className="stat-icon">⌂</span>
-                <p>عدد طاولات الصالة الداخلية</p>
-                <input
-                  type="number"
-                  min="0"
-                  value={settings.indoor_tables}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      indoor_tables: e.target.value,
-                    })
-                  }
-                />
-              </article>
+              <div className="admin-stats">
+                <article className="admin-stat-card">
+                  <span className="stat-icon">⌂</span>
+                  <p>عدد طاولات الصالة الداخلية</p>
 
-              <article className="admin-stat-card">
-                <span className="stat-icon">☀</span>
-                <p>عدد طاولات الصالة الخارجية</p>
-                <input
-                  type="number"
-                  min="0"
-                  value={settings.outdoor_tables}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      outdoor_tables: e.target.value,
-                    })
-                  }
-                />
-              </article>
+                  {can("hallUpdate") ? (
+                    <input
+                      type="number"
+                      min="0"
+                      value={settings.indoor_tables}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          indoor_tables: e.target.value,
+                        })
+                      }
+                    />
+                  ) : (
+                    <h2>{settings.indoor_tables}</h2>
+                  )}
+                </article>
 
-              <article className="admin-stat-card">
-                <span className="stat-icon">♙</span>
-                <p>عدد الأفراد لكل طاولة</p>
-                <input
-                  type="number"
-                  min="1"
-                  value={settings.seats_per_table}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      seats_per_table: e.target.value,
-                    })
-                  }
-                />
-              </article>
-            </div>
+                <article className="admin-stat-card">
+                  <span className="stat-icon">☀</span>
+                  <p>عدد طاولات الصالة الخارجية</p>
 
-            <button
-              type="button"
-              onClick={saveSettings}
-              disabled={saving}
-              style={{
-                marginTop: 20,
-                padding: "12px 28px",
-                border: "none",
-                borderRadius: 8,
-                cursor: saving ? "not-allowed" : "pointer",
-                background: "#b88946",
-                color: "#fff",
-                fontWeight: "bold",
-              }}
-            >
-              {saving ? "جاري الحفظ..." : "حفظ إعدادات الصالة"}
-            </button>
-          </section>
+                  {can("hallUpdate") ? (
+                    <input
+                      type="number"
+                      min="0"
+                      value={settings.outdoor_tables}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          outdoor_tables: e.target.value,
+                        })
+                      }
+                    />
+                  ) : (
+                    <h2>{settings.outdoor_tables}</h2>
+                  )}
+                </article>
+
+                <article className="admin-stat-card">
+                  <span className="stat-icon">♙</span>
+                  <p>عدد الأفراد لكل طاولة</p>
+
+                  {can("hallUpdate") ? (
+                    <input
+                      type="number"
+                      min="1"
+                      value={settings.seats_per_table}
+                      onChange={(e) =>
+                        setSettings({
+                          ...settings,
+                          seats_per_table: e.target.value,
+                        })
+                      }
+                    />
+                  ) : (
+                    <h2>{settings.seats_per_table}</h2>
+                  )}
+                </article>
+              </div>
+
+              {can("hallUpdate") && (
+                <button
+                  type="button"
+                  onClick={saveSettings}
+                  disabled={saving}
+                  style={{
+                    marginTop: 20,
+                    padding: "12px 28px",
+                    border: "none",
+                    borderRadius: 8,
+                    cursor: saving ? "not-allowed" : "pointer",
+                    background: "#b88946",
+                    color: "#fff",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {saving ? "جاري الحفظ..." : "حفظ إعدادات الصالة"}
+                </button>
+              )}
+            </section>
+          )}
 
           <div className="admin-content-grid">
-            <section className="admin-panel">
-              <div className="admin-panel-heading">
-                <div>
-                  <h2>أحدث الطلبات</h2>
-                  <p>آخر طلبات اليومية الحالية</p>
+            {can("ordersView") && (
+              <section className="admin-panel">
+                <div className="admin-panel-heading">
+                  <div>
+                    <h2>أحدث الطلبات</h2>
+                    <p>آخر طلبات اليومية الحالية</p>
+                  </div>
                 </div>
-              </div>
 
-              {recentOrders.length === 0 ? (
-                <div className="admin-empty">
-                  لا توجد طلبات في اليومية الحالية
-                </div>
-              ) : (
-                <div className="admin-table-wrapper">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>رقم الطلب</th>
-                        <th>العميل</th>
-                        <th>الإجمالي</th>
-                        <th>الحالة</th>
-                        <th>التاريخ</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {recentOrders.map((order) => (
-                        <tr key={order.id}>
-                          <td>#{order.id}</td>
-                          <td>{order.customer_name || "عميل"}</td>
-                          <td>{formatMoney(order.total_amount)}</td>
-                          <td>{order.status}</td>
-                          <td>{formatDate(order.created_at)}</td>
+                {recentOrders.length === 0 ? (
+                  <div className="admin-empty">
+                    لا توجد طلبات في اليومية الحالية
+                  </div>
+                ) : (
+                  <div className="admin-table-wrapper">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>رقم الطلب</th>
+                          <th>العميل</th>
+                          <th>الإجمالي</th>
+                          <th>الحالة</th>
+                          <th>التاريخ</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
+                      </thead>
 
-            <section className="admin-panel">
-              <div className="admin-panel-heading">
-                <div>
-                  <h2>أحدث الحجوزات</h2>
-                  <p>
-                    {pendingReservations} حجز في انتظار المراجعة
-                  </p>
-                </div>
-              </div>
+                      <tbody>
+                        {recentOrders.map((order) => (
+                          <tr key={order.id}>
+                            <td>#{order.id}</td>
+                            <td>{order.customer_name || "عميل"}</td>
+                            <td>{formatMoney(order.total_amount)}</td>
+                            <td>{order.status}</td>
+                            <td>{formatDate(order.created_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )}
 
-              {recentReservations.length === 0 ? (
-                <div className="admin-empty">
-                  لا توجد حجوزات حتى الآن
+            {can("reservationsView") && (
+              <section className="admin-panel">
+                <div className="admin-panel-heading">
+                  <div>
+                    <h2>أحدث الحجوزات</h2>
+                    <p>
+                      {pendingReservations} حجز في انتظار المراجعة
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <div className="admin-reservation-list">
-                  {recentReservations.map((reservation) => (
-                    <div
-                      className="admin-reservation-item"
-                      key={reservation.id}
-                    >
-                      <div>
-                        <strong>
-                          {reservation.customer_name || "عميل"}
-                        </strong>
-                        <p>
-                          {reservation.guests} أفراد ·{" "}
-                          {reservation.reservation_time || "—"}
-                        </p>
+
+                {recentReservations.length === 0 ? (
+                  <div className="admin-empty">
+                    لا توجد حجوزات حتى الآن
+                  </div>
+                ) : (
+                  <div className="admin-reservation-list">
+                    {recentReservations.map((reservation) => (
+                      <div
+                        className="admin-reservation-item"
+                        key={reservation.id}
+                      >
+                        <div>
+                          <strong>
+                            {reservation.customer_name || "عميل"}
+                          </strong>
+                          <p>
+                            {reservation.guests} أفراد ·{" "}
+                            {reservation.reservation_time || "—"}
+                          </p>
+                        </div>
+
+                        <span>
+                          {formatDate(reservation.reservation_date)}
+                        </span>
                       </div>
-
-                      <span>
-                        {formatDate(reservation.reservation_date)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
           </div>
         </>
       )}

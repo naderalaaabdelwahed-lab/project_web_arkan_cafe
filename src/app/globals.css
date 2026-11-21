@@ -2904,3 +2904,46 @@ footer small {
     height: 220px;
   }
 }
+
+/* ===== GLOBAL INPUT VISIBILITY FIX ===== */
+
+input,
+textarea,
+select {
+  color: #ffffff !important;
+  caret-color: #c9a45c !important;
+  font-family: 'Cairo', sans-serif;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #aaa69b !important;
+  opacity: 1;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #c9a45c !important;
+  box-shadow: 0 0 0 2px rgba(201, 164, 92, 0.18);
+}
+
+/* Keep typed text visible in admin and inventory forms */
+.admin-layout input,
+.admin-layout textarea,
+.admin-layout select,
+.menu-admin input,
+.menu-admin textarea,
+.menu-admin select {
+  color: #ffffff !important;
+  background-color: #100d0b;
+}
+
+/* Browser autofill */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #c9a45c;
+}

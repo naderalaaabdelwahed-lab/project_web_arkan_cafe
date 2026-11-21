@@ -16,9 +16,7 @@ function getStoragePath(imageUrl) {
   if (index === -1) return null;
 
   try {
-    return decodeURIComponent(
-      imageUrl.slice(index + marker.length)
-    );
+    return decodeURIComponent(imageUrl.slice(index + marker.length));
   } catch {
     return null;
   }
@@ -27,6 +25,10 @@ function getStoragePath(imageUrl) {
 export default function AdminMenuPage() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
+  const [permissions, setPermissions] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(true);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -46,9 +48,75 @@ export default function AdminMenuPage() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
 
+  const can = (permission) =>
+    isAdmin || permissions.includes(permission);
+
   useEffect(() => {
-    loadData();
+    async function initialize() {
+      setAccessLoading(true);
+
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+        if (!session) throw new Error("يجب تسجيل الدخول.");
+
+        const { data: adminResult, error: adminError } =
+          await supabase.rpc("is_admin");
+
+        if (adminError) throw adminError;
+
+        if (adminResult === true) {
+          setIsAdmin(true);
+        } else {
+          const { data: employee, error: employeeError } =
+            await supabase
+              .from("employee_profiles")
+              .select("is_active")
+              .eq("user_id", session.user.id)
+              .maybeSingle();
+
+          if (employeeError) throw employeeError;
+
+          if (!employee || !employee.is_active) {
+            throw new Error("حساب الموظف غير نشط.");
+          }
+
+          const { data: rows, error: permissionError } =
+            await supabase
+              .from("employee_permissions")
+              .select("permission_key")
+              .eq("user_id", session.user.id);
+
+          if (permissionError) throw permissionError;
+
+          setPermissions(
+            (rows || []).map((row) => row.permission_key)
+          );
+        }
+      } catch (err) {
+        setError(err.message || "تعذر التحقق من الصلاحيات.");
+      } finally {
+        setAccessLoading(false);
+      }
+    }
+
+    initialize();
   }, []);
+
+  useEffect(() => {
+    if (accessLoading) return;
+
+    if (!can("menu.view")) {
+      setLoading(false);
+      return;
+    }
+
+    loadData();
+  }, [accessLoading, isAdmin, permissions]);
 
   useEffect(() => {
     return () => {
@@ -85,21 +153,24 @@ export default function AdminMenuPage() {
     setDescription("");
     setPrice("");
     setCategoryId("");
-
     setImageUrl("");
     setOriginalImageUrl("");
     setImageFile(null);
     setImagePreview("");
     setRemoveImage(false);
-
     setEditingId(null);
     setShowForm(false);
     setError("");
   }
 
+  function openCreateForm() {
+    if (!can("menu.create")) return;
+    resetForm();
+    setShowForm(true);
+  }
+
   function handleImageChange(e) {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -127,10 +198,7 @@ export default function AdminMenuPage() {
     setRemoveImage(true);
 
     const fileInput = document.getElementById("product-image-input");
-
-    if (fileInput) {
-      fileInput.value = "";
-    }
+    if (fileInput) fileInput.value = "";
   }
 
   async function uploadImage() {
@@ -168,38 +236,32 @@ export default function AdminMenuPage() {
     e.preventDefault();
     setError("");
 
+    if (editingId && !can("menu.update")) return;
+    if (!editingId && !can("menu.create")) return;
+
     if (!name.trim() || !price || !categoryId) {
       setError("من فضلك اكتب اسم المنتج والسعر واختار القسم");
       return;
     }
 
-    if (
-      !Number.isFinite(Number(price)) ||
-      Number(price) < 0
-    ) {
+    if (!Number.isFinite(Number(price)) || Number(price) < 0) {
       setError("من فضلك اكتب سعر صحيح");
       return;
     }
 
     setSaving(true);
-
     let uploadedImagePath = null;
 
     try {
       const oldImageUrl = originalImageUrl;
-
       let newImageUrl = imageUrl || null;
 
-      // رفع الصورة الجديدة لو تم اختيار صورة
       if (imageFile) {
         newImageUrl = await uploadImage();
         uploadedImagePath = getStoragePath(newImageUrl);
       }
 
-      // إزالة الصورة من المنتج لو تم الضغط على حذف الصورة
-      if (removeImage) {
-        newImageUrl = null;
-      }
+      if (removeImage) newImageUrl = null;
 
       const productData = {
         name: name.trim(),
@@ -218,11 +280,8 @@ export default function AdminMenuPage() {
             .from("products")
             .insert([productData]);
 
-      if (result.error) {
-        throw result.error;
-      }
+      if (result.error) throw result.error;
 
-      // حذف الصورة القديمة بعد نجاح تحديث قاعدة البيانات
       if (oldImageUrl && oldImageUrl !== newImageUrl) {
         const oldPath = getStoragePath(oldImageUrl);
 
@@ -239,9 +298,7 @@ export default function AdminMenuPage() {
 
       resetForm();
       await loadData();
-
     } catch (err) {
-      // حذف الصورة الجديدة لو فشل حفظ المنتج
       if (uploadedImagePath) {
         await supabase.storage
           .from("products")
@@ -249,31 +306,30 @@ export default function AdminMenuPage() {
       }
 
       setError(err.message || "حصل خطأ أثناء حفظ المنتج");
-
     } finally {
       setSaving(false);
     }
   }
 
   function editProduct(product) {
-    setEditingId(product.id);
+    if (!can("menu.update")) return;
 
+    setEditingId(product.id);
     setName(product.name || "");
     setDescription(product.description || "");
     setPrice(String(product.price ?? ""));
     setCategoryId(product.category_id || "");
-
     setImageUrl(product.image_url || "");
     setOriginalImageUrl(product.image_url || "");
     setImageFile(null);
     setImagePreview(product.image_url || "");
     setRemoveImage(false);
-
     setError("");
     setShowForm(true);
   }
 
   async function deleteProduct(product) {
+    if (!can("menu.delete")) return;
     if (!confirm("متأكد إنك عايز تحذف المنتج؟")) return;
 
     const { error } = await supabase
@@ -302,6 +358,8 @@ export default function AdminMenuPage() {
   }
 
   async function toggleAvailability(product) {
+    if (!can("menu.update")) return;
+
     const { error } = await supabase
       .from("products")
       .update({ is_available: !product.is_available })
@@ -319,9 +377,26 @@ export default function AdminMenuPage() {
     product.name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  if (accessLoading) {
+    return (
+      <main className="menu-admin" dir="rtl">
+        <div className="menu-empty">جاري التحقق من الصلاحيات...</div>
+      </main>
+    );
+  }
+
+  if (!can("menu.view")) {
+    return (
+      <main className="menu-admin" dir="rtl">
+        <div className="menu-empty">
+          ليس لديك صلاحية عرض المنيو.
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="menu-admin" dir="rtl">
-
       <div className="menu-admin-header">
         <div>
           <span className="menu-eyebrow">ARKAN MANAGEMENT</span>
@@ -329,19 +404,14 @@ export default function AdminMenuPage() {
           <p>تحكم في منتجات المطعم وأسعارها وتوفرها</p>
         </div>
 
-        <button
-          className="menu-add-btn"
-          onClick={() => {
-            resetForm();
-            setShowForm(true);
-          }}
-        >
-          <span>＋</span> إضافة منتج جديد
-        </button>
+        {can("menu.create") && (
+          <button className="menu-add-btn" onClick={openCreateForm}>
+            <span>＋</span> إضافة منتج جديد
+          </button>
+        )}
       </div>
 
       <div className="menu-stats">
-
         <div className="menu-stat-card">
           <span>إجمالي المنتجات</span>
           <strong>{products.length}</strong>
@@ -350,9 +420,7 @@ export default function AdminMenuPage() {
 
         <div className="menu-stat-card">
           <span>المنتجات المتاحة</span>
-          <strong>
-            {products.filter((p) => p.is_available).length}
-          </strong>
+          <strong>{products.filter((p) => p.is_available).length}</strong>
           <small>متاحة للعملاء</small>
         </div>
 
@@ -361,11 +429,9 @@ export default function AdminMenuPage() {
           <strong>{categories.length}</strong>
           <small>أقسام المنيو</small>
         </div>
-
       </div>
 
       <section className="menu-products-section">
-
         <div className="menu-section-heading">
           <div>
             <h2>منتجات المنيو</h2>
@@ -388,41 +454,29 @@ export default function AdminMenuPage() {
           <div className="menu-empty">
             <span>✦</span>
             <h3>لا توجد منتجات</h3>
-            <p>ابدأ بإضافة أول منتج إلى المنيو</p>
-
-            <button
-              onClick={() => {
-                resetForm();
-                setShowForm(true);
-              }}
-            >
-              إضافة منتج جديد
-            </button>
+            {can("menu.create") && (
+              <>
+                <p>ابدأ بإضافة أول منتج إلى المنيو</p>
+                <button onClick={openCreateForm}>
+                  إضافة منتج جديد
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="menu-products-grid">
-
             {filteredProducts.map((product) => (
-              <article
-                className="menu-product-card"
-                key={product.id}
-              >
-
+              <article className="menu-product-card" key={product.id}>
                 <div className="menu-product-image">
                   {product.image_url ? (
-                    <img
-                      src={product.image_url}
-                      alt={product.name}
-                    />
+                    <img src={product.image_url} alt={product.name} />
                   ) : (
                     <span>ARKAN</span>
                   )}
 
                   <span
                     className={`menu-status ${
-                      product.is_available
-                        ? "available"
-                        : "unavailable"
+                      product.is_available ? "available" : "unavailable"
                     }`}
                   >
                     {product.is_available ? "متاح" : "غير متاح"}
@@ -430,76 +484,64 @@ export default function AdminMenuPage() {
                 </div>
 
                 <div className="menu-product-info">
-
                   <span className="menu-product-category">
                     {product.categories?.name || "بدون قسم"}
                   </span>
 
                   <h3>{product.name}</h3>
-
-                  <p>
-                    {product.description || "لا يوجد وصف للمنتج"}
-                  </p>
+                  <p>{product.description || "لا يوجد وصف للمنتج"}</p>
 
                   <div className="menu-product-bottom">
-
                     <strong>
                       {product.price} <small>جنيه</small>
                     </strong>
 
                     <div className="menu-product-actions">
+                      {can("menu.update") && (
+                        <>
+                          <button
+                            className="edit-btn"
+                            onClick={() => editProduct(product)}
+                            title="تعديل"
+                          >
+                            ✎
+                          </button>
 
-                      <button
-                        className="edit-btn"
-                        onClick={() => editProduct(product)}
-                        title="تعديل"
-                      >
-                        ✎
-                      </button>
+                          <button
+                            className="toggle-btn"
+                            onClick={() => toggleAvailability(product)}
+                            title="تغيير التوفر"
+                          >
+                            ◉
+                          </button>
+                        </>
+                      )}
 
-                      <button
-                        className="toggle-btn"
-                        onClick={() => toggleAvailability(product)}
-                        title="تغيير التوفر"
-                      >
-                        ◉
-                      </button>
-
-                      <button
-                        className="delete-btn"
-                        onClick={() => deleteProduct(product)}
-                        title="حذف"
-                      >
-                        ×
-                      </button>
-
+                      {can("menu.delete") && (
+                        <button
+                          className="delete-btn"
+                          onClick={() => deleteProduct(product)}
+                          title="حذف"
+                        >
+                          ×
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
               </article>
             ))}
-
           </div>
         )}
       </section>
 
       {showForm && (
-        <div
-          className="menu-modal-overlay"
-          onClick={resetForm}
-        >
-
-          <div
-            className="menu-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-
+        <div className="menu-modal-overlay" onClick={resetForm}>
+          <div className="menu-modal" onClick={(e) => e.stopPropagation()}>
             <div className="menu-modal-header">
               <div>
                 <span>ARKAN MENU</span>
-                <h2>
-                  {editingId ? "تعديل المنتج" : "إضافة منتج جديد"}
-                </h2>
+                <h2>{editingId ? "تعديل المنتج" : "إضافة منتج جديد"}</h2>
               </div>
 
               <button
@@ -512,9 +554,7 @@ export default function AdminMenuPage() {
             </div>
 
             <form onSubmit={saveProduct}>
-
               <label>اسم المنتج</label>
-
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -523,7 +563,6 @@ export default function AdminMenuPage() {
               />
 
               <label>وصف المنتج</label>
-
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -531,10 +570,8 @@ export default function AdminMenuPage() {
               />
 
               <div className="menu-form-row">
-
                 <div>
                   <label>السعر بالجنيه</label>
-
                   <input
                     type="number"
                     min="0"
@@ -548,29 +585,22 @@ export default function AdminMenuPage() {
 
                 <div>
                   <label>القسم</label>
-
                   <select
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
                     required
                   >
                     <option value="">اختار القسم</option>
-
                     {categories.map((category) => (
-                      <option
-                        key={category.id}
-                        value={category.id}
-                      >
+                      <option key={category.id} value={category.id}>
                         {category.name}
                       </option>
                     ))}
                   </select>
                 </div>
-
               </div>
 
               <label>صورة المنتج</label>
-
               <input
                 id="product-image-input"
                 type="file"
@@ -579,13 +609,10 @@ export default function AdminMenuPage() {
                 disabled={saving}
               />
 
-              <small>
-                اختار صورة من جهازك (الحد الأقصى 5 ميجابايت)
-              </small>
+              <small>اختار صورة من جهازك (الحد الأقصى 5 ميجابايت)</small>
 
               {imagePreview && (
                 <div className="menu-image-preview">
-
                   <img
                     src={imagePreview}
                     alt="معاينة صورة المنتج"
@@ -616,16 +643,12 @@ export default function AdminMenuPage() {
                   >
                     حذف الصورة
                   </button>
-
                 </div>
               )}
 
-              {error && (
-                <div className="menu-error">{error}</div>
-              )}
+              {error && <div className="menu-error">{error}</div>}
 
               <div className="menu-modal-actions">
-
                 <button
                   type="button"
                   className="cancel-btn"
@@ -646,14 +669,11 @@ export default function AdminMenuPage() {
                     ? "حفظ التعديلات"
                     : "إضافة المنتج"}
                 </button>
-
               </div>
-
             </form>
           </div>
         </div>
       )}
-
     </main>
   );
 }

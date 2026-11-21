@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
 const statuses = [
@@ -16,33 +16,122 @@ export default function ReservationsManagementPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
+
   const [loading, setLoading] = useState(true);
+  const [accessLoading, setAccessLoading] = useState(true);
+
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    loadReservations();
+  const [permissions, setPermissions] = useState({
+    canView: false,
+    canCreate: false,
+    canUpdate: false,
+    canDelete: false,
+  });
+
+  const fetchPermissions = useCallback(async () => {
+    setAccessLoading(true);
+    setError("");
+
+    try {
+      const [
+        { data: admin, error: adminError },
+        { data: view, error: viewError },
+        { data: create, error: createError },
+        { data: update, error: updateError },
+        { data: remove, error: deleteError },
+      ] = await Promise.all([
+        supabase.rpc("is_admin"),
+        supabase.rpc("has_permission", {
+          requested_permission: "reservations.view",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "reservations.create",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "reservations.update",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "reservations.delete",
+        }),
+      ]);
+
+      if (adminError) throw adminError;
+      if (viewError) throw viewError;
+      if (createError) throw createError;
+      if (updateError) throw updateError;
+      if (deleteError) throw deleteError;
+
+      const isAdmin = Boolean(admin);
+
+      const currentPermissions = {
+        canView: isAdmin || Boolean(view),
+        canCreate: isAdmin || Boolean(create),
+        canUpdate: isAdmin || Boolean(update),
+        canDelete: isAdmin || Boolean(remove),
+      };
+
+      setPermissions(currentPermissions);
+      return currentPermissions;
+    } catch (err) {
+      console.error("Fetch Reservations Permissions Error:", err);
+      setError("تعذر التحقق من الصلاحيات: " + err.message);
+      return null;
+    } finally {
+      setAccessLoading(false);
+    }
   }, []);
 
-  async function loadReservations() {
+  const loadReservations = useCallback(async () => {
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase
-      .from("reservations")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      setError("فشل تحميل الحجوزات: " + error.message);
-    } else {
+      if (error) throw error;
+
       setReservations(data || []);
+    } catch (err) {
+      console.error("Load Reservations Error:", err);
+      setError("فشل تحميل الحجوزات: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    async function initializePage() {
+      const currentPermissions = await fetchPermissions();
+
+      if (currentPermissions?.canView) {
+        await loadReservations();
+      } else {
+        setLoading(false);
+      }
     }
 
-    setLoading(false);
+    initializePage();
+  }, [fetchPermissions, loadReservations]);
+
+  async function handleRefresh() {
+    const currentPermissions = await fetchPermissions();
+
+    if (currentPermissions?.canView) {
+      await loadReservations();
+    }
   }
 
   async function updateStatus(id, status) {
+    if (!permissions.canUpdate) {
+      setError("ليس لديك صلاحية تعديل الحجوزات.");
+      return;
+    }
+
     setError("");
     setMessage("");
 
@@ -70,6 +159,11 @@ export default function ReservationsManagementPage() {
   }
 
   async function deleteReservation(id) {
+    if (!permissions.canDelete) {
+      setError("ليس لديك صلاحية حذف الحجوزات.");
+      return;
+    }
+
     if (!window.confirm("هل أنت متأكد من حذف هذا الحجز؟")) return;
 
     setError("");
@@ -123,6 +217,33 @@ export default function ReservationsManagementPage() {
     return area === "outdoor" ? "الصالة الخارجية" : "الصالة الداخلية";
   }
 
+  if (accessLoading) {
+    return (
+      <div dir="rtl" className="admin-empty">
+        جاري التحقق من الصلاحيات...
+      </div>
+    );
+  }
+
+  if (!permissions.canView) {
+    return (
+      <div dir="rtl">
+        <header className="admin-header">
+          <div>
+            <span className="admin-eyebrow">RESERVATIONS MANAGEMENT</span>
+            <h1>إدارة الحجوزات</h1>
+          </div>
+        </header>
+
+        <div className="admin-empty">
+          ليس لديك صلاحية عرض الحجوزات.
+        </div>
+
+        {error && <p className="form-error">{error}</p>}
+      </div>
+    );
+  }
+
   return (
     <div dir="rtl">
       <header className="admin-header">
@@ -134,11 +255,11 @@ export default function ReservationsManagementPage() {
 
         <button
           type="button"
-          onClick={loadReservations}
+          onClick={handleRefresh}
           className="order-details-button"
           disabled={loading}
         >
-          تحديث الحجوزات
+          {loading ? "جاري التحديث..." : "تحديث الحجوزات"}
         </button>
       </header>
 
@@ -270,28 +391,32 @@ export default function ReservationsManagementPage() {
                     تفاصيل الحجز
                   </button>
 
-                  <select
-                    className="order-status-select"
-                    value={reservation.status || "pending"}
-                    onChange={(e) =>
-                      updateStatus(reservation.id, e.target.value)
-                    }
-                    aria-label="تغيير حالة الحجز"
-                  >
-                    {statuses.map((status) => (
-                      <option key={status.value} value={status.value}>
-                        {status.label}
-                      </option>
-                    ))}
-                  </select>
+                  {permissions.canUpdate && (
+                    <select
+                      className="order-status-select"
+                      value={reservation.status || "pending"}
+                      onChange={(e) =>
+                        updateStatus(reservation.id, e.target.value)
+                      }
+                      aria-label="تغيير حالة الحجز"
+                    >
+                      {statuses.map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
 
-                  <button
-                    type="button"
-                    className="reservation-delete-button"
-                    onClick={() => deleteReservation(reservation.id)}
-                  >
-                    حذف الحجز
-                  </button>
+                  {permissions.canDelete && (
+                    <button
+                      type="button"
+                      className="reservation-delete-button"
+                      onClick={() => deleteReservation(reservation.id)}
+                    >
+                      حذف الحجز
+                    </button>
+                  )}
                 </div>
               </article>
             ))}
@@ -331,20 +456,22 @@ export default function ReservationsManagementPage() {
               <p><strong>ملاحظات:</strong> {selected.notes || "لا توجد ملاحظات"}</p>
             </div>
 
-            <label className="order-modal-status">
-              حالة الحجز
+            {permissions.canUpdate && (
+              <label className="order-modal-status">
+                حالة الحجز
 
-              <select
-                value={selected.status || "pending"}
-                onChange={(e) => updateStatus(selected.id, e.target.value)}
-              >
-                {statuses.map((status) => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <select
+                  value={selected.status || "pending"}
+                  onChange={(e) => updateStatus(selected.id, e.target.value)}
+                >
+                  {statuses.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </section>
         </div>
       )}

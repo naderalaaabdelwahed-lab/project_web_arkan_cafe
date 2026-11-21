@@ -17,33 +17,76 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [cancelOrder, setCancelOrder] = useState(null);
   const [cancelReason, setCancelReason] = useState("");
+
   const [loading, setLoading] = useState(true);
+  const [accessLoading, setAccessLoading] = useState(true);
   const [cancelLoading, setCancelLoading] = useState(false);
+
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
   const [permissions, setPermissions] = useState({
+    canView: false,
     canCancel: false,
     canViewClosing: false,
   });
 
   const fetchPermissions = useCallback(async () => {
-    const { data: cancel } = await supabase.rpc("has_permission", {
-      requested_permission: "orders.cancel",
-    });
+    setAccessLoading(true);
+    setError("");
 
-    const { data: closing } = await supabase.rpc("has_permission", {
-      requested_permission: "daily_closing.view",
-    });
+    try {
+      const [
+        { data: admin, error: adminError },
+        { data: view, error: viewError },
+        { data: cancel, error: cancelError },
+        { data: closing, error: closingError },
+      ] = await Promise.all([
+        supabase.rpc("is_admin"),
+        supabase.rpc("has_permission", {
+          requested_permission: "orders.view",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "orders.cancel",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "daily_closing.view",
+        }),
+      ]);
 
-    const { data: admin } = await supabase.rpc("is_admin");
+      if (adminError) throw adminError;
+      if (viewError) throw viewError;
+      if (cancelError) throw cancelError;
+      if (closingError) throw closingError;
 
-    setPermissions({
-      canCancel: Boolean(admin || cancel),
-      canViewClosing: Boolean(admin || closing),
-    });
+      const isAdmin = Boolean(admin);
+
+      const currentPermissions = {
+        canView: isAdmin || Boolean(view),
+        canCancel: isAdmin || Boolean(cancel),
+        canViewClosing: isAdmin || Boolean(closing),
+      };
+
+      setPermissions(currentPermissions);
+
+      return currentPermissions;
+    } catch (err) {
+      console.error("Fetch Permissions Error:", err);
+      setError("تعذر التحقق من الصلاحيات: " + err.message);
+      setOrders([]);
+      return null;
+    } finally {
+      setAccessLoading(false);
+    }
   }, []);
 
   const fetchOrders = useCallback(async () => {
+    if (!permissions.canView) {
+      setOrders([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -72,19 +115,29 @@ export default function OrdersPage() {
       if (error) throw error;
 
       setOrders(data || []);
-    } catch (error) {
-      console.error("Fetch Orders Error:", error);
-      setError("تعذر تحميل الطلبات: " + error.message);
+    } catch (err) {
+      console.error("Fetch Orders Error:", err);
+      setError("تعذر تحميل الطلبات: " + err.message);
       setOrders([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [permissions.canView]);
 
   useEffect(() => {
-    fetchOrders();
-    fetchPermissions();
-  }, [fetchOrders, fetchPermissions]);
+    async function initializePage() {
+      const currentPermissions = await fetchPermissions();
+
+      if (currentPermissions?.canView) {
+        await fetchOrders();
+      } else {
+        setOrders([]);
+        setLoading(false);
+      }
+    }
+
+    initializePage();
+  }, [fetchPermissions, fetchOrders]);
 
   const filteredOrders =
     filter === "all"
@@ -123,7 +176,24 @@ export default function OrdersPage() {
       : parsed.toLocaleString("ar-EG");
   }
 
+  async function handleRefresh() {
+    const currentPermissions = await fetchPermissions();
+
+    if (currentPermissions?.canView) {
+      await fetchOrders();
+    } else {
+      setOrders([]);
+      setSelectedOrder(null);
+      setCancelOrder(null);
+    }
+  }
+
   async function handleCancelOrder() {
+    if (!permissions.canCancel) {
+      setError("ليس لديك صلاحية إلغاء الطلبات.");
+      return;
+    }
+
     if (!cancelOrder || !cancelReason.trim()) {
       setError("اكتب سبب إلغاء الطلب.");
       return;
@@ -154,6 +224,33 @@ export default function OrdersPage() {
     }
   }
 
+  if (accessLoading) {
+    return (
+      <div dir="rtl" className="admin-empty">
+        جاري التحقق من الصلاحيات...
+      </div>
+    );
+  }
+
+  if (!permissions.canView) {
+    return (
+      <div dir="rtl">
+        <header className="admin-header">
+          <div>
+            <span className="admin-eyebrow">ORDER MANAGEMENT</span>
+            <h1>إدارة الطلبات</h1>
+          </div>
+        </header>
+
+        <div className="admin-empty">
+          ليس لديك صلاحية عرض الطلبات.
+        </div>
+
+        {error && <p className="form-error">{error}</p>}
+      </div>
+    );
+  }
+
   return (
     <div dir="rtl">
       <header className="admin-header">
@@ -167,7 +264,7 @@ export default function OrdersPage() {
           <button
             type="button"
             className="order-details-button"
-            onClick={fetchOrders}
+            onClick={handleRefresh}
             disabled={loading}
           >
             {loading ? "جاري التحديث..." : "↻ تحديث الطلبات"}
@@ -374,7 +471,7 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {cancelOrder && (
+      {cancelOrder && permissions.canCancel && (
         <div className="order-modal-overlay">
           <section className="order-modal">
             <div className="order-modal-heading">

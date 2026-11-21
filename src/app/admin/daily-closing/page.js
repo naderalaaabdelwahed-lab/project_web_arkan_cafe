@@ -36,10 +36,64 @@ export default function DailyClosingPage() {
   const [items, setItems] = useState([]);
   const [savedSummary, setSavedSummary] = useState(null);
 
+  const [permissions, setPermissions] = useState({
+    canView: false,
+    canExport: false,
+    canClose: false,
+  });
+
+  const [accessLoading, setAccessLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  const fetchPermissions = useCallback(async () => {
+    setAccessLoading(true);
+    setError("");
+
+    try {
+      const [
+        { data: admin, error: adminError },
+        { data: view, error: viewError },
+        { data: exportPermission, error: exportError },
+        { data: close, error: closeError },
+      ] = await Promise.all([
+        supabase.rpc("is_admin"),
+        supabase.rpc("has_permission", {
+          requested_permission: "daily_closing.view",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "daily_closing.export",
+        }),
+        supabase.rpc("has_permission", {
+          requested_permission: "daily_closing.close",
+        }),
+      ]);
+
+      if (adminError) throw adminError;
+      if (viewError) throw viewError;
+      if (exportError) throw exportError;
+      if (closeError) throw closeError;
+
+      const isAdmin = Boolean(admin);
+
+      const currentPermissions = {
+        canView: isAdmin || Boolean(view),
+        canExport: isAdmin || Boolean(exportPermission),
+        canClose: isAdmin || Boolean(close),
+      };
+
+      setPermissions(currentPermissions);
+      return currentPermissions;
+    } catch (err) {
+      console.error("Daily Closing Permissions Error:", err);
+      setError("تعذر التحقق من الصلاحيات: " + err.message);
+      return null;
+    } finally {
+      setAccessLoading(false);
+    }
+  }, []);
 
   // تحميل الطلبات والأصناف من قاعدة البيانات
   const loadLiveData = async (day) => {
@@ -137,6 +191,8 @@ export default function DailyClosingPage() {
   // تحميل اليومية الحالية أو يومية من الأرشيف
   const loadReport = useCallback(
     async (requestedDayId = "open", preserveMessage = false) => {
+      if (!permissions.canView) return;
+
       setLoading(true);
       setError("");
 
@@ -181,7 +237,6 @@ export default function DailyClosingPage() {
 
         const snapshot = selectedDay.snapshot;
 
-        // قراءة النسخة المحفوظة لليومية المقفولة
         if (
           selectedDay.status === "closed" &&
           snapshot &&
@@ -225,12 +280,22 @@ export default function DailyClosingPage() {
         setLoading(false);
       }
     },
-    []
+    [permissions.canView]
   );
 
   useEffect(() => {
-    loadReport("open");
-  }, [loadReport]);
+    async function initializePage() {
+      const currentPermissions = await fetchPermissions();
+
+      if (currentPermissions?.canView) {
+        await loadReport("open");
+      } else {
+        setLoading(false);
+      }
+    }
+
+    initializePage();
+  }, [fetchPermissions, loadReport]);
 
   // حساب المبيعات
   const activeOrders = orders.filter(
@@ -316,6 +381,11 @@ export default function DailyClosingPage() {
 
   // تصدير تقرير Excel
   const exportExcel = () => {
+    if (!permissions.canExport) {
+      setError("ليس لديك صلاحية تصدير التقرير.");
+      return;
+    }
+
     if (!businessDay) return;
 
     const summaryRows = [
@@ -336,7 +406,6 @@ export default function DailyClosingPage() {
       { البيان: "مبيعات المطبخ", القيمة: kitchenSales },
     ];
 
-    // كل صنف في صف مستقل مع بيانات الأوردر
     const orderRows = items.map((item) => {
       const order = orders.find(
         (order) => String(order.id) === String(item.order_id)
@@ -360,7 +429,6 @@ export default function DailyClosingPage() {
       };
     });
 
-    // إظهار الطلبات التي ليس لها أصناف
     const ordersWithoutItems = orders
       .filter(
         (order) =>
@@ -387,7 +455,6 @@ export default function DailyClosingPage() {
 
     const allOrderRows = [...orderRows, ...ordersWithoutItems];
 
-    // تفاصيل الأصناف بشكل منفصل
     const itemRows = items.map((item) => ({
       "رقم الأوردر": item.order_id,
       "اسم المنتج": item.product_name,
@@ -436,23 +503,9 @@ export default function DailyClosingPage() {
       { wch: 16 },
     ];
 
-    XLSX.utils.book_append_sheet(
-      workbook,
-      summarySheet,
-      "ملخص اليومية"
-    );
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      ordersSheet,
-      "الطلبات"
-    );
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      itemsSheet,
-      "تفاصيل الأصناف"
-    );
+    XLSX.utils.book_append_sheet(workbook, summarySheet, "ملخص اليومية");
+    XLSX.utils.book_append_sheet(workbook, ordersSheet, "الطلبات");
+    XLSX.utils.book_append_sheet(workbook, itemsSheet, "تفاصيل الأصناف");
 
     XLSX.writeFile(
       workbook,
@@ -462,6 +515,11 @@ export default function DailyClosingPage() {
 
   // إنهاء اليومية
   const handleCloseDay = async () => {
+    if (!permissions.canClose) {
+      setError("ليس لديك صلاحية إنهاء اليومية.");
+      return;
+    }
+
     if (!businessDay || businessDay.status !== "open" || closing) return;
 
     const confirmed = window.confirm(
@@ -504,6 +562,26 @@ export default function DailyClosingPage() {
     ["رسوم التوصيل", money(deliveryFees)],
   ];
 
+  if (accessLoading) {
+    return (
+      <main style={styles.page}>
+        <p style={styles.muted}>جاري التحقق من الصلاحيات...</p>
+      </main>
+    );
+  }
+
+  if (!permissions.canView) {
+    return (
+      <main style={styles.page}>
+        <h1 style={styles.title}>الإقفال اليومي</h1>
+        <div style={styles.error}>
+          ليس لديك صلاحية عرض تقارير اليومية.
+        </div>
+        {error && <div style={styles.error}>{error}</div>}
+      </main>
+    );
+  }
+
   if (loading) {
     return (
       <main style={styles.page}>
@@ -525,6 +603,7 @@ export default function DailyClosingPage() {
         <button
           style={styles.secondaryButton}
           onClick={() => loadReport(selectedDayId)}
+          disabled={loading}
         >
           تحديث التقرير
         </button>
@@ -761,15 +840,17 @@ export default function DailyClosingPage() {
           </section>
 
           <section style={styles.actions}>
-            <button
-              style={styles.excelButton}
-              onClick={exportExcel}
-              disabled={!orders.length}
-            >
-              تنزيل تقرير Excel
-            </button>
+            {permissions.canExport && (
+              <button
+                style={styles.excelButton}
+                onClick={exportExcel}
+                disabled={!orders.length}
+              >
+                تنزيل تقرير Excel
+              </button>
+            )}
 
-            {businessDay.status === "open" && (
+            {permissions.canClose && businessDay.status === "open" && (
               <button
                 style={styles.closeButton}
                 onClick={handleCloseDay}
