@@ -52,6 +52,7 @@ export default function Page() {
     setLoading(true);
     setMessage("");
 
+    // تحميل الوصفات والمنتجات
     const { data: recipeData, error: recipeError } =
       await supabase.rpc("get_inventory_recipes");
 
@@ -68,6 +69,7 @@ export default function Page() {
     (recipeData || []).forEach((row) => {
       if (!seen.has(row.product_id)) {
         seen.add(row.product_id);
+
         uniqueProducts.push({
           id: row.product_id,
           name: row.product_name,
@@ -80,13 +82,19 @@ export default function Page() {
     setRows(recipeData || []);
     setProducts(uniqueProducts);
 
+    // تحميل جميع الخامات النشطة من النوعين raw و finished
     const { data: ingredientData, error: ingredientError } =
       await supabase
         .from("inventory_items")
-        .select("id, name, current_stock, unit_id")
+        .select("id, name, current_stock, unit_id, item_type")
         .eq("is_active", true)
-        .eq("item_type", "raw")
+        .in("item_type", ["raw", "finished"])
         .order("name");
+
+    // Debugging: عرض نتيجة تحميل الخامات
+    console.log("Ingredients:", ingredientData);
+    console.log("Ingredients Error:", ingredientError);
+    console.log("Ingredients Count:", ingredientData?.length);
 
     if (ingredientError) {
       setMessage("خطأ في تحميل الخامات: " + ingredientError.message);
@@ -95,6 +103,7 @@ export default function Page() {
       return;
     }
 
+    // تحميل الوحدات
     const { data: unitData, error: unitError } = await supabase
       .from("inventory_units")
       .select("id, name, abbreviation, base_unit_id");
@@ -108,19 +117,19 @@ export default function Page() {
 
     const units = unitData || [];
 
-    setIngredients(
-      (ingredientData || []).map((item) => {
-        const unit = units.find((u) => u.id === item.unit_id);
-        const baseUnitId = unit?.base_unit_id || unit?.id;
-        const baseUnit = units.find((u) => u.id === baseUnitId);
+    // تجهيز الخامات وربطها بالوحدة الأساسية
+    const formattedIngredients = (ingredientData || []).map((item) => {
+      const unit = units.find((u) => u.id === item.unit_id);
+      const baseUnitId = unit?.base_unit_id || unit?.id;
+      const baseUnit = units.find((u) => u.id === baseUnitId);
 
-        return {
-          ...item,
-          unit_name: baseUnit?.abbreviation || baseUnit?.name || "",
-        };
-      })
-    );
+      return {
+        ...item,
+        unit_name: baseUnit?.abbreviation || baseUnit?.name || "",
+      };
+    });
 
+    setIngredients(formattedIngredients);
     setLoading(false);
   }, []);
 

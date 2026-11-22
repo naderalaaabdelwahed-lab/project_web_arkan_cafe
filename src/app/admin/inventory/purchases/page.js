@@ -63,7 +63,6 @@ export default function Page() {
 
   const [selectedPurchase, setSelectedPurchase] = useState(null);
 
-  // فلتر البحث بالتاريخ
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -90,12 +89,30 @@ export default function Page() {
     try {
       const results = await Promise.all([
         supabase.from("inventory_suppliers").select("*").order("name"),
-        supabase.from("inventory_items").select("*").eq("is_active", true).order("name"),
+
+        // تحميل كل الأصناف، بما فيها غير النشطة للفواتير القديمة
+        supabase.from("inventory_items").select("*").order("name"),
+
         supabase.from("inventory_units").select("*").order("name"),
-        supabase.from("inventory_purchases").select("*").order("created_at", { ascending: false }),
-        supabase.from("inventory_purchase_items").select("*").order("id"),
-        supabase.from("inventory_purchase_payments").select("*").order("payment_date", { ascending: false }),
-        supabase.from("inventory_purchase_payment_summary").select("*"),
+
+        supabase
+          .from("inventory_purchases")
+          .select("*")
+          .order("created_at", { ascending: false }),
+
+        supabase
+          .from("inventory_purchase_items")
+          .select("*")
+          .order("id"),
+
+        supabase
+          .from("inventory_purchase_payments")
+          .select("*")
+          .order("payment_date", { ascending: false }),
+
+        supabase
+          .from("inventory_purchase_payment_summary")
+          .select("*"),
       ]);
 
       const failed = results.find((result) => result.error);
@@ -163,7 +180,6 @@ export default function Page() {
     return purchases.filter((purchase) => {
       if (!purchase.created_at) return false;
 
-      // استخراج التاريخ المحلي للفاتورة
       const purchaseDate = new Date(purchase.created_at);
 
       if (Number.isNaN(purchaseDate.getTime())) return false;
@@ -491,9 +507,11 @@ export default function Page() {
       if (error) throw error;
 
       notifySuccess("تم إلغاء المسودة");
+
       if (Number(selectedPurchase) === Number(purchase.id)) {
         setSelectedPurchase(null);
       }
+
       await loadData();
     } catch (err) {
       notifyError(err.message || "تعذر إلغاء الفاتورة");
@@ -587,7 +605,7 @@ export default function Page() {
     const paymentRows = invoicePayments.map((payment, index) => `
       <tr>
         <td>${index + 1}</td>
-        <td>${dateText(payment.payment_date)}</td>
+        <td>${escapeHtml(dateText(payment.payment_date))}</td>
         <td>${money(payment.amount)} جنيه</td>
         <td>${escapeHtml(payment.payment_method || "-")}</td>
         <td>${escapeHtml(payment.notes || "-")}</td>
@@ -669,7 +687,7 @@ export default function Page() {
           </div>
           <div>
             <h2>${escapeHtml(purchase.invoice_number || purchase.id)}</h2>
-            <p>تاريخ الإنشاء: ${dateText(purchase.created_at)}</p>
+            <p>تاريخ الإنشاء: ${escapeHtml(dateText(purchase.created_at))}</p>
             <p>الحالة: ${escapeHtml(getStatus(purchase.status))}</p>
           </div>
         </div>
@@ -1110,7 +1128,8 @@ export default function Page() {
                             اختر الصنف
                           </option>
 
-                          {items.map((item) => (
+                          {/* عرض الأصناف النشطة فقط في الفواتير الجديدة */}
+                          {items.filter((item) => item.is_active).map((item) => (
                             <option
                               key={item.id}
                               value={item.id}

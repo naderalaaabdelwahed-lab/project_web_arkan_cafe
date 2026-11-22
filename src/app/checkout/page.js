@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -10,8 +10,58 @@ import { supabase } from "@/lib/supabase";
 
 const WHATSAPP_NUMBER = "201028808164";
 
+const PENDING_TOKENS_KEY = "arkan-pending-checkout-tokens";
+const CANCELLATIONS_KEY = "arkan-order-cancellations";
+
+// إنشاء بصمة ثابتة لبيانات الطلب بدون تخزين بيانات العميل كنص في المفتاح
+async function getCheckoutSignature(payload) {
+  const data = new TextEncoder().encode(JSON.stringify(payload));
+  const hash = await crypto.subtle.digest("SHA-256", data);
+
+  return Array.from(new Uint8Array(hash))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+// الحصول على Token ثابت لنفس محاولة الطلب
+function getOrCreatePendingToken(signature) {
+  const pending = JSON.parse(
+    localStorage.getItem(PENDING_TOKENS_KEY) || "{}"
+  );
+
+  let token = pending[signature];
+
+  if (!token) {
+    token = crypto.randomUUID();
+    pending[signature] = token;
+
+    localStorage.setItem(
+      PENDING_TOKENS_KEY,
+      JSON.stringify(pending)
+    );
+  }
+
+  return token;
+}
+
+// حذف Token المحاولة بعد نجاح الطلب
+function removePendingToken(signature) {
+  const pending = JSON.parse(
+    localStorage.getItem(PENDING_TOKENS_KEY) || "{}"
+  );
+
+  delete pending[signature];
+
+  localStorage.setItem(
+    PENDING_TOKENS_KEY,
+    JSON.stringify(pending)
+  );
+}
+
 export default function CheckoutPage() {
   const { cart, totalPrice, totalItems, clearCart } = useCart();
+
+  const submittingRef = useRef(false);
 
   const [customer, setCustomer] = useState({
     name: "",
@@ -30,6 +80,7 @@ export default function CheckoutPage() {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelled, setCancelled] = useState(false);
   const [cancelError, setCancelError] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
   const [cancelWhatsappUrl, setCancelWhatsappUrl] = useState("");
   const [cancelWhatsappOpened, setCancelWhatsappOpened] = useState(false);
 
@@ -45,11 +96,42 @@ export default function CheckoutPage() {
     }));
   }
 
+  function getOrderErrorMessage(message) {
+    if (!message) {
+      return "حصلت مشكلة أثناء حفظ الطلب. حاول مرة أخرى.";
+    }
+
+    if (message.includes("does not have an active inventory recipe")) {
+      return "أحد المنتجات في طلبك ليس له وصفة مخزون نشطة. برجاء التواصل مع المطعم.";
+    }
+
+    if (message.includes("Insufficient stock")) {
+      return "المخزون غير كافٍ لتجهيز أحد المنتجات المطلوبة. برجاء تقليل الكمية أو التواصل مع المطعم.";
+    }
+
+    if (
+      message.includes("Inventory item") &&
+      message.includes("missing or inactive")
+    ) {
+      return "إحدى الخامات المطلوبة غير متاحة حاليًا في المخزون.";
+    }
+
+    if (message.includes("No open business day found")) {
+      return "المطعم لا يستقبل طلبات حاليًا.";
+    }
+
+    if (message.includes("Product") && message.includes("unavailable")) {
+      return "أحد المنتجات لم يعد متاحًا. برجاء تحديث المنيو.";
+    }
+
+    return message;
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
 
-    if (loading) return;
+    if (submittingRef.current || loading) return;
 
     if (cart.length === 0) {
       setError("السلة فارغة، أضف منتجات أولاً.");
@@ -61,7 +143,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!/^01[0125][0-9]{8}$/.test(customer.phone)) {
+    if (!/^01[0125][0-9]{8}$/.test(customer.phone.trim())) {
       setError("أدخل رقم موبايل مصري صحيح مكون من 11 رقم.");
       return;
     }
@@ -74,45 +156,58 @@ export default function CheckoutPage() {
       return;
     }
 
+    submittingRef.current = true;
     setLoading(true);
 
     try {
-      // الاحتفاظ بنسخة من السلة قبل تفريغها
       const orderCart = cart.map((item) => ({ ...item }));
 
-      const orderSubtotal = totalPrice;
+      const orderSubtotal = orderCart.reduce(
+        (total, item) => total + Number(item.price) * item.quantity,
+        0
+      );
+
       const orderDeliveryFee = deliveryFee;
-      const orderFinalTotal = finalTotal;
+      const orderFinalTotal = orderSubtotal + orderDeliveryFee;
 
       const orderItems = orderCart.map((item) => ({
         product_id: item.id,
         quantity: item.quantity,
       }));
 
-      // إنشاء كود سري خاص بإلغاء الطلب
-      const cancellationToken = crypto.randomUUID();
+      // نفس بيانات الطلب = نفس البصمة ونفس Token
+      const checkoutPayload = {
+        customer_name: customer.name.trim(),
+        phone: customer.phone.trim(),
+        address: customer.address.trim(),
+        notes: customer.notes.trim(),
+        order_type: customer.orderType,
+        payment_method: customer.payment,
+        items: orderItems,
+      };
 
-      // حفظ الطلب في Supabase
+      const signature = await getCheckoutSignature(checkoutPayload);
+
+      // حفظ Token قبل إرسال الطلب إلى Supabase
+      const cancellationToken = getOrCreatePendingToken(signature);
+
       const { data, error: orderError } = await supabase.rpc(
         "create_customer_order_secure",
         {
-          p_customer_name: customer.name.trim(),
-          p_phone: customer.phone.trim(),
-          p_address: customer.address.trim(),
-          p_notes: customer.notes.trim(),
-          p_order_type: customer.orderType,
-          p_payment_method: customer.payment,
-          p_items: orderItems,
+          p_customer_name: checkoutPayload.customer_name,
+          p_phone: checkoutPayload.phone,
+          p_address: checkoutPayload.address,
+          p_notes: checkoutPayload.notes,
+          p_order_type: checkoutPayload.order_type,
+          p_payment_method: checkoutPayload.payment_method,
+          p_items: checkoutPayload.items,
           p_cancellation_token: cancellationToken,
         }
       );
 
       if (orderError) {
         console.error("Supabase Order Error:", orderError);
-
-        throw new Error(
-          "حصلت مشكلة أثناء حفظ الطلب. راجع البيانات وحاول مرة أخرى."
-        );
+        throw new Error(getOrderErrorMessage(orderError.message));
       }
 
       if (!data) {
@@ -121,17 +216,20 @@ export default function CheckoutPage() {
 
       const orderId = `ARK-${data}`;
 
-      // حفظ كود الإلغاء على جهاز العميل
+      // حفظ كود الإلغاء
       const savedCancellations = JSON.parse(
-        localStorage.getItem("arkan-order-cancellations") || "{}"
+        localStorage.getItem(CANCELLATIONS_KEY) || "{}"
       );
 
       savedCancellations[String(data)] = cancellationToken;
 
       localStorage.setItem(
-        "arkan-order-cancellations",
+        CANCELLATIONS_KEY,
         JSON.stringify(savedCancellations)
       );
+
+      // حذف Token المحاولة بعد اكتمال الحفظ
+      removePendingToken(signature);
 
       const orderTypes = {
         delivery: "توصيل Delivery",
@@ -203,10 +301,8 @@ ${itemsDetails}
         whatsappUrl: `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`,
       };
 
-      // عرض تفاصيل الطلب ثم تفريغ السلة
       setConfirmedOrder(order);
       clearCart();
-
     } catch (err) {
       console.error("Order Error:", err);
 
@@ -214,13 +310,25 @@ ${itemsDetails}
         err.message || "حصل خطأ أثناء حفظ الطلب. حاول مرة أخرى."
       );
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   }
 
-  // إلغاء الطلب من شاشة التأكيد
   async function handleCancelOrder() {
     if (!confirmedOrder || cancelLoading || cancelled) return;
+
+    setCancelError("");
+
+    if (!cancelReason.trim()) {
+      setCancelError("من فضلك اكتب سبب إلغاء الطلب.");
+      return;
+    }
+
+    if (cancelReason.trim().length > 500) {
+      setCancelError("سبب الإلغاء يجب ألا يتجاوز 500 حرف.");
+      return;
+    }
 
     const confirmed = window.confirm(
       "هل أنت متأكد إنك عايز تلغي الطلب؟"
@@ -229,7 +337,6 @@ ${itemsDetails}
     if (!confirmed) return;
 
     setCancelLoading(true);
-    setCancelError("");
 
     try {
       const { data, error: rpcError } = await supabase.rpc(
@@ -237,6 +344,7 @@ ${itemsDetails}
         {
           p_order_id: confirmedOrder.databaseId,
           p_cancellation_token: confirmedOrder.cancellationToken,
+          p_cancellation_reason: cancelReason.trim(),
         }
       );
 
@@ -258,6 +366,8 @@ ${itemsDetails}
 📱 رقم الموبايل: ${confirmedOrder.customer.phone}
 💰 قيمة الطلب: ${confirmedOrder.total} جنيه
 
+📝 سبب الإلغاء: ${cancelReason.trim()}
+
 العميل قام بإلغاء الطلب من الموقع.
 يرجى مراجعة حالة الطلب في لوحة الإدارة.
 `;
@@ -276,7 +386,6 @@ ${itemsDetails}
     }
   }
 
-  // شاشة نتيجة الطلب
   if (confirmedOrder) {
     return (
       <main dir="rtl">
@@ -339,19 +448,44 @@ ${itemsDetails}
                   </div>
                 )}
 
-                <button
-                  className="primary-button"
-                  onClick={handleCancelOrder}
-                  disabled={cancelLoading}
-                  style={{
-                    marginTop: "15px",
-                    background: "#b42318",
-                  }}
-                >
-                  {cancelLoading
-                    ? "جاري إلغاء الطلب..."
-                    : "إلغاء الطلب"}
-                </button>
+                <div style={{ marginTop: "20px" }}>
+                  <label htmlFor="cancelReason">
+                    سبب إلغاء الطلب
+                  </label>
+
+                  <textarea
+                    id="cancelReason"
+                    value={cancelReason}
+                    onChange={(event) => {
+                      setCancelReason(event.target.value);
+                      setCancelError("");
+                    }}
+                    placeholder="اكتب سبب إلغاء الطلب..."
+                    maxLength={500}
+                    rows={3}
+                    disabled={cancelLoading}
+                    style={{
+                      width: "100%",
+                      marginTop: "8px",
+                    }}
+                  />
+
+                  <small>{cancelReason.length}/500</small>
+
+                  <button
+                    className="primary-button"
+                    onClick={handleCancelOrder}
+                    disabled={cancelLoading}
+                    style={{
+                      marginTop: "15px",
+                      background: "#b42318",
+                    }}
+                  >
+                    {cancelLoading
+                      ? "جاري إلغاء الطلب..."
+                      : "تأكيد إلغاء الطلب"}
+                  </button>
+                </div>
 
                 {cancelError && (
                   <p className="form-error">{cancelError}</p>
@@ -414,7 +548,6 @@ ${itemsDetails}
     );
   }
 
-  // شاشة إدخال بيانات الطلب
   return (
     <main dir="rtl">
       <Navbar />
