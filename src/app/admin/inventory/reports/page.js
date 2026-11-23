@@ -257,6 +257,53 @@ export default function InventoryReportsPage() {
     : activeReport === "purchases" ? purchaseLines
     : wasteRows;
 
+  const printReport = () => {
+    const reportElement = document.querySelector(".inventory-reports .report");
+    if (!reportElement) return;
+
+    const printWindow = window.open("", "_blank", "width=1200,height=850");
+    if (!printWindow) {
+      window.alert("اسمح بفتح النوافذ المنبثقة من المتصفح حتى تتمكن من طباعة التقرير.");
+      return;
+    }
+
+    const reportCopy = reportElement.cloneNode(true);
+    reportCopy.querySelector(".report-actions")?.remove();
+    const reportTitle = reportCopy.querySelector("h2")?.textContent || "تقرير المخزن";
+
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html>
+      <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>${reportTitle}</title>
+          <style>
+            @page { size: A4 landscape; margin: 12mm; }
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 0; color: #111; background: #fff; direction: rtl; font-family: Arial, Tahoma, sans-serif; }
+            .report { width: 100%; padding: 0; color: #111; }
+            .report-heading { display: flex; justify-content: space-between; align-items: center; margin: 0 0 16px; padding: 0 0 12px; border-bottom: 2px solid #222; }
+            .report-heading h2 { margin: 0 0 5px; color: #111; font-size: 20px; }
+            .report-heading p { margin: 0; color: #444; font-size: 12px; }
+            .table-wrap { width: 100%; overflow: visible; }
+            table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; text-align: right; }
+            th, td { width: auto; padding: 10px 12px; border: 1px solid #999; color: #111; font-size: 10pt; line-height: 1.6; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
+            th { background: #e9edf2; font-weight: 700; }
+            tbody tr:nth-child(even) td { background: #f7f7f7; }
+            .empty, .summary { margin-top: 12px; padding: 12px; color: #111; background: #fff; border: 1px solid #aaa; }
+            .summary strong { color: #111; }
+            thead { display: table-header-group; }
+            tr { break-inside: avoid; page-break-inside: avoid; }
+          </style>
+        </head>
+        <body>${reportCopy.outerHTML}</body>
+      </html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   return (
     <main dir="rtl" className="inventory-reports">
       <header className="header">
@@ -294,7 +341,7 @@ export default function InventoryReportsPage() {
           <div><h2>{reportTypes.find((report) => report.id === activeReport)?.label}</h2><p>{loading ? "جارٍ تحميل البيانات..." : `عدد السجلات: ${formatNumber(reportRows.length)}`}</p></div>
           <div className="report-actions">
             <span>{lastUpdated ? `آخر تحديث: ${lastUpdated.toLocaleTimeString("ar-EG")}` : ""}</span>
-            <button className="print-button" onClick={() => window.print()} disabled={loading || !!error || !reportRows.length}>🖨️ طباعة التقرير</button>
+            <button className="print-button" onClick={printReport} disabled={loading || !!error || !reportRows.length}>🖨️ طباعة التقرير</button>
           </div>
         </div>
         {loading ? <div className="empty">جارٍ تحميل بيانات التقارير من قاعدة البيانات...</div> : !error ? <Table columns={columns} rows={reportRows} /> : null}
@@ -321,35 +368,19 @@ export default function InventoryReportsPage() {
         .report{padding:22px}.report-heading{margin-bottom:20px;align-items:flex-start}.report-heading h2{font-size:20px;margin:0 0 7px;font-weight:900}
         .report-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.report-heading span{font-size:12px;color:#94a3b8}
         .print-button{background:#14532d;border-color:#166534;padding:10px 16px}
-        .table-wrap{overflow-x:auto;border:1px solid #3b4960;border-radius:10px}
-        table{width:100%;border-collapse:separate;border-spacing:0;min-width:1000px;table-layout:auto;text-align:right}
-        th,td{padding:15px 17px;border-bottom:1px solid #334155;font-size:13px;line-height:1.8;vertical-align:middle}
-        th{background:#202b3c;color:#f1f5f9;font-size:13px;font-weight:900;white-space:normal}
-        td{color:#f1f5f9;white-space:normal;min-width:90px}
-        td:first-child,th:first-child{white-space:nowrap}
+        .table-wrap{width:100%;overflow-x:auto;border:1px solid #3b4960;border-radius:10px}
+        table{width:100%;min-width:100%;border-collapse:collapse;table-layout:fixed;text-align:right}
+        th,td{padding:17px 22px;border-bottom:1px solid #334155;border-left:1px solid #293548;font-size:14px;line-height:2;vertical-align:middle;text-align:right}
+        th{background:#202b3c;color:#f1f5f9;font-size:14px;font-weight:900;white-space:normal}
+        td{color:#f1f5f9;white-space:normal;overflow-wrap:anywhere;word-break:normal;min-width:0}
+        th:last-child,td:last-child{border-left:0}
+        tbody tr{min-height:58px}
         tbody tr:nth-child(even){background:#172235}tbody tr:hover{background:#1e293b}
         tbody tr:last-child td{border-bottom:0}
         .empty{padding:35px;text-align:center;color:#cbd5e1}.error{display:flex;flex-direction:column;gap:7px;background:#451a1a;border:1px solid #991b1b;border-radius:10px;padding:14px;margin-bottom:15px;color:#fecaca}
         .error span{overflow-wrap:anywhere;font-size:13px}.error small{color:#fca5a5}.summary{margin-top:15px;background:#172554;padding:13px;border-radius:9px}.summary strong{color:#fff}
         @media(max-width:750px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.header{align-items:flex-start}.actions{width:100%}.actions button{flex:1}.report{padding:14px}.report-actions{width:100%;justify-content:space-between}}
         @media(max-width:450px){.stats{grid-template-columns:1fr 1fr}.stats article{padding:11px}.stats strong{font-size:15px}.filters{align-items:stretch}label{min-width:100%}}
-        @media print{
-          @page{size:A4 landscape;margin:12mm}
-          :global(html),:global(body){background:#fff!important;color:#111!important}
-          :global(body *){visibility:hidden!important}
-          .inventory-reports,.inventory-reports .report,.inventory-reports .report *{visibility:visible!important}
-          .inventory-reports{position:absolute!important;inset:0!important;width:100%!important;padding:0!important;margin:0!important;color:#111!important;background:#fff!important}
-          .header,.filters,.stats,.tabs,.report-actions,.breadcrumb{display:none!important}
-          .report{position:static!important;width:100%!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:#fff!important;color:#111!important}
-          .report-heading{margin:0 0 14px!important;padding-bottom:10px!important;border-bottom:2px solid #222!important}
-          .report-heading h2,.report-heading p{color:#111!important}
-          .table-wrap{overflow:visible!important;border:1px solid #999!important;border-radius:0!important}
-          table{width:100%!important;min-width:0!important;border-collapse:collapse!important;font-size:10pt!important}
-          th,td{padding:8px 9px!important;font-size:9pt!important;line-height:1.5!important;color:#111!important;border:1px solid #bbb!important;white-space:normal!important;background:#fff!important}
-          th{font-weight:700!important;background:#eee!important}
-          tbody tr:nth-child(even){background:#f7f7f7!important}
-          .empty,.summary{color:#111!important;background:#fff!important;border:1px solid #bbb!important}
-        }
       `}</style>
     </main>
   );
