@@ -29,10 +29,11 @@ export async function GET(request){
    }
   }
   if(pending.length){const {error}=await db.from("hr_attendance").upsert(pending,{onConflict:"employee_id,shift_date",ignoreDuplicates:true});if(error)throw error}
-  const [{data:rows,error:re},{data:employees,error:er}]=await Promise.all([
+  const [{data:rows,error:re},{data:employees,error:er},{data:balances,error:be}]=await Promise.all([
    db.from("hr_attendance").select("*,hr_employees(full_name,job_title,department,monthly_salary)").gte("shift_date",from).lte("shift_date",today).order("shift_date",{ascending:false}),
-   db.from("hr_employees").select("id,full_name").eq("employment_status","active").order("full_name")
-  ]);if(re)throw re;if(er)throw er;return NextResponse.json({attendance:rows||[],employees:employees||[]});
+   db.from("hr_employees").select("id,full_name,paid_leave_days").eq("employment_status","active").order("full_name"),
+   db.from("hr_leave_balances").select("employee_id,leave_year,allocated_days,used_days").eq("leave_year",Number(today.slice(0,4)))
+  ]);if(re)throw re;if(er)throw er;if(be)throw be;return NextResponse.json({attendance:rows||[],employees:employees||[],leaveBalances:balances||[]});
  }catch(e){console.error("HR attendance GET",e);return NextResponse.json({error:e.message||"تعذر تحميل الحضور."},{status:500})}
 }
 export async function PATCH(request){
