@@ -46,14 +46,13 @@ Next.js 16 application for ARKAN Cafe & Restaurant.
 
 ## Human Resources (HR)
 
-- The employee HR portal is available at `/hr`; each employee receives a dedicated username and password created by an HR administrator.
-- Employees open `/hr/attendance` to check in, check out, and view only their own attendance history.
-- HR employee accounts are isolated from system administrator and system employee accounts. They cannot sign in to the admin application, access inventory permissions, or manage HR.
-- HR manager accounts use the existing administrator login and open `/hr/manage` from the admin navigation. Employee files, shifts, attendance review, and payroll are manager-only.
-- Employee passwords are managed by Supabase Auth. The application stores only the HR username and Auth user ID mapping, never a plaintext password.
-- The server records attendance timestamps in Cairo time and associates overnight check-outs with the original shift date.
-- The former standalone `/attendance/kiosk` page, kiosk API, device activation workflow, and PIN attendance flow have been removed from the active app.
-- Duplicate check-ins are rejected. Check-out is unavailable unless the employee has an open attendance record. Previous unclosed records remain available for manager correction.
+- The employee attendance page is the HR home at `/hr`. Employees choose check-in or check-out and enter their personal six-digit attendance code; no system/admin account is required.
+- HR managers create each employee's attendance code from HR → Employees. Codes are unique, stored as salted scrypt hashes, and never returned to the browser in plaintext.
+- Attendance-code accounts are separate from administrator and system employee accounts. The code grants attendance actions only; it does not grant admin, inventory, or HR management access.
+- HR managers use their existing administrator login and open `/hr/manage`. Employee files, shifts, attendance review, and payroll remain manager-only.
+- Attendance timestamps use Cairo time. Overnight check-outs are associated with the original shift date.
+- Duplicate check-ins are rejected, and check-out is unavailable unless the employee has an open attendance record. Previous unclosed records remain available for manager correction.
+- The attendance endpoint applies per-process attempt throttling. For a multi-instance production deployment, use a shared rate-limit store/gateway as an additional control.
 - Managers can assign flexible and overnight shifts, review absences, correct attendance timestamps, and manage payroll. Confirm payroll policy assumptions with the restaurant before using payroll for actual payment.
 
 ## Validation
