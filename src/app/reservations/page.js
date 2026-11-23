@@ -23,6 +23,7 @@ export default function ReservationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [today, setToday] = useState("");
 
   async function loadSettings() {
     setLoadingSettings(true);
@@ -48,6 +49,14 @@ export default function ReservationsPage() {
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    setToday(`${year}-${month}-${day}`);
+  }, []);
+
   function handleChange(e) {
     const { name, value } = e.target;
 
@@ -59,14 +68,6 @@ export default function ReservationsPage() {
     setMessage("");
   }
 
-  function getLocalDate() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -79,7 +80,7 @@ export default function ReservationsPage() {
       return;
     }
 
-    if (form.date < getLocalDate()) {
+    if (form.date < today) {
       setMessage("لا يمكن اختيار تاريخ سابق.");
       setMessageType("error");
       return;
@@ -300,7 +301,7 @@ export default function ReservationsPage() {
                   name="date"
                   value={form.date}
                   onChange={handleChange}
-                  min={getLocalDate()}
+                  min={today}
                   required
                 />
               </label>
