@@ -327,11 +327,12 @@ export default function InventoryReportsPage() {
         </body>
       </html>`);
     printWindow.document.close();
-    printWindow.focus();
-    printWindow.onload = () => window.setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-    }, 300);
+    window.setTimeout(() => {
+      if (!printWindow.closed) {
+        printWindow.focus();
+        printWindow.print();
+      }
+    }, 700);
   };
 
   return (
