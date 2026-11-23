@@ -16,7 +16,7 @@ export async function GET(request){
   const a=await admin(request);if(a.response)return a.response;const db=a.db;
   const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   const requestedMonth=new URL(request.url).searchParams.get("month")||today.slice(0,7);
-  if(!/^\\d{4}-\\d{2}$/.test(requestedMonth))return NextResponse.json({error:"اختار شهرًا صحيحًا."},{status:400});
+  if(!/^\d{4}-\d{2}$/.test(requestedMonth))return NextResponse.json({error:"اختار شهرًا صحيحًا."},{status:400});
   const [year,month]=requestedMonth.split("-").map(Number);
   if(month<1||month>12)return NextResponse.json({error:"اختار شهرًا صحيحًا."},{status:400});
   const from=requestedMonth+"-01";
