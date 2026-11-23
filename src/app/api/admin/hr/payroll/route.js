@@ -2,7 +2,26 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 function service(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}})}
 async function admin(request){const token=(request.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");if(!token)return {response:NextResponse.json({error:"سجل دخول المدير أولاً."},{status:401})};const auth=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}});const {data,error}=await auth.auth.getUser(token);if(error||!data?.user)return {response:NextResponse.json({error:"جلسة غير صالحة."},{status:401})};if(data.user.app_metadata?.account_type==="hr_employee")return {response:NextResponse.json({error:"حساب HR مخصص للحضور والانصراف الشخصي فقط."},{status:403})};const db=service(),{data:row}=await db.from("admin_users").select("user_id").eq("user_id",data.user.id).maybeSingle();return row?{db,user:data.user}:{response:NextResponse.json({error:"غير مسموح."},{status:403})}}
-export async function GET(request){try{const a=await admin(request);if(a.response)return a.response;const [{data:runs,error},{data:employees,error:ee},{data:adjustments,error:ae}]=await Promise.all([a.db.from("hr_payroll_runs").select("*,hr_payroll_items(*)").order("created_at",{ascending:false}),a.db.from("hr_employees").select("id,full_name").eq("employment_status","active").order("full_name"),a.db.from("hr_payroll_adjustments").select("id,employee_id,adjustment_date,amount,adjustment_type,reason").order("adjustment_date",{ascending:false}).limit(100)]);if(error)throw error;if(ee)throw ee;if(ae)throw ae;return NextResponse.json({runs:runs||[],employees:employees||[],adjustments:adjustments||[]})}catch(e){return NextResponse.json({error:e.message||"تعذر تحميل الرواتب."},{status:500})}}
+export async function GET(request){
+ try{
+  const a=await admin(request);if(a.response)return a.response;
+  const month=new URL(request.url).searchParams.get("month");
+  let runQuery=a.db.from("hr_payroll_runs").select("*,hr_payroll_items(*)").order("created_at",{ascending:false});
+  if(month){
+   if(!/^\\d{4}-\\d{2}$/.test(month)||Number(month.slice(5,7))<1||Number(month.slice(5,7))>12)
+    return NextResponse.json({error:"الشهر غير صحيح."},{status:400});
+   const start=month+"-01",end=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).toISOString().slice(0,10);
+   runQuery=runQuery.eq("period_start",start).eq("period_end",end);
+  }
+  const [{data:runs,error},{data:employees,error:ee},{data:adjustments,error:ae}]=await Promise.all([
+   runQuery,
+   a.db.from("hr_employees").select("id,full_name,employment_status,termination_date").order("full_name"),
+   a.db.from("hr_payroll_adjustments").select("id,employee_id,adjustment_date,amount,adjustment_type,reason").order("adjustment_date",{ascending:false}).limit(100)
+  ]);
+  if(error)throw error;if(ee)throw ee;if(ae)throw ae;
+  return NextResponse.json({runs:runs||[],employees:employees||[],adjustments:adjustments||[]});
+ }catch(e){return NextResponse.json({error:e.message||"تعذر تحميل الرواتب."},{status:500})}
+}
 export async function POST(request){
  try{
   const a=await admin(request);if(a.response)return a.response;
