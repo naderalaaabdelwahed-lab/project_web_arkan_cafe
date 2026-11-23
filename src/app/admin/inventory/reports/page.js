@@ -143,7 +143,7 @@ export default function InventoryReportsPage() {
     const supplier = supplierMap.get(Number(purchase.supplier_id)) || "";
     const matchesSearch = !query || [purchase.invoice_number, supplier, purchase.representative_name, purchase.notes]
       .some((value) => String(value || "").toLocaleLowerCase("ar").includes(query));
-    return inDateRange(purchase.purchase_date) && matchesSearch && purchase.status !== "cancelled";
+    return inDateRange(purchase.purchase_date) && matchesSearch && purchase.status === "received";
   }), [purchases, supplierMap, dateFrom, dateTo, query]);
 
   const consumptionRows = filteredMovements.filter((row) =>
