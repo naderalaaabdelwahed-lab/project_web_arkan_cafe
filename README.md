@@ -44,17 +44,15 @@ Next.js 16 application for ARKAN Cafe & Restaurant.
 
 5. Open http://localhost:3000.
 
-## HR attendance
+## Human Resources (HR)
 
-- HR employees are separate from website/Auth employee accounts.
-- The manager assigns each employee a personal attendance code (4–8 digits) from HR → Employees.
-- The attendance kiosk at `/attendance/kiosk` asks the employee to choose their name, select check-in or check-out, and enter their code. The kiosk device must first be activated by a manager.
-- Codes are stored as salted scrypt hashes and are never returned to the kiosk.
-- Duplicate check-ins for the same work date and duplicate check-outs are rejected. A new work date can be checked in even if a previous date still has an unclosed shift; that previous record remains open for manager correction.
-- Overnight check-outs are attached to the original shift date. For example, a shift that starts on Nov 23 and ends at 2:00 AM on Nov 24 remains one attendance record with `shift_date=Nov 23`.
-- Managers can filter the attendance report by employee and correct check-in and check-out timestamps from each record. Entered date/time values are interpreted in Cairo time, and worked/overtime minutes are recalculated.
-- Pending absences are generated automatically by a Supabase Cron job every 15 minutes. The job uses Cairo local time and supports overnight shifts.
-- Payroll formulas currently use a 30-day salary basis and a 26-day lateness divisor. Confirm these rules, overtime rates, and leave policy with the restaurant before using payroll for actual payment.
+- The HR area is available at `/hr`; employees sign in with a username and password created by an administrator in HR → Employees.
+- Employee passwords are managed by Supabase Auth. The application stores only the username and Auth user ID mapping, never a plaintext password.
+- Employees use the in-site HR portal to check in and check out. The server records timestamps in Cairo time and associates overnight check-outs with the original shift date.
+- HR managers open `/hr/manage` from the HR entry in the admin navigation. Employee files, shifts, attendance review, and payroll are grouped under `/hr`.
+- The former standalone `/attendance/kiosk` page, kiosk API, device activation workflow, and PIN attendance flow have been removed from the active app.
+- Duplicate check-ins are rejected. Check-out is unavailable unless the employee has an open attendance record. Previous unclosed records remain available for manager correction.
+- Managers can assign flexible and overnight shifts, review absences, correct attendance timestamps, and manage payroll. Confirm the payroll policy assumptions with the restaurant before using payroll for actual payment.
 
 ## Validation
 
