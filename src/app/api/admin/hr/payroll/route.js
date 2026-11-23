@@ -8,7 +8,7 @@ export async function GET(request){
   const month=new URL(request.url).searchParams.get("month");
   let runQuery=a.db.from("hr_payroll_runs").select("*,hr_payroll_items(*)").order("created_at",{ascending:false});
   if(month){
-   if(!/^\\d{4}-\\d{2}$/.test(month)||Number(month.slice(5,7))<1||Number(month.slice(5,7))>12)
+   if(!/^\d{4}-\d{2}$/.test(month)||Number(month.slice(5,7))<1||Number(month.slice(5,7))>12)
     return NextResponse.json({error:"الشهر غير صحيح."},{status:400});
    const start=month+"-01",end=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).toISOString().slice(0,10);
    runQuery=runQuery.eq("period_start",start).eq("period_end",end);
