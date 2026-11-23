@@ -106,7 +106,7 @@ export async function POST(request) {
       }
       const values = {
         employee_id: employee.id, shift_date: today, check_in_at: now.toISOString(),
-        check_in_method: "code", attendance_status: "present", late_minutes, updated_at: now.toISOString()
+        check_in_method: "pin", attendance_status: "present", late_minutes, updated_at: now.toISOString()
       };
       const saved = existing
         ? await db.from("hr_attendance").update(values).eq("id", existing.id)
@@ -138,7 +138,7 @@ export async function POST(request) {
       planned = Math.max(0, Math.round((end - start) / 60000) - breakMinutes);
     }
     const { error: updateError } = await db.from("hr_attendance").update({
-      check_out_at: now.toISOString(), check_out_method: "code", worked_minutes: worked,
+      check_out_at: now.toISOString(), check_out_method: "pin", worked_minutes: worked,
       overtime_minutes: Math.max(0, worked - planned), updated_at: now.toISOString()
     }).eq("id", open.id);
     if (updateError) throw updateError;
