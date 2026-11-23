@@ -17,6 +17,7 @@ async function context(request) {
   const {auth,db}=clients();
   const {data,error}=await auth.auth.getUser(token);
   if(error||!data?.user) return {response:NextResponse.json({error:"جلسة الدخول غير صالحة."},{status:401})};
+  if(data.user.app_metadata?.account_type!=="hr_employee") return {response:NextResponse.json({error:"هذا الحساب ليس حساب حضور وانصراف HR."},{status:403})};
   const {data:employee,error:employeeError}=await db.from("hr_employees")
     .select("id,full_name,job_title,department,employment_status,monthly_salary,daily_work_hours,username,auth_user_id")
     .eq("auth_user_id",data.user.id).maybeSingle();
