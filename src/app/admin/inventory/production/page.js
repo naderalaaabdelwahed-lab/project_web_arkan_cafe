@@ -68,7 +68,6 @@ export default function ProductionPage() {
     const base = baseUnit(item.unit_id);
     return units.filter((unit) => baseUnit(unit.id) === base);
   };
-  const outputItem = itemById[String(outputId)];
   const outputUnits = outputItem ? compatibleUnits(outputId) : [];
   const getItemName = (id) => itemById[String(id)]?.name || `صنف #${id}`;
   const getUnitName = (id) => unitById[String(id)]?.abbreviation || unitById[String(id)]?.name || "-";
@@ -209,6 +208,7 @@ export default function ProductionPage() {
 
       <form onSubmit={executeProduction} style={panel}>
         <h2 style={{ marginTop: 0 }}>تسجيل عملية تصنيع</h2>
+        <label style={{ display: "block", marginBottom: 12 }}>اسم قالب التصنيع<input style={field} value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="مثال: تجهيز عجينة الفطير" /></label>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 12 }}>
           <label>الصنف الناتج<select required style={field} value={outputId} onChange={(e) => { setOutputId(e.target.value); setOutputUnit(""); }}><option value="">اختار الصنف</option>{items.map((item) => <option key={item.id} value={item.id}>{item.name} — {item.item_type === "finished" ? "منتج مصنع" : "خامة"}</option>)}</select></label>
           <label>كمية الناتج<input required min="0.001" step="any" type="number" style={field} value={outputQuantity} onChange={(e) => setOutputQuantity(e.target.value)} /></label>
@@ -235,7 +235,7 @@ export default function ProductionPage() {
 
       <section style={panel}>
         <h2 style={{ marginTop: 0 }}>آخر عمليات التصنيع</h2>
-        {history.length === 0 ? <p style={{ color: "#aaa" }}>لا توجد عمليات تصنيع مسجلة حتى الآن.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", minWidth: 650, borderCollapse: "collapse", textAlign: "right" }}><thead><tr>{["رقم العملية","الصنف الناتج","الكمية","إجمالي التكلفة","تكلفة الوحدة","التاريخ"].map((label) => <th key={label} style={{ padding: 12, borderBottom: "1px solid #444", color: "#c99a55" }}>{label}</th>)}</tr></thead><tbody>{history.map((row) => <tr key={row.id}>{[<b>#{row.id}</b>, getItemName(row.output_item_id), `${number(row.output_quantity)} ${getUnitName(row.output_unit_id)}`, money(row.total_cost), money(row.unit_cost), new Date(row.created_at).toLocaleString("ar-EG")].map((value, index) => <td key={index} style={{ padding: 12, borderBottom: "1px solid #303030" }}>{value}</td>)}</tr>)}</tbody></table></div>}
+        {history.length === 0 ? <p style={{ color: "#aaa" }}>لا توجد عمليات تصنيع مسجلة حتى الآن.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", minWidth: 650, borderCollapse: "collapse", textAlign: "right" }}><thead><tr>{["رقم العملية","الصنف الناتج","الكمية","إجمالي التكلفة","تكلفة الوحدة","التاريخ"].map((label) => <th key={label} style={{ padding: 12, borderBottom: "1px solid #444", color: "#c99a55" }}>{label}</th>)}</tr></thead><tbody>{history.map((row) => <tr key={row.id}>{[<b>#{row.id}</b>, getItemName(row.output_item_id), `${number(row.output_input_quantity)} ${getUnitName(row.output_unit_id)}`, money(row.total_cost), money(row.unit_cost), new Date(row.created_at).toLocaleString("ar-EG")].map((value, index) => <td key={index} style={{ padding: 12, borderBottom: "1px solid #303030" }}>{value}</td>)}</tr>)}</tbody></table></div>}
       </section>
     </main>
   );
