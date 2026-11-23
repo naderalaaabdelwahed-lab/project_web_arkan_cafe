@@ -9,7 +9,6 @@ const adminLinks=[
  ["/hr/manage","⌂","الرئيسية"],
  ["/hr/manage/attendance-code","⌁","تسجيل بالكود"],
  ["/hr/employees","♙","شؤون الموظفين"],
- ["/hr/shifts","◷","الشيفتات"],
  ["/hr/attendance","◷","الحضور والانصراف"],
  ["/hr/payroll","ج.م","الرواتب"]
 ];
