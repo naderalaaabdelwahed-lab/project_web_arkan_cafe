@@ -44,7 +44,7 @@ export async function GET(request) {
   try {
     const auth = await authorize(request);
     if (auth.response) return auth.response;
-    const { data, error } = await auth.db.from("hr_employees").select("id,full_name,phone,photo_path,job_title,department,hire_date,employment_status,monthly_salary,overtime_hour_rate,paid_leave_days,daily_work_hours,notes,created_at").order("created_at", { ascending: false });
+    const { data, error } = await auth.db.from("hr_employees").select("id,full_name,phone,photo_path,job_title,department,hire_date,employment_status,monthly_salary,overtime_hour_rate,paid_leave_days,daily_work_hours,notes,username,created_at").order("created_at", { ascending: false });
     if (error) throw error;
     const employees = await Promise.all((data || []).map(async (employee) => {
       const photoUrl = employee.photo_path
