@@ -42,15 +42,55 @@ export async function PATCH(request){
   const b=await request.json(),id=String(b.id||"");
   if(!/^[0-9a-f-]{36}$/i.test(id))return NextResponse.json({error:"سجل غير صحيح."},{status:400});
   const allowed=["present","absent","paid_leave","unpaid_leave","excused","holiday"];
-  if(!allowed.includes(b.attendance_status))return NextResponse.json({error:"حالة الحضور غير صحيحة."},{status:400});
-  const {data,error}=await a.db.rpc("hr_review_attendance",{
-   p_attendance_id:id,p_employee_id:null,p_shift_date:null,p_status:b.attendance_status,
-   p_notes:String(b.notes||"").slice(0,1000),p_reviewed_by:a.user.id
-  });
-  if(error){
-   const status=error.code==="23514"?409:400;
-   return NextResponse.json({error:error.message||"تعذر تحديث السجل."},{status});
+  const {data:current,error:readError}=await a.db.from("hr_attendance").select("*,hr_employee_shift_assignments:hr_employee_shift_assignments!left(shift_id,hr_shifts(*))").eq("id",id).maybeSingle();
+  if(readError)throw readError;
+  if(!current)return NextResponse.json({error:"سجل الحضور غير موجود."},{status:404});
+  const updates={updated_at:new Date().toISOString(),reviewed_by:a.user.id,reviewed_at:new Date().toISOString()};
+  if(b.attendance_status!==undefined){
+   if(!allowed.includes(b.attendance_status))return NextResponse.json({error:"حالة الحضور غير صحيحة."},{status:400});
+   updates.attendance_status=b.attendance_status;
   }
+  const parseLocal=(value)=>{
+   if(value===null||value==="")return null;
+   if(typeof value!=="string"||!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}$/.test(value))throw new Error("صيغة التاريخ والوقت غير صحيحة.");
+   const [date,time]=value.split("T");return cairoToUtc(date,time).toISOString();
+  };
+  const changesIn=Object.prototype.hasOwnProperty.call(b,"check_in_local");
+  const changesOut=Object.prototype.hasOwnProperty.call(b,"check_out_local");
+  if(changesIn)updates.check_in_at=parseLocal(b.check_in_local);
+  if(changesOut)updates.check_out_at=parseLocal(b.check_out_local);
+  const checkIn=changesIn?updates.check_in_at:current.check_in_at;
+  const checkOut=changesOut?updates.check_out_at:current.check_out_at;
+  if(checkIn&&checkOut&&new Date(checkOut)<=new Date(checkIn))return NextResponse.json({error:"وقت الانصراف لازم يكون بعد وقت الحضور."},{status:400});
+  if(changesIn)updates.check_in_method="manager";
+  if(changesOut)updates.check_out_method="manager";
+  if(changesIn||changesOut){
+   let worked=0,overtime=0,late=Number(current.late_minutes||0);
+   const {data:assignment,error:shiftError}=await a.db.from("hr_employee_shift_assignments").select("hr_shifts(*)").eq("employee_id",current.employee_id).lte("effective_from",current.shift_date).or("effective_to.is.null,effective_to.gte."+current.shift_date).order("effective_from",{ascending:false}).limit(1).maybeSingle();
+   if(shiftError)throw shiftError;
+   const shift=assignment?.hr_shifts;
+   if(checkIn&&checkOut){
+    const elapsed=Math.max(0,Math.round((new Date(checkOut)-new Date(checkIn))/60000));
+    worked=Math.max(0,elapsed-Number(shift?.break_minutes||0));
+    if(shift){
+     const start=cairoToUtc(current.shift_date,shift.start_time);
+     let end=cairoToUtc(current.shift_date,shift.end_time);
+     if(shift.crosses_midnight||end<=start)end=new Date(end.getTime()+86400000);
+     const planned=Math.max(0,Math.round((end-start)/60000)-Number(shift.break_minutes||0));
+     overtime=Math.max(0,worked-planned);
+     if(changesIn)late=Math.max(0,Math.floor((new Date(checkIn)-start)/60000)-Number(shift.grace_minutes||0));
+    } else {
+     const {data:emp}=await a.db.from("hr_employees").select("daily_work_hours").eq("id",current.employee_id).maybeSingle();
+     overtime=Math.max(0,worked-Math.round(Number(emp?.daily_work_hours||8)*60));
+    }
+   } else {worked=0;overtime=0;}
+   updates.worked_minutes=worked;updates.overtime_minutes=overtime;
+   if(changesIn)updates.late_minutes=late;
+  }
+  if(b.notes!==undefined)updates.notes=String(b.notes||"").slice(0,1000)||null;
+  else if(changesIn||changesOut)updates.notes=[current.notes,"تعديل وقت الحضور/الانصراف يدويًا بواسطة المدير"].filter(Boolean).join("\\n").slice(0,1000);
+  const {data,error}=await a.db.from("hr_attendance").update(updates).eq("id",id).select("*").single();
+  if(error)throw error;
   return NextResponse.json({attendance:data});
  }catch(e){console.error("HR attendance PATCH",e);return NextResponse.json({error:e.message||"تعذر تحديث السجل."},{status:400})}
 }
