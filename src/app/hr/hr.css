@@ -49,3 +49,25 @@
 .hr-attendance-submit{width:100%;font:800 16px 'Cairo',sans-serif}
 .hr-attendance-note{margin:0;text-align:center;color:#9b8b72;font-size:12px;line-height:1.9}
 @media(max-width:650px){.hr-attendance-card{padding:18px}.hr-attendance-actions button{min-height:90px;font-size:14px}.hr-attendance-form input{font-size:25px}}
+
+/* HR attendance report visual refresh */
+.hr-main > main[dir="rtl"]{max-width:1250px!important;margin:0 auto!important;padding:8px 0 30px!important;color:#f4e9d8!important;font-family:'Cairo',sans-serif!important}
+.hr-main > main[dir="rtl"]>h1{font-size:clamp(25px,3vw,34px)!important;font-weight:900!important;color:#f4e9d8!important;margin:0 0 8px!important}
+.hr-main > main[dir="rtl"]>p{color:#a99b87!important;line-height:1.9!important;margin:0 0 22px!important}
+.hr-main > main[dir="rtl"] section{background:linear-gradient(145deg,#211b14,#191510)!important;border:1px solid #443723!important;border-radius:16px!important;padding:22px!important;box-shadow:0 12px 35px #0003!important;margin-bottom:18px!important}
+.hr-main > main[dir="rtl"] section h2{font-size:18px!important;color:#e4bd75!important;margin:0 0 16px!important;line-height:1.8!important}
+.hr-main > main[dir="rtl"] label{display:inline-grid!important;gap:8px!important;color:#e8ddca!important;font-size:13px!important;font-weight:700!important}
+.hr-main > main[dir="rtl"] input,.hr-main > main[dir="rtl"] select{min-height:44px!important;padding:10px 13px!important;border:1px solid #54452e!important;border-radius:10px!important;background:#100d0b!important;color:#f4e9d8!important;font:500 14px 'Cairo',sans-serif!important;outline:none!important;box-shadow:none!important}
+.hr-main > main[dir="rtl"] input:focus,.hr-main > main[dir="rtl"] select:focus{border-color:#c9a45c!important;box-shadow:0 0 0 3px #c9a45c24!important}
+.hr-main > main[dir="rtl"] button{min-height:42px!important;padding:9px 17px!important;border:1px solid #9a7843!important;border-radius:10px!important;background:linear-gradient(135deg,#c9a45c,#a98243)!important;color:#17120b!important;font:800 13px 'Cairo',sans-serif!important;cursor:pointer!important;transition:filter .2s,transform .2s!important}
+.hr-main > main[dir="rtl"] button:hover{filter:brightness(1.12)!important;transform:translateY(-1px)!important}
+.hr-main > main[dir="rtl"] table{border-collapse:separate!important;border-spacing:0!important;overflow:hidden!important;border-radius:10px!important}
+.hr-main > main[dir="rtl"] thead{background:#302416!important}
+.hr-main > main[dir="rtl"] th{padding:13px 11px!important;color:#e4bd75!important;font:800 12px 'Cairo',sans-serif!important;background:#302416!important;border-bottom:1px solid #59472d!important;white-space:nowrap!important}
+.hr-main > main[dir="rtl"] td{padding:12px 11px!important;color:#e7dfd2!important;font:500 12px 'Cairo',sans-serif!important;border-bottom:1px solid #352b1e!important}
+.hr-main > main[dir="rtl"] tbody tr{background:#191510!important}
+.hr-main > main[dir="rtl"] tbody tr:nth-child(even){background:#211b14!important}
+.hr-main > main[dir="rtl"] tbody tr:hover{background:#2b2318!important}
+.hr-main > main[dir="rtl"] [role="alert"]{padding:12px 15px!important;border:1px solid #754343!important;border-radius:10px!important;background:#482323!important;color:#ffc5c5!important}
+.hr-main > main[dir="rtl"] [role="status"]{padding:12px 15px!important;border:1px solid #31684c!important;border-radius:10px!important;background:#193a2c!important;color:#b5f0ca!important}
+@media(max-width:650px){.hr-main > main[dir="rtl"] section{padding:15px!important}.hr-main > main[dir="rtl"] section:first-of-type{align-items:stretch!important}.hr-main > main[dir="rtl"] section:first-of-type label,.hr-main > main[dir="rtl"] section:first-of-type button{width:100%!important}}
