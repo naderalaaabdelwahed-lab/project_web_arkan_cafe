@@ -52,7 +52,7 @@ Next.js 16 application for ARKAN Cafe & Restaurant.
 - Codes are stored as salted scrypt hashes and are never returned to the kiosk.
 - Duplicate check-ins for the same work date and duplicate check-outs are rejected. A new work date can be checked in even if a previous date still has an unclosed shift; that previous record remains open for manager correction.
 - Overnight check-outs are attached to the original shift date. For example, a shift that starts on Nov 23 and ends at 2:00 AM on Nov 24 remains one attendance record with `shift_date=Nov 23`.
-- Managers can correct check-in and check-out timestamps from the attendance report. Entered date/time values are interpreted in Cairo time, and worked/overtime minutes are recalculated.
+- Managers can filter the attendance report by employee and correct check-in and check-out timestamps from each record. Entered date/time values are interpreted in Cairo time, and worked/overtime minutes are recalculated.
 - Pending absences are generated automatically by a Supabase Cron job every 15 minutes. The job uses Cairo local time and supports overnight shifts.
 - Payroll formulas currently use a 30-day salary basis and a 26-day lateness divisor. Confirm these rules, overtime rates, and leave policy with the restaurant before using payroll for actual payment.
 
