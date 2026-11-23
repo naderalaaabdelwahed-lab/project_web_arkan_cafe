@@ -3,7 +3,7 @@ import Link from "next/link";
 import {useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
 import {supabase} from "@/lib/supabase";
-const items=[["/hr/employees","شؤون الموظفين","ملفات الموظفين وإنشاء حسابات الدخول"],["/hr/shifts","الشيفتات","إنشاء الشيفتات وتكليف الموظفين"],["/hr/attendance","الحضور والانصراف","مراجعة السجلات والغياب وتصحيح الأوقات"],["/admin/hr/payroll","الرواتب","حساب الرواتب والمراجعة والتسوية"]];
+const items=[["/hr/employees","شؤون الموظفين","ملفات الموظفين وإنشاء حسابات الدخول"],["/hr/shifts","الشيفتات","إنشاء الشيفتات وتكليف الموظفين"],["/hr/attendance","الحضور والانصراف","مراجعة السجلات والغياب وتصحيح الأوقات"],["/hr/payroll","الرواتب","حساب الرواتب والمراجعة والتسوية"]];
 export default function HrManagement(){
  const router=useRouter();const [ok,setOk]=useState(false),[loading,setLoading]=useState(true);
  useEffect(()=>{supabase.rpc("is_admin").then(({data,error})=>{if(error||data!==true)router.replace("/hr");else setOk(true);setLoading(false);});},[router]);
