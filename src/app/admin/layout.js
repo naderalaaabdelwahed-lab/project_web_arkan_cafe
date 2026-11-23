@@ -48,18 +48,8 @@ const links = [
     adminOnly: true,
   },
   {
-    href: "/admin/hr/employees",
-    label: "♙ شؤون الموظفين",
-    adminOnly: true,
-  },
-  {
-    href: "/admin/hr/shifts",
-    label: "◷ إدارة الشيفتات",
-    adminOnly: true,
-  },
-  {
-    href: "/admin/hr/kiosk",
-    label: "▣ إعداد جهاز الحضور",
+    href: "/hr/manage",
+    label: "♙ نظام الموارد البشرية HR",
     adminOnly: true,
   },
 ];
