@@ -69,7 +69,11 @@ export async function POST(request) {
    const {data:existing}=await db.from("hr_attendance").select("id,check_in_at,check_out_at").eq("employee_id",employee.id).eq("shift_date",shiftDate).maybeSingle();
    if(existing?.check_in_at)return NextResponse.json({error:"تم تسجيل حضورك لهذا اليوم بالفعل."},{status:409});
    let lateMinutes=0;
-   if(shift){
+   if(shift?.is_flexible && shift.latest_check_in){
+    const latest=cairoLocalToUtc(shiftDate,shift.latest_check_in);
+    const cutoff=new Date(latest.getTime()+Number(shift.grace_minutes||0)*60000);
+    if(now>cutoff) return NextResponse.json({error:"انتهى وقت الحضور المسموح لهذا الشيفت."},{status:409});
+   } else if(shift){
     const start=cairoLocalToUtc(shiftDate,shift.start_time);
     lateMinutes=Math.max(0,Math.floor((now-start)/60000)-Number(shift.grace_minutes||0));
    }
