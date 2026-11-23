@@ -41,10 +41,9 @@ export default function HrHome(){
    const clean=username.trim().toLowerCase();
    const {data:result,error:authError}=await supabase.auth.signInWithPassword({email:clean+"@employees.arkan.local",password});
    if(authError)throw authError;
-   const {data:isAdmin}=await supabase.rpc("is_admin");
-   if(isAdmin===true){await supabase.auth.signOut();throw new Error("استخدم بوابة الإدارة لحساب المدير.");}
+   if(result.user?.app_metadata?.account_type!=="hr_employee"){await supabase.auth.signOut();throw new Error("هذا الحساب غير مخصص للحضور والانصراف. استخدم بوابة الإدارة.");}
    setSession(result.session);await load(result.session);
-  }catch(e){setError(e.message==="استخدم بوابة الإدارة لحساب المدير."?e.message:"اسم المستخدم أو كلمة المرور غير صحيحة.");}
+  }catch(e){setError(e.message==="هذا الحساب غير مخصص للحضور والانصراف. استخدم بوابة الإدارة."?e.message:"اسم المستخدم أو كلمة المرور غير صحيحة.");}
   finally{setBusy(false);}
  }
  async function logout(){await supabase.auth.signOut();setSession(null);setData(null);}
