@@ -34,7 +34,7 @@ export default function HrHome(){
     </div>
     <label style={{display:"grid",gap:10,color:"#e8ddca",fontWeight:800}}>
      كود الحضور والانصراف
-     <input required type="password" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} minLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\\D/g,"").slice(0,6))} placeholder="••••••" style={{width:"100%",boxSizing:"border-box",textAlign:"center",fontSize:28,letterSpacing:12,fontWeight:900,padding:"16px 12px",borderRadius:12,border:"1px solid #665334",background:"#100d0b",color:"#f4e9d8",outlineColor:"#c9a45c"}}/>
+     <input required type="password" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} minLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="••••••" style={{width:"100%",boxSizing:"border-box",textAlign:"center",fontSize:28,letterSpacing:12,fontWeight:900,padding:"16px 12px",borderRadius:12,border:"1px solid #665334",background:"#100d0b",color:"#f4e9d8",outlineColor:"#c9a45c"}}/>
      <small style={{fontWeight:400,color:"#9f917d"}}>الكود مكوّن من 6 أرقام. خليه سري وما تشاركهوش مع أي حد.</small>
     </label>
     {error&&<div role="alert" style={{padding:13,borderRadius:10,background:"#482323",border:"1px solid #754343",color:"#ffc5c5"}}>{error}</div>}
