@@ -15,7 +15,7 @@ export async function GET(request){
   }
   const [{data:runs,error},{data:employees,error:ee},{data:adjustments,error:ae}]=await Promise.all([
    runQuery,
-   a.db.from("hr_employees").select("id,full_name,employment_status,termination_date").order("full_name"),
+   a.db.from("hr_employees").select("id,full_name,employment_status,termination_date").is("archived_at",null).order("full_name"),
    a.db.from("hr_payroll_adjustments").select("id,employee_id,adjustment_date,amount,adjustment_type,reason").order("adjustment_date",{ascending:false}).limit(100)
   ]);
   if(error)throw error;if(ee)throw ee;if(ae)throw ae;
