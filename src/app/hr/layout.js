@@ -27,7 +27,7 @@ export default function HrLayout({children}){
    if(error||!session){setRole("guest");if(pathname!=="/hr")router.replace("/hr");return;}
    const {data:isAdmin,error:adminError}=await supabase.rpc("is_admin");
    if(!active)return;
-   if(!adminError&&isAdmin===true){setRole("admin");if(pathname==="/hr")router.replace("/hr/manage");return;}
+   if(!adminError&&isAdmin===true){setRole("admin");return;}
    if(session.user?.app_metadata?.account_type!=="hr_employee"){setRole("guest");router.replace("/admin");return;}
    setRole("employee");
    if(pathname!=="/hr"){router.replace("/hr");return;}
@@ -38,6 +38,7 @@ export default function HrLayout({children}){
  },[pathname,router]);
  if(role==="checking"&&pathname!=="/hr")return <main dir="rtl" style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"#100d0b",color:"#e4bd75"}}>جارٍ التحقق من حساب HR...</main>;
  if(role==="checking"||role==="guest")return children;
+ if(pathname==="/hr")return children;
  const links=role==="admin"?adminLinks:employeeLinks;
  async function logout(){await supabase.auth.signOut();router.replace("/hr");router.refresh();}
  return <div className="hr-shell" dir="rtl">
