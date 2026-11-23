@@ -56,7 +56,7 @@ function Table({ columns, rows, empty = "لا توجد بيانات للفترة
   return (
     <div className="table-wrap">
       <table>
-        <colgroup>{columns.map((column) => <col key={column.label} style={{ width: `${100 / columns.length}%` }} />)}</colgroup>
+        <colgroup>{columns.map((column) => <col key={column.label} style={{ width: column.width ? `${column.width}%` : `${100 / columns.length}%` }} />)}</colgroup>
         <thead><tr>{columns.map((column) => <th key={column.label}>{column.label}</th>)}</tr></thead>
         <tbody>
           {rows.map((row, index) => (
@@ -210,13 +210,13 @@ export default function InventoryReportsPage() {
 
   const filteredItems = items.filter((item) => item.is_active && (!query || item.name.toLocaleLowerCase("ar").includes(query)));
   const columns = activeReport === "movement" ? [
-    { label: "التاريخ", render: (row) => dateOnly(row.created_at) },
-    { label: "الصنف", render: (row) => itemName(row.inventory_item_id) },
-    { label: "نوع الحركة", render: (row) => movementLabels[row.movement_type] || row.movement_type },
-    { label: "الكمية", render: (row) => formatNumber(row.quantity) },
-    { label: "الوحدة", render: (row) => unitName(itemMap.get(Number(row.inventory_item_id))) },
-    { label: "المصدر", render: (row) => row.order_id ? `أوردر #${row.order_id}` : row.source_type === "purchase" ? `فاتورة #${row.source_id || ""}` : row.source_type || "—" },
-    { label: "ملاحظات", render: (row) => row.notes || "—" },
+    { label: "التاريخ", width: 12, render: (row) => dateOnly(row.created_at) },
+    { label: "الصنف", width: 20, render: (row) => itemName(row.inventory_item_id) },
+    { label: "نوع الحركة", width: 13, render: (row) => movementLabels[row.movement_type] || row.movement_type },
+    { label: "الكمية", width: 10, render: (row) => formatNumber(row.quantity) },
+    { label: "الوحدة", width: 8, render: (row) => unitName(itemMap.get(Number(row.inventory_item_id))) },
+    { label: "المصدر", width: 15, render: (row) => row.order_id ? `أوردر #${row.order_id}` : row.source_type === "purchase" ? `فاتورة #${row.source_id || ""}` : row.source_type || "—" },
+    { label: "ملاحظات", width: 22, render: (row) => row.notes || "—" },
   ] : activeReport === "stock" || activeReport === "valuation" ? [
     { label: "الصنف", key: "name" },
     { label: "الرصيد", render: (row) => formatNumber(row.current_stock) },
@@ -235,13 +235,13 @@ export default function InventoryReportsPage() {
     { label: "الوحدة", key: "unit" },
     { label: "القيمة التقديرية", render: (row) => formatMoney(row.value) },
   ] : activeReport === "purchases" ? [
-    { label: "التاريخ", render: (row) => dateOnly(row.purchase.purchase_date) },
-    { label: "الفاتورة", render: (row) => row.purchase.invoice_number || `#${row.purchase.id}` },
-    { label: "المورد", render: (row) => supplierMap.get(Number(row.purchase.supplier_id)) || "—" },
-    { label: "الصنف", render: (row) => row.item?.name || "—" },
-    { label: "الكمية", render: (row) => formatNumber(row.quantity) },
-    { label: "تكلفة الوحدة", render: (row) => formatMoney(row.unit_price) },
-    { label: "الإجمالي", render: (row) => formatMoney(row.subtotal) },
+    { label: "التاريخ", width: 11, render: (row) => dateOnly(row.purchase.purchase_date) },
+    { label: "الفاتورة", width: 14, render: (row) => row.purchase.invoice_number || `#${row.purchase.id}` },
+    { label: "المورد", width: 15, render: (row) => supplierMap.get(Number(row.purchase.supplier_id)) || "—" },
+    { label: "الصنف", width: 20, render: (row) => row.item?.name || "—" },
+    { label: "الكمية", width: 10, render: (row) => formatNumber(row.quantity) },
+    { label: "تكلفة الوحدة", width: 14, render: (row) => formatMoney(row.unit_price) },
+    { label: "الإجمالي", width: 16, render: (row) => formatMoney(row.subtotal) },
   ] : [
     { label: "التاريخ", render: (row) => dateOnly(row.created_at) },
     { label: "الصنف", render: (row) => itemName(row.inventory_item_id) },
@@ -382,6 +382,59 @@ export default function InventoryReportsPage() {
         {activeReport === "low" && !loading && !error && <p className="summary">عدد الأصناف عند حد الطلب أو أقل: <strong>{formatNumber(lowStockItems.length)}</strong></p>}
       </section>
 
+      <style jsx global>{`
+        .inventory-reports .table-wrap {
+          display: block;
+          width: 100%;
+          max-width: 100%;
+          overflow-x: auto;
+          border: 1px solid #3b4960;
+          border-radius: 12px;
+          background: #0f172a;
+        }
+        .inventory-reports .table-wrap table {
+          display: table;
+          width: 100% !important;
+          min-width: 100% !important;
+          border-collapse: separate;
+          border-spacing: 0;
+          table-layout: fixed !important;
+          direction: rtl;
+          text-align: right;
+        }
+        .inventory-reports .table-wrap th,
+        .inventory-reports .table-wrap td {
+          box-sizing: border-box;
+          padding: 15px 14px;
+          border-bottom: 1px solid #334155;
+          border-left: 1px solid #293548;
+          min-width: 0;
+          font-size: 14px;
+          line-height: 1.85;
+          text-align: right;
+          vertical-align: middle;
+          white-space: normal !important;
+          overflow-wrap: anywhere;
+          word-break: normal;
+        }
+        .inventory-reports .table-wrap th {
+          background: #26364d;
+          color: #fff;
+          font-weight: 800;
+          font-size: 13px;
+          letter-spacing: .1px;
+        }
+        .inventory-reports .table-wrap td { color: #e5edf8; }
+        .inventory-reports .table-wrap tbody tr:nth-child(even) td { background: #172438; }
+        .inventory-reports .table-wrap tbody tr:hover td { background: #20324b; }
+        .inventory-reports .table-wrap tbody tr:last-child td { border-bottom: 0; }
+        .inventory-reports .table-wrap th:last-child,
+        .inventory-reports .table-wrap td:last-child { border-left: 0; }
+        .inventory-reports .table-wrap tbody tr { height: 58px; }
+        @media (max-width: 750px) {
+          .inventory-reports .table-wrap table { min-width: 760px !important; }
+        }
+      `}</style>
       <style jsx>{`
         .inventory-reports{color:#f8fafc;padding:12px 0 40px;direction:rtl}
         .header,.report-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
