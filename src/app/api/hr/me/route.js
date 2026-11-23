@@ -18,7 +18,7 @@ async function context(request) {
   const {data,error}=await auth.auth.getUser(token);
   if(error||!data?.user) return {response:NextResponse.json({error:"جلسة الدخول غير صالحة."},{status:401})};
   const {data:employee,error:employeeError}=await db.from("hr_employees")
-    .select("id,full_name,job_title,department,employment_status,monthly_salary,username,auth_user_id")
+    .select("id,full_name,job_title,department,employment_status,monthly_salary,daily_work_hours,username,auth_user_id")
     .eq("auth_user_id",data.user.id).maybeSingle();
   if(employeeError) throw employeeError;
   if(!employee||employee.employment_status!=="active") return {response:NextResponse.json({error:"هذا الحساب غير مرتبط بموظف نشط. تواصل مع الإدارة."},{status:403})};
