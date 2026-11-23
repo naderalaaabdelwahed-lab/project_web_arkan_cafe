@@ -23,6 +23,7 @@ export default function ReservationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [minimumDate, setMinimumDate] = useState("");
 
   async function loadSettings() {
     setLoadingSettings(true);
@@ -67,6 +68,10 @@ export default function ReservationsPage() {
 
     return `${year}-${month}-${day}`;
   }
+
+  useEffect(() => {
+    setMinimumDate(getLocalDate());
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -300,7 +305,7 @@ export default function ReservationsPage() {
                   name="date"
                   value={form.date}
                   onChange={handleChange}
-                  min={getLocalDate()}
+                  min={minimumDate}
                   required
                 />
               </label>
