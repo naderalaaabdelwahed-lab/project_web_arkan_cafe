@@ -59,6 +59,22 @@ export default function HrEmployeesPage() {
     } catch(e) { setError(e.message); }
     finally { setSaving(false); }
   }
+  async function archiveEmployee(employee) {
+    const confirmed = confirm("هل تريد حذف " + employee.full_name + " من قائمة الموظفين؟ سيتم إخفاء ملفه من القائمة مع الاحتفاظ بالحضور والرواتب وكشوفه القديمة.");
+    if (!confirmed) return;
+    try {
+      setError(""); setMessage("");
+      await request("/api/admin/hr/employees", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: employee.id, action: "archive", termination_date: employee.termination_date || cairoToday })
+      });
+      setMessage("تم حذف الموظف من القائمة وأُرشفت بياناته مع الحفاظ على سجلاته.");
+      if (editing === employee.id) reset();
+      await load();
+    } catch (e) { setError(e.message); }
+  }
+
   async function toggleStatus(employee) {
     if (!confirm(employee.employment_status==="active"?"إيقاف الموظف مع الاحتفاظ بسجلاته؟":"إعادة تفعيل الموظف؟")) return;
     try { await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:employee.employment_status==="active"?"deactivate":"activate",termination_date:employee.termination_date||cairoToday})}); await load(); }
@@ -104,7 +120,7 @@ export default function HrEmployeesPage() {
               <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{emp.termination_date||"—"}</td>
               <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>
               <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{emp.has_attendance_code?"تم إعداد الكود":"غير مُعد"}</td>
-              <td style={{padding:12,borderBottom:"1px solid #3a3022",whiteSpace:"nowrap"}}><button onClick={()=>{edit(emp);window.scrollTo({top:0,behavior:"smooth"});}} style={{marginLeft:8}}>تعديل البيانات / الكود</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
+              <td style={{padding:12,borderBottom:"1px solid #3a3022",whiteSpace:"nowrap"}}><button onClick={()=>{edit(emp);window.scrollTo({top:0,behavior:"smooth"});}} style={{marginLeft:8}}>تعديل البيانات / الكود</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button><button onClick={()=>archiveEmployee(emp)} style={{marginRight:8,background:"#7f1d1d",color:"#fff",border:0,borderRadius:7,padding:"7px 10px"}}>حذف</button></td>
             </tr>)}</tbody>
           </table></div>}
       </section>
