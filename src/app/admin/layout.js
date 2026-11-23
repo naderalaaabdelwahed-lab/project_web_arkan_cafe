@@ -70,6 +70,10 @@ const inventoryRoutes = [
     href: "/admin/inventory/reports",
     permission: "inventory.reports.view",
   },
+  {
+    href: "/admin/inventory/production",
+    permission: "inventory.production.manage",
+  },
 ];
 
 export default function AdminLayout({ children }) {
