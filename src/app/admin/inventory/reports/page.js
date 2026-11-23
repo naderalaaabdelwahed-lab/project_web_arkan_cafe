@@ -56,6 +56,7 @@ function Table({ columns, rows, empty = "لا توجد بيانات للفترة
   return (
     <div className="table-wrap">
       <table>
+        <colgroup>{columns.map((column) => <col key={column.label} style={{ width: `${100 / columns.length}%` }} />)}</colgroup>
         <thead><tr>{columns.map((column) => <th key={column.label}>{column.label}</th>)}</tr></thead>
         <tbody>
           {rows.map((row, index) => (
@@ -270,6 +271,13 @@ export default function InventoryReportsPage() {
     const reportCopy = reportElement.cloneNode(true);
     reportCopy.querySelector(".report-actions")?.remove();
     const reportTitle = reportCopy.querySelector("h2")?.textContent || "تقرير المخزن";
+    const printedAt = new Date();
+    const dateTime = printedAt.toLocaleString("ar-EG", { dateStyle: "full", timeStyle: "short" });
+    const period = dateFrom || dateTo
+      ? `من ${dateFrom ? dateOnly(dateFrom) : "البداية"} إلى ${dateTo ? dateOnly(dateTo) : "اليوم"}`
+      : "كل الفترات";
+    const searchLabel = search.trim() ? `بحث: ${search.trim()}` : "بدون فلتر بحث";
+    const summaryText = reportCopy.querySelector(".summary")?.textContent || `عدد السجلات: ${formatNumber(reportRows.length)}`;
 
     printWindow.document.open();
     printWindow.document.write(`<!doctype html>
@@ -277,31 +285,53 @@ export default function InventoryReportsPage() {
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>${reportTitle}</title>
+          <title>${reportTitle} - مطعم أركان</title>
           <style>
             @page { size: A4 landscape; margin: 12mm; }
             * { box-sizing: border-box; }
-            body { margin: 0; padding: 0; color: #111; background: #fff; direction: rtl; font-family: Arial, Tahoma, sans-serif; }
-            .report { width: 100%; padding: 0; color: #111; }
-            .report-heading { display: flex; justify-content: space-between; align-items: center; margin: 0 0 16px; padding: 0 0 12px; border-bottom: 2px solid #222; }
-            .report-heading h2 { margin: 0 0 5px; color: #111; font-size: 20px; }
-            .report-heading p { margin: 0; color: #444; font-size: 12px; }
-            .table-wrap { width: 100%; overflow: visible; }
-            table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; text-align: right; }
-            th, td { width: auto; padding: 10px 12px; border: 1px solid #999; color: #111; font-size: 10pt; line-height: 1.6; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; word-break: normal; }
-            th { background: #e9edf2; font-weight: 700; }
-            tbody tr:nth-child(even) td { background: #f7f7f7; }
-            .empty, .summary { margin-top: 12px; padding: 12px; color: #111; background: #fff; border: 1px solid #aaa; }
-            .summary strong { color: #111; }
-            thead { display: table-header-group; }
-            tr { break-inside: avoid; page-break-inside: avoid; }
+            body { margin: 0; color: #172033; background: #fff; direction: rtl; font-family: Tahoma, Arial, sans-serif; }
+            .print-sheet { width: 100%; }
+            .brand { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:0 0 14px; border-bottom:3px solid #1e3a5f; }
+            .brand-name { font-size:25px; font-weight:800; color:#17365d; margin:0 0 5px; }
+            .brand-subtitle { margin:0; color:#64748b; font-size:11px; }
+            .print-meta { text-align:left; color:#475569; font-size:10px; line-height:1.9; }
+            .report-title { margin:18px 0 10px; font-size:19px; color:#172033; }
+            .meta-strip { display:flex; flex-wrap:wrap; gap:8px 22px; padding:10px 12px; margin-bottom:14px; background:#f1f5f9; border:1px solid #d7dee8; border-radius:6px; font-size:11px; }
+            .report { width:100%; padding:0; color:#172033; }
+            .report-heading { display:none; }
+            .table-wrap { width:100%; overflow:visible; border:0; }
+            table { width:100% !important; min-width:100% !important; table-layout:fixed !important; border-collapse:collapse; text-align:right; direction:rtl; }
+            col { width:auto; }
+            th, td { padding:9px 10px; border:1px solid #aeb8c5; color:#172033; font-size:10pt; line-height:1.55; vertical-align:middle; white-space:normal; overflow-wrap:anywhere; word-break:normal; }
+            th { background:#e8eef5 !important; color:#17365d; font-weight:700; }
+            tbody tr:nth-child(even) td { background:#f7f9fc !important; }
+            .empty, .summary { margin-top:12px; padding:11px; color:#172033; background:#f8fafc; border:1px solid #cbd5e1; }
+            .summary strong { color:#17365d; }
+            thead { display:table-header-group; }
+            tr { break-inside:avoid; page-break-inside:avoid; }
+            .print-footer { margin-top:16px; padding-top:8px; border-top:1px solid #cbd5e1; color:#64748b; font-size:9px; display:flex; justify-content:space-between; }
+            @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
           </style>
         </head>
-        <body>${reportCopy.outerHTML}</body>
+        <body>
+          <main class="print-sheet">
+            <header class="brand">
+              <div><div class="brand-name">مطعم أركان</div><p class="brand-subtitle">إدارة المخزون والتقارير</p></div>
+              <div class="print-meta"><div>تاريخ ووقت الطباعة: ${dateTime}</div><div>المكان: مطعم أركان</div></div>
+            </header>
+            <h1 class="report-title">${reportTitle}</h1>
+            <div class="meta-strip"><span><strong>الفترة:</strong> ${period}</span><span><strong>الفلاتر:</strong> ${searchLabel}</span><span><strong>عدد السجلات:</strong> ${formatNumber(reportRows.length)}</span></div>
+            ${reportCopy.outerHTML}
+            <footer class="print-footer"><span>مطعم أركان - تقرير داخلي</span><span>تم إنشاء التقرير إلكترونيًا</span></footer>
+          </main>
+        </body>
       </html>`);
     printWindow.document.close();
     printWindow.focus();
-    printWindow.print();
+    printWindow.onload = () => window.setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 300);
   };
 
   return (
@@ -368,9 +398,10 @@ export default function InventoryReportsPage() {
         .report{padding:22px}.report-heading{margin-bottom:20px;align-items:flex-start}.report-heading h2{font-size:20px;margin:0 0 7px;font-weight:900}
         .report-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.report-heading span{font-size:12px;color:#94a3b8}
         .print-button{background:#14532d;border-color:#166534;padding:10px 16px}
-        .table-wrap{width:100%;overflow-x:auto;border:1px solid #3b4960;border-radius:10px}
-        table{width:100%;min-width:100%;border-collapse:collapse;table-layout:fixed;text-align:right}
-        th,td{padding:17px 22px;border-bottom:1px solid #334155;border-left:1px solid #293548;font-size:14px;line-height:2;vertical-align:middle;text-align:right}
+        .table-wrap{display:block;width:100%;max-width:100%;overflow-x:auto;border:1px solid #3b4960;border-radius:10px}
+        table{display:table;width:100% !important;min-width:100% !important;border-collapse:collapse;table-layout:fixed;text-align:right;direction:rtl}
+        col{width:auto}
+        th,td{padding:17px 16px;border-bottom:1px solid #334155;border-left:1px solid #293548;font-size:14px;line-height:1.9;vertical-align:middle;text-align:right;min-width:0}
         th{background:#202b3c;color:#f1f5f9;font-size:14px;font-weight:900;white-space:normal}
         td{color:#f1f5f9;white-space:normal;overflow-wrap:anywhere;word-break:normal;min-width:0}
         th:last-child,td:last-child{border-left:0}
