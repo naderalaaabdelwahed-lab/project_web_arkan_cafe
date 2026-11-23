@@ -1,6 +1,6 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
-import {useRouter} from "next/navigation";
+import {useRouter} from "next/navigation";\nimport Link from "next/link";
 import {supabase} from "@/lib/supabase";
 
 const field={width:"100%",padding:13,borderRadius:10,border:"1px solid #405365",background:"#14212c",color:"#fff",boxSizing:"border-box"};
@@ -56,7 +56,7 @@ export default function HrHome(){
    <label>كلمة المرور<input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} style={field}/></label>
    {error&&<p role="alert" style={{color:"#ff9c9c"}}>{error}</p>}
    <button disabled={busy} style={gold}>{busy?"جارٍ تسجيل الدخول...":"تسجيل الدخول"}</button>
-   <a href="/" style={{textAlign:"center",color:"#d6a44d"}}>العودة للموقع</a>
+   <Link href="/" style={{textAlign:"center",color:"#d6a44d"}}>العودة للموقع</Link>
   </form>
  </main>;
  const todayRow=data?.attendance?.find(x=>x.shift_date===data.today);
