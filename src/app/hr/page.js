@@ -25,7 +25,7 @@ export default function HrHome(){
     <div style={{fontSize:35,fontWeight:950,letterSpacing:1}}>ARKAN<span style={{color:"#c9a45c"}}>.</span></div>
     <div style={{fontSize:12,letterSpacing:3,color:"#c9a45c",fontWeight:800,marginTop:3}}>EMPLOYEE ATTENDANCE</div>
     <h1 style={{fontSize:27,margin:"18px 0 8px"}}>تسجيل الحضور والانصراف</h1>
-    <p style={{color:"#ad9e88",margin:0,lineHeight:1.8}}>اختار العملية، اكتب كودك الشخصي، وسجّل وقتك بسهولة.</p>
+    <p style={{color:"#ad9e88",margin:0,lineHeight:1.8}}>اختار العملية واكتب كودك الشخصي</p>
    </header>
    <form onSubmit={submit} style={{background:"linear-gradient(145deg,#241d15,#19140f)",border:"1px solid #59472d",borderRadius:20,padding:24,display:"grid",gap:20,boxShadow:"0 24px 80px #0008"}}>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -39,7 +39,7 @@ export default function HrHome(){
     </label>
     {error&&<div role="alert" style={{padding:13,borderRadius:10,background:"#482323",border:"1px solid #754343",color:"#ffc5c5"}}>{error}</div>}
     {result&&<div role="status" style={{padding:15,borderRadius:10,background:"#193a2c",border:"1px solid #31684c",color:"#b5f0ca",lineHeight:1.9}}><strong>تم تسجيل {action==="check_in"?"الحضور":"الانصراف"} بنجاح ✓</strong><div>الموظف: {result.employee_name}</div><div>الوقت: {recordedAt}</div></div>}
-    <button disabled={busy||code.length!==6} type="submit" style={{padding:15,border:0,borderRadius:12,background:"#c9a45c",color:"#17120b",fontSize:17,fontWeight:900,cursor:busy?"wait":"pointer",opacity:busy||code.length!==6?.6:1}}>{busy?"جارٍ تسجيل العملية...":action==="check_in"?"تأكيد تسجيل الحضور":"تأكيد تسجيل الانصراف"}</button>
+    <button disabled={busy||code.length!==6} type="submit" style={{padding:15,border:0,borderRadius:12,background:"#c9a45c",color:"#17120b",fontSize:17,fontWeight:900,cursor:busy?"wait":"pointer",opacity:busy||code.length!==6?.6:1}}>{busy?"جارٍ تسجيل العملية...":"تأكيد التسجيل"}</button>
    </form>
    <footer style={{textAlign:"center",color:"#81745f",fontSize:12,lineHeight:1.8}}>يتم حفظ وقت التسجيل تلقائيًا بتوقيت القاهرة.<br/>لو الكود مش شغال، تواصل مع المدير المسؤول.</footer>
   </div>
