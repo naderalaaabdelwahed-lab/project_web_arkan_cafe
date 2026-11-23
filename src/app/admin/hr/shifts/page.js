@@ -86,6 +86,7 @@ export default function HrShiftsPage() {
   const shiftName = (id) => shifts.find((s) => s.id === id)?.name || "شيفت غير موجود";
   const employeeName = (id) => employees.find((e) => e.id === id)?.full_name || "موظف غير موجود";
   const time = (value) => String(value || "").slice(0, 5);
+  const formatTime = (value) => { const raw = time(value); if (!/^\\d{2}:\\d{2}$/.test(raw)) return "—"; const [h, m] = raw.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; };
   const durationOf = (s) => { const a=Number(String(s.start_time).slice(0,2))*60+Number(String(s.start_time).slice(3,5)); const b=Number(String(s.end_time).slice(0,2))*60+Number(String(s.end_time).slice(3,5)); const n=Math.max(0,b-a+(s.crosses_midnight?1440:0)-Number(s.break_minutes||0)); return `${Math.floor(n/60)}س ${n%60}د`; };
 
   return <main dir="rtl" style={{ minHeight: "100vh", background: "#101820", color: "#f8fafc", padding: "28px 18px" }}>
@@ -98,14 +99,14 @@ export default function HrShiftsPage() {
         <h2 style={{ margin: 0, fontSize: 20 }}>إنشاء شيفت جديد</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 14 }}>
           <label style={label}>اسم الشيفت<input required maxLength={80} style={field} placeholder="مثلاً: شيفت المساء" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></label>
-          <label style={label}>وقت البداية<input required type="time" style={field} value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} /></label>
-          <label style={label}>وقت النهاية<input required type="time" style={field} value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} /></label>
+          <label style={label}>وقت البداية<input required type="time" style={field} value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} /><small style={{ color: "#d6a44d" }}> {formatTime(form.start_time)} — صباحًا / مساءً</small></label>
+          <label style={label}>وقت النهاية<input required type="time" style={field} value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} /><small style={{ color: "#d6a44d" }}> {formatTime(form.end_time)} — صباحًا / مساءً</small></label>
           <label style={label}>مدة الراحة بالدقائق<input type="number" min="0" max="600" step="1" style={field} value={form.break_minutes} onChange={e => setForm({ ...form, break_minutes: e.target.value })} /></label>
           <label style={label}>مهلة السماح بالدقائق<input type="number" min="0" max="240" step="1" style={field} value={form.grace_minutes} onChange={e => setForm({ ...form, grace_minutes: e.target.value })} /></label>
           <label style={{...label,display:"flex",alignItems:"center",gap:9}}><input type="checkbox" checked={form.is_flexible} onChange={e=>setForm({...form,is_flexible:e.target.checked})}/> شيفت مرن (الموظف يكمل عدد الساعات)</label>
           {form.is_flexible && <label style={label}>آخر وقت مسموح للحضور<input required type="time" style={field} value={form.latest_check_in} onChange={e=>setForm({...form,latest_check_in:e.target.value})}/></label>}
         </div>
-        <div style={{ color: overnight ? "#f3c66d" : "#aebdca", fontSize: 14 }}>{overnight ? "شيفت ليلي: النظام هيعتبر النهاية في اليوم التالي تلقائيًا." : "شيفت في نفس اليوم."} — مدة العمل المحسوبة: <b>{durationLabel}</b>{form.is_flexible ? ` — آخر حضور ${form.latest_check_in}` : ""}</div>
+        <div style={{ color: overnight ? "#f3c66d" : "#aebdca", fontSize: 14 }}>{overnight ? "شيفت ليلي: النظام هيعتبر النهاية في اليوم التالي تلقائيًا." : "شيفت في نفس اليوم."} — مدة العمل المحسوبة: <b>{durationLabel}</b>{form.is_flexible ? ` — آخر حضور ${formatTime(form.latest_check_in)}` : ""}</div>
         <button disabled={saving} style={{ justifySelf: "start", background: "#d6a44d", color: "#101820", border: 0, borderRadius: 9, padding: "11px 22px", fontWeight: 700 }}>{saving ? "جارٍ الحفظ..." : "حفظ الشيفت"}</button>
       </form>
 
@@ -113,7 +114,7 @@ export default function HrShiftsPage() {
         <h2 style={{ margin: 0, fontSize: 20 }}>تحديد شيفت لموظف</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 14 }}>
           <label style={label}>الموظف<select required style={field} value={assignment.employee_id} onChange={e => setAssignment({ ...assignment, employee_id: e.target.value })}><option value="">اختار الموظف</option>{employees.filter(e => e.employment_status === "active").map(e => <option key={e.id} value={e.id}>{e.full_name}</option>)}</select></label>
-          <label style={label}>الشيفت<select required style={field} value={assignment.shift_id} onChange={e => setAssignment({ ...assignment, shift_id: e.target.value })}><option value="">اختار الشيفت</option>{shifts.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} ({time(s.start_time)} - {time(s.end_time)}{s.crosses_midnight ? " +1" : ""})</option>)}</select></label>
+          <label style={label}>الشيفت<select required style={field} value={assignment.shift_id} onChange={e => setAssignment({ ...assignment, shift_id: e.target.value })}><option value="">اختار الشيفت</option>{shifts.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} ({formatTime(s.start_time)} - {formatTime(s.end_time)}{s.crosses_midnight ? " +1" : ""})</option>)}</select></label>
           <label style={label}>يبدأ التكليف من<input required type="date" style={field} value={assignment.effective_from} onChange={e => setAssignment({ ...assignment, effective_from: e.target.value })} /></label>
           <label style={label}>ينتهي التكليف (اختياري)<input type="date" style={field} value={assignment.effective_to} onChange={e => setAssignment({ ...assignment, effective_to: e.target.value })} /></label>
           <label style={label}>يوم محدد (اختياري)<select style={field} value={assignment.weekday} onChange={e => setAssignment({ ...assignment, weekday: e.target.value })}><option value="">كل الأيام</option>{["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"].map((d,i)=><option key={i} value={i}>{d}</option>)}</select></label>
@@ -124,7 +125,7 @@ export default function HrShiftsPage() {
 
       <section style={panel}>
         <h2 style={{ margin: "0 0 16px", fontSize: 20 }}>الشيفتات ({shifts.length})</h2>
-        {loading ? <p>جارٍ التحميل...</p> : shifts.length === 0 ? <p style={{ color: "#aebdca" }}>لم يتم إنشاء شيفتات بعد.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 650 }}><thead><tr>{["الاسم","من","إلى","المدة","الراحة","نوع الشيفت","الحالة",""].map(x => <th key={x} style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #425466", color: "#d6a44d" }}>{x}</th>)}</tr></thead><tbody>{shifts.map(s => <tr key={s.id}><td style={cell}>{s.name}</td><td style={cell}>{time(s.start_time)}</td><td style={cell}>{time(s.end_time)}{s.crosses_midnight ? " (اليوم التالي)" : ""}</td><td style={cell}>{durationOf(s)}</td><td style={cell}>{s.break_minutes} د</td><td style={cell}>{s.is_flexible ? `مرن حتى ${time(s.latest_check_in)}` : "ثابت"}</td><td style={cell}>{s.is_active ? "نشط" : "موقوف"}</td><td style={cell}><button onClick={() => editShift(s)} style={{marginLeft:6}}>تعديل</button><button onClick={() => toggle(s)}>{s.is_active ? "إيقاف" : "تفعيل"}</button></td></tr>)}</tbody></table></div>}
+        {loading ? <p>جارٍ التحميل...</p> : shifts.length === 0 ? <p style={{ color: "#aebdca" }}>لم يتم إنشاء شيفتات بعد.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 650 }}><thead><tr>{["الاسم","من","إلى","المدة","الراحة","نوع الشيفت","الحالة",""].map(x => <th key={x} style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #425466", color: "#d6a44d" }}>{x}</th>)}</tr></thead><tbody>{shifts.map(s => <tr key={s.id}><td style={cell}>{s.name}</td><td style={cell}>{formatTime(s.start_time)}</td><td style={cell}>{formatTime(s.end_time)}{s.crosses_midnight ? " (اليوم التالي)" : ""}</td><td style={cell}>{durationOf(s)}</td><td style={cell}>{s.break_minutes} د</td><td style={cell}>{s.is_flexible ? `مرن حتى ${formatTime(s.latest_check_in)}` : "ثابت"}</td><td style={cell}>{s.is_active ? "نشط" : "موقوف"}</td><td style={cell}><button onClick={() => editShift(s)} style={{marginLeft:6}}>تعديل</button><button onClick={() => toggle(s)}>{s.is_active ? "إيقاف" : "تفعيل"}</button></td></tr>)}</tbody></table></div>}
       </section>
 
       <section style={panel}>
