@@ -22,12 +22,12 @@ export async function GET(request){
   const from=requestedMonth+"-01";
   const to=new Date(Date.UTC(year,month,0)).toISOString().slice(0,10);
   const [{data:employees,error:er},{data:rows,error:re},{data:balances,error:be}]=await Promise.all([
-   db.from("hr_employees").select("id,full_name,paid_leave_days,daily_work_hours,hire_date,employment_status,monthly_salary,job_title,department").order("full_name"),
+   db.from("hr_employees").select("id,full_name,paid_leave_days,daily_work_hours,hire_date,employment_status,termination_date,monthly_salary,job_title,department").order("full_name"),
    db.from("hr_attendance").select("*,hr_employees(full_name,job_title,department,monthly_salary,daily_work_hours)").gte("shift_date",from).lte("shift_date",to).order("shift_date",{ascending:true}),
    db.from("hr_leave_balances").select("employee_id,leave_year,allocated_days,used_days").eq("leave_year",year)
   ]);
   if(re)throw re;if(er)throw er;if(be)throw be;
-  const registerEmployees=(employees||[]).filter(e=>e.hire_date<=to&&(e.employment_status==="active"||(rows||[]).some(r=>r.employee_id===e.id)));
+  const registerEmployees=(employees||[]).filter(e=>e.hire_date<=to&&(!e.termination_date||e.termination_date>=from)&&(e.employment_status==="active"||(rows||[]).some(r=>r.employee_id===e.id)));
   if(registerEmployees.length){
    const registerRows=registerEmployees.map(e=>({employee_id:e.id,month_start:from,month_end:to}));
    const {error:registerError}=await db.from("hr_attendance_monthly_registers").upsert(registerRows,{onConflict:"employee_id,month_start",ignoreDuplicates:true});
