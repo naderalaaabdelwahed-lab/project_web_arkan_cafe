@@ -15,13 +15,28 @@ export async function GET(request){
  try{
   const a=await admin(request);if(a.response)return a.response;const db=a.db;
   const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-  const from=dateAdd(today,-30);
-  const [{data:rows,error:re},{data:employees,error:er},{data:balances,error:be}]=await Promise.all([
-   db.from("hr_attendance").select("*,hr_employees(full_name,job_title,department,monthly_salary)").gte("shift_date",from).lte("shift_date",today).order("shift_date",{ascending:false}),
-   db.from("hr_employees").select("id,full_name,paid_leave_days").eq("employment_status","active").order("full_name"),
-   db.from("hr_leave_balances").select("employee_id,leave_year,allocated_days,used_days").eq("leave_year",Number(today.slice(0,4)))
-  ]);if(re)throw re;if(er)throw er;if(be)throw be;return NextResponse.json({attendance:rows||[],employees:employees||[],leaveBalances:balances||[]});
- }catch(e){console.error("HR attendance GET",e);return NextResponse.json({error:e.message||"تعذر تحميل الحضور."},{status:500})}
+  const requestedMonth=new URL(request.url).searchParams.get("month")||today.slice(0,7);
+  if(!/^\\d{4}-\\d{2}$/.test(requestedMonth))return NextResponse.json({error:"اختار شهرًا صحيحًا."},{status:400});
+  const [year,month]=requestedMonth.split("-").map(Number);
+  if(month<1||month>12)return NextResponse.json({error:"اختار شهرًا صحيحًا."},{status:400});
+  const from=requestedMonth+"-01";
+  const to=new Date(Date.UTC(year,month,0)).toISOString().slice(0,10);
+  const [{data:employees,error:er},{data:rows,error:re},{data:balances,error:be}]=await Promise.all([
+   db.from("hr_employees").select("id,full_name,paid_leave_days,daily_work_hours,hire_date,employment_status,monthly_salary,job_title,department").order("full_name"),
+   db.from("hr_attendance").select("*,hr_employees(full_name,job_title,department,monthly_salary,daily_work_hours)").gte("shift_date",from).lte("shift_date",to).order("shift_date",{ascending:true}),
+   db.from("hr_leave_balances").select("employee_id,leave_year,allocated_days,used_days").eq("leave_year",year)
+  ]);
+  if(re)throw re;if(er)throw er;if(be)throw be;
+  const registerEmployees=(employees||[]).filter(e=>e.hire_date<=to&&(e.employment_status==="active"||(rows||[]).some(r=>r.employee_id===e.id)));
+  if(registerEmployees.length){
+   const registerRows=registerEmployees.map(e=>({employee_id:e.id,month_start:from,month_end:to}));
+   const {error:registerError}=await db.from("hr_attendance_monthly_registers").upsert(registerRows,{onConflict:"employee_id,month_start",ignoreDuplicates:true});
+   if(registerError)throw registerError;
+  }
+  const {data:registers,error:registerReadError}=await db.from("hr_attendance_monthly_registers").select("id,employee_id,month_start,month_end,created_at").eq("month_start",from);
+  if(registerReadError)throw registerReadError;
+  return NextResponse.json({month:requestedMonth,monthStart:from,monthEnd:to,attendance:rows||[],employees:employees||[],leaveBalances:balances||[],registers:registers||[]});
+ }catch(e){console.error("HR attendance GET",e);return NextResponse.json({error:e.message||"تعذر تحميل كشف الحضور الشهري."},{status:500})}
 }
 export async function PATCH(request){
  try{
