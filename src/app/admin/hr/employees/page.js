@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-const empty = { full_name:"", phone:"", job_title:"", department:"", hire_date:new Date().toISOString().slice(0,10), monthly_salary:"", overtime_hour_rate:"", paid_leave_days:"", daily_work_hours:"8", attendance_code:"", notes:"" };
+const empty = { full_name:"", phone:"", job_title:"", department:"", hire_date:new Date().toISOString().slice(0,10), monthly_salary:"", paid_leave_days:"", daily_work_hours:"8", attendance_code:"", notes:"" };
 const inputStyle = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1px solid #54452e", background:"#15120e", color:"#f4e9d8", boxSizing:"border-box" };
 const labelStyle = { display:"grid", gap:6, color:"#dbe4ec", fontSize:14 };
 
@@ -66,7 +66,7 @@ export default function HrEmployeesPage() {
 
   return <main dir="rtl" style={{minHeight:"100vh",background:"#100d0b",color:"#f4e9d8",padding:"28px 18px"}}>
     <div style={{maxWidth:1200,margin:"0 auto",display:"grid",gap:22}}>
-      <header><h1 style={{fontSize:28,margin:"0 0 8px"}}>شؤون الموظفين</h1><p style={{color:"#ad9e88",margin:0}}>ملفات الموظفين وأكوادهم السرية لتسجيل الحضور والانصراف من الصفحة الرئيسية لـ HR.</p></header>
+      <header><h1 style={{fontSize:28,margin:"0 0 8px"}}>شؤون الموظفين</h1><p style={{color:"#ad9e88",margin:0}}>أدخل الراتب الشهري وساعات العمل المطلوبة يوميًا؛ سعر الساعة يُحسب تلقائيًا من الراتب ÷ 30 ÷ ساعات العمل اليومية.</p></header>
       {error && <div role="alert" style={{background:"#4a2024",padding:12,borderRadius:9}}>{error}</div>}
       {message && <div role="status" style={{background:"#183d30",padding:12,borderRadius:9}}>{message}</div>}
       <form onSubmit={submit} style={{background:"#211b14",border:"1px solid #443723",borderRadius:14,padding:20,display:"grid",gap:16}}>
@@ -78,7 +78,6 @@ export default function HrEmployeesPage() {
           <label style={labelStyle}>القسم<input style={inputStyle} value={form.department||""} onChange={e=>setForm({...form,department:e.target.value})}/></label>
           <label style={labelStyle}>تاريخ التعيين<input type="date" required style={inputStyle} value={form.hire_date} onChange={e=>setForm({...form,hire_date:e.target.value})}/></label>
           <label style={labelStyle}>الراتب الشهري<input type="number" min="0" step="0.01" style={inputStyle} value={form.monthly_salary} onChange={e=>setForm({...form,monthly_salary:e.target.value})}/></label>
-          <label style={labelStyle}>سعر ساعة الإضافي<input type="number" min="0" step="0.01" style={inputStyle} value={form.overtime_hour_rate} onChange={e=>setForm({...form,overtime_hour_rate:e.target.value})}/></label>
           <label style={labelStyle}>أيام الإجازة المدفوعة<input type="number" min="0" step="0.5" style={inputStyle} value={form.paid_leave_days} onChange={e=>setForm({...form,paid_leave_days:e.target.value})}/></label>
           <label style={labelStyle}>ساعات العمل اليومية<input type="number" min="1" max="24" step="0.5" style={inputStyle} value={form.daily_work_hours} onChange={e=>setForm({...form,daily_work_hours:e.target.value})}/></label>
           <label style={labelStyle}>كود الحضور والانصراف (6 أرقام)<input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} minLength={6} pattern="[0-9]{6}" required={!editing} style={inputStyle} value={form.attendance_code||""} onChange={e=>setForm({...form,attendance_code:e.target.value.replace(/\D/g,"").slice(0,6)})} placeholder={editing?"اتركه فارغًا للاحتفاظ بالكود الحالي":"مثال: 482951"}/><small style={{color:"#ad9e88"}}>{editing?"اكتب كودًا جديدًا فقط إذا أردت تغييره.":"أنشئ كودًا سريًا خاصًا بالموظف، وسيستخدمه لتسجيل الحضور والانصراف."}</small></label>
