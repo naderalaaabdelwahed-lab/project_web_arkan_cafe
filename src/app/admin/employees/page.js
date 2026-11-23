@@ -51,6 +51,17 @@ const permissionGroups = [
       ["daily_closing.close", "تنفيذ الإقفال اليومي"],
     ],
   },
+  {
+    title: "المخزن",
+    items: [
+      ["inventory.view", "عرض المخزن"],
+      ["inventory.items.manage", "إدارة الأصناف والخامات"],
+      ["inventory.recipes.manage", "إدارة الوصفات"],
+      ["inventory.purchases.manage", "إدارة المشتريات"],
+      ["inventory.movements.manage", "إدارة حركات المخزون"],
+      ["inventory.reports.view", "عرض تقارير المخزون"],
+    ],
+  },
 ];
 
 const colors = {

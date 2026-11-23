@@ -34,6 +34,12 @@ export default function AdminLoginPage() {
           throw new Error("الإيميل أو كلمة المرور غير صحيحة.");
         }
 
+        const { data: signedInUser } = await supabase.auth.getUser();
+        if (signedInUser.user?.app_metadata?.account_type === "hr_employee") {
+          await supabase.auth.signOut();
+          throw new Error("حساب HR مخصص للحضور والانصراف فقط. استخدم بوابة HR.");
+        }
+
         const { data: isAdmin, error: adminError } =
           await supabase.rpc("is_admin");
 

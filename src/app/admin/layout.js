@@ -47,6 +47,11 @@ const links = [
     label: "♟ إدارة الموظفين",
     adminOnly: true,
   },
+  {
+    href: "/hr/manage",
+    label: "♙ نظام الموارد البشرية HR",
+    adminOnly: true,
+  },
 ];
 
 const inventoryRoutes = [
@@ -104,6 +109,12 @@ export default function AdminLayout({ children }) {
 
         if (sessionError || !session) {
           if (active) router.replace("/admin/login");
+          return;
+        }
+
+        // HR employee accounts must never enter the system administration area.
+        if (session.user?.app_metadata?.account_type === "hr_employee") {
+          if (active) router.replace("/hr");
           return;
         }
 

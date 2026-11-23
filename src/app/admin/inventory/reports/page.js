@@ -1,56 +1,19 @@
-﻿
 "use client";
 
-import { useMemo, useState } from "react";
-
-// بيانات تجريبية - سيتم ربطها بقاعدة البيانات لاحقًا
-const inventoryItems = [
-  { id: 1, name: "دقيق", currentStock: 5000, minStock: 2000, unit: "جم", unitCost: 0.035 },
-  { id: 2, name: "عجين فطير", currentStock: 20, minStock: 10, unit: "قطعة", unitCost: 18 },
-  { id: 3, name: "موزاريلا", currentStock: 10, minStock: 8, unit: "كجم", unitCost: 220 },
-  { id: 4, name: "جبنة رومي", currentStock: 5, minStock: 6, unit: "كجم", unitCost: 180 },
-  { id: 5, name: "خضار فطير", currentStock: 4, minStock: 5, unit: "كجم", unitCost: 65 },
-  { id: 6, name: "فراخ", currentStock: 0, minStock: 3, unit: "كجم", unitCost: 150 },
-  { id: 7, name: "زيت", currentStock: 12000, minStock: 3000, unit: "مللي", unitCost: 0.09 },
-  { id: 8, name: "سكر", currentStock: 1500, minStock: 1000, unit: "جم", unitCost: 0.04 },
-];
-
-const movements = [
-  { id: 1, date: "2026-11-01", itemId: 1, type: "purchase", quantity: 3000, source: "مورد الدقيق", employee: "أحمد", notes: "شراء دقيق", unitCost: 0.035 },
-  { id: 2, date: "2026-11-02", itemId: 2, type: "production_in", quantity: 15, source: "الإنتاج", employee: "محمد", notes: "إنتاج عجين", unitCost: 18 },
-  { id: 3, date: "2026-11-03", itemId: 3, type: "purchase", quantity: 5, source: "مورد الألبان", employee: "أحمد", notes: "شراء موزاريلا", unitCost: 220 },
-  { id: 4, date: "2026-11-04", itemId: 1, type: "production_out", quantity: -1200, source: "المطبخ", employee: "محمد", notes: "صرف للإنتاج", unitCost: 0.035 },
-  { id: 5, date: "2026-11-05", itemId: 4, type: "purchase", quantity: 3, source: "مورد الجبن", employee: "أحمد", notes: "شراء جبنة رومي", unitCost: 180 },
-  { id: 6, date: "2026-11-06", itemId: 5, type: "waste", quantity: -2, source: "المطبخ", employee: "محمود", notes: "تلف بعض الخضار", unitCost: 65 },
-  { id: 7, date: "2026-11-07", itemId: 6, type: "purchase", quantity: 5, source: "مورد الفراخ", employee: "أحمد", notes: "شراء فراخ", unitCost: 150 },
-  { id: 8, date: "2026-11-08", itemId: 7, type: "purchase", quantity: 5000, source: "مورد الزيوت", employee: "أحمد", notes: "شراء زيت", unitCost: 0.09 },
-  { id: 9, date: "2026-11-09", itemId: 2, type: "sale", quantity: -4, source: "المبيعات", employee: "محمد", notes: "صرف مبيعات", unitCost: 18 },
-  { id: 10, date: "2026-11-10", itemId: 3, type: "production_out", quantity: -2, source: "المطبخ", employee: "محمود", notes: "استخدام في الإنتاج", unitCost: 220 },
-  { id: 11, date: "2026-11-11", itemId: 1, type: "purchase", quantity: 2000, source: "مورد الدقيق", employee: "أحمد", notes: "شراء دقيق", unitCost: 0.035 },
-  { id: 12, date: "2026-11-12", itemId: 4, type: "sale", quantity: -1, source: "المبيعات", employee: "محمد", notes: "صرف مبيعات", unitCost: 180 },
-  { id: 13, date: "2026-11-13", itemId: 6, type: "waste", quantity: -1, source: "المطبخ", employee: "محمود", notes: "تلف فراخ", unitCost: 150 },
-  { id: 14, date: "2026-11-14", itemId: 5, type: "purchase", quantity: 4, source: "مورد الخضار", employee: "أحمد", notes: "شراء خضار", unitCost: 65 },
-  { id: 15, date: "2026-11-15", itemId: 7, type: "production_out", quantity: -1500, source: "المطبخ", employee: "محمد", notes: "استخدام زيت", unitCost: 0.09 },
-  { id: 16, date: "2026-11-16", itemId: 8, type: "purchase", quantity: 1000, source: "مورد السكر", employee: "أحمد", notes: "شراء سكر", unitCost: 0.04 },
-  { id: 17, date: "2026-11-17", itemId: 2, type: "sale", quantity: -3, source: "المبيعات", employee: "محمد", notes: "صرف مبيعات", unitCost: 18 },
-  { id: 18, date: "2026-11-18", itemId: 3, type: "waste", quantity: -1, source: "المطبخ", employee: "محمود", notes: "تلف جزء من الجبنة", unitCost: 220 },
-  { id: 19, date: "2026-11-19", itemId: 1, type: "production_out", quantity: -800, source: "المطبخ", employee: "محمد", notes: "صرف للإنتاج", unitCost: 0.035 },
-  { id: 20, date: "2026-11-20", itemId: 6, type: "purchase", quantity: 3, source: "مورد الفراخ", employee: "أحمد", notes: "شراء فراخ", unitCost: 150 },
-  { id: 21, date: "2026-11-21", itemId: 2, type: "deduction", quantity: -2, source: "المطبخ", employee: "محمود", notes: "استخدام داخلي", unitCost: 18 },
-  { id: 22, date: "2026-11-22", itemId: 7, type: "sale", quantity: -500, source: "المبيعات", employee: "محمد", notes: "صرف زيت", unitCost: 0.09 },
-];
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const reportTypes = [
-  { id: "movement", label: "حركة المخزون", icon: "↕", description: "عرض جميع حركات الإضافة والخصم خلال الفترة المحددة." },
-  { id: "stock", label: "أرصدة المخزون", icon: "▤", description: "عرض الرصيد الحالي لجميع أصناف المخزن." },
-  { id: "low", label: "المخزون المنخفض", icon: "⚠", description: "الأصناف التي وصلت إلى حد إعادة الطلب أو أقل." },
-  { id: "consumption", label: "الاستهلاك", icon: "◉", description: "متابعة كميات وقيمة الأصناف المستهلكة." },
-  { id: "purchases", label: "المشتريات", icon: "＋", description: "تفاصيل عمليات الشراء خلال الفترة المحددة." },
-  { id: "waste", label: "الهالك", icon: "⌁", description: "متابعة كميات وقيمة الأصناف التالفة." },
-  { id: "valuation", label: "تقييم المخزون", icon: "ج", description: "حساب القيمة المالية الحالية للمخزون." },
+  { id: "movement", label: "حركة المخزون" },
+  { id: "stock", label: "أرصدة المخزون" },
+  { id: "low", label: "المخزون المنخفض" },
+  { id: "consumption", label: "الاستهلاك" },
+  { id: "purchases", label: "المشتريات" },
+  { id: "waste", label: "الهالك" },
+  { id: "valuation", label: "تقييم المخزون" },
 ];
 
-const typeLabels = {
+const movementLabels = {
   purchase: "شراء",
   sale: "بيع",
   deduction: "خصم",
@@ -62,67 +25,44 @@ const typeLabels = {
   reversal: "عكس حركة",
 };
 
+const number = (value) => Number(value || 0);
 const formatNumber = (value) =>
-  new Intl.NumberFormat("ar-EG", {
-    maximumFractionDigits: 2,
-  }).format(value || 0);
-
-const formatCurrency = (value) => `${formatNumber(value)} ج.م`;
-
-const formatDate = (date) => {
-  if (!date) return "-";
-  return new Date(`${date}T00:00:00`).toLocaleDateString("ar-EG");
-};
-
-const getToday = () => {
+  new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 }).format(number(value));
+const formatMoney = (value) => `${formatNumber(value)} ج.م`;
+const dateOnly = (value) => (value ? new Date(value).toLocaleDateString("ar-EG") : "—");
+const todayISO = () => {
   const now = new Date();
-  const offset = now.getTimezoneOffset();
-  return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
+const monthStart = () => `${todayISO().slice(0, 7)}-01`;
 
-const getMonthStart = () => `${getToday().slice(0, 7)}-01`;
-
-function StatCard({ title, value, subtitle, icon, color = "blue" }) {
-  return (
-    <div className="stat-card">
-      <div className={`stat-icon ${color}`}>{icon}</div>
-      <div className="stat-content">
-        <span className="stat-title">{title}</span>
-        <strong>{value}</strong>
-        <small>{subtitle}</small>
-      </div>
-    </div>
-  );
+async function fetchAll(table, columns = "*") {
+  const pageSize = 1000;
+  const rows = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .order("id", { ascending: true })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) return rows;
+  }
 }
 
-function ReportTable({ columns, rows, emptyMessage = "لا توجد بيانات لعرضها" }) {
-  if (!rows.length) {
-    return (
-      <div className="empty-state">
-        <div className="empty-icon">▤</div>
-        <strong>{emptyMessage}</strong>
-        <p>لا توجد سجلات مطابقة للفترة المحددة.</p>
-      </div>
-    );
-  }
-
+function Table({ columns, rows, empty = "لا توجد بيانات للفترة المحددة" }) {
+  if (!rows.length) return <div className="empty">{empty}</div>;
   return (
-    <div className="table-wrapper">
+    <div className="table-wrap">
       <table>
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key}>{column.label}</th>
-            ))}
-          </tr>
-        </thead>
+        <colgroup>{columns.map((column) => <col key={column.label} style={{ width: column.width ? `${column.width}%` : `${100 / columns.length}%` }} />)}</colgroup>
+        <thead><tr>{columns.map((column) => <th key={column.label}>{column.label}</th>)}</tr></thead>
         <tbody>
           {rows.map((row, index) => (
             <tr key={row.id ?? index}>
               {columns.map((column) => (
-                <td key={column.key}>
-                  {column.render ? column.render(row) : row[column.key] ?? "-"}
-                </td>
+                <td key={column.label}>{column.render ? column.render(row) : (row[column.key] ?? "—")}</td>
               ))}
             </tr>
           ))}
@@ -133,1652 +73,399 @@ function ReportTable({ columns, rows, emptyMessage = "لا توجد بيانات
 }
 
 export default function InventoryReportsPage() {
-  const today = getToday();
-
+  const [items, setItems] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [movements, setMovements] = useState([]);
+  const [purchases, setPurchases] = useState([]);
+  const [purchaseItems, setPurchaseItems] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [activeReport, setActiveReport] = useState("movement");
-  const [dateFrom, setDateFrom] = useState(getMonthStart());
-  const [dateTo, setDateTo] = useState(today);
+  const [dateFrom, setDateFrom] = useState(monthStart());
+  const [dateTo, setDateTo] = useState(todayISO());
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  const itemNameFor = (id) =>
-    inventoryItems.find((item) => item.id === id)?.name || "غير معروف";
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [itemRows, unitRows, movementRows, purchaseRows, purchaseItemRows, supplierRows] =
+        await Promise.all([
+          fetchAll("inventory_items", "id,name,item_type,unit_id,current_stock,min_stock,unit_cost,is_active"),
+          fetchAll("inventory_units", "id,name,abbreviation,base_unit_id"),
+          fetchAll("inventory_movements", "id,inventory_item_id,movement_type,quantity,unit_cost,source_type,source_id,order_id,notes,created_by,created_at"),
+          fetchAll("inventory_purchases", "id,supplier_id,invoice_number,status,purchase_date,total_amount,notes,representative_name"),
+          fetchAll("inventory_purchase_items", "id,purchase_id,inventory_item_id,quantity,input_unit_id,unit_price,subtotal"),
+          fetchAll("inventory_suppliers", "id,name"),
+        ]);
+      setItems(itemRows || []);
+      setUnits(unitRows || []);
+      setMovements(movementRows || []);
+      setPurchases(purchaseRows || []);
+      setPurchaseItems(purchaseItemRows || []);
+      setSuppliers(supplierRows || []);
+      setLastUpdated(new Date());
+    } catch (loadError) {
+      setError(loadError?.message || "تعذر تحميل بيانات التقارير من قاعدة البيانات");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const filteredMovements = useMemo(() => {
-    return movements.filter((movement) => {
-      const matchesFrom = !dateFrom || movement.date >= dateFrom;
-      const matchesTo = !dateTo || movement.date <= dateTo;
+  useEffect(() => { loadData(); }, [loadData]);
 
-      const item = inventoryItems.find(
-        (product) => product.id === movement.itemId
-      );
+  const itemMap = useMemo(() => new Map(items.map((item) => [Number(item.id), item])), [items]);
+  const unitMap = useMemo(() => new Map(units.map((unit) => [Number(unit.id), unit])), [units]);
+  const supplierMap = useMemo(() => new Map(suppliers.map((supplier) => [Number(supplier.id), supplier.name])), [suppliers]);
+  const unitName = (item) => {
+    const unit = unitMap.get(Number(item?.unit_id));
+    return unit?.abbreviation || unit?.name || "—";
+  };
+  const itemName = (id) => itemMap.get(Number(id))?.name || "صنف غير معروف";
+  const inDateRange = (value) => {
+    if (!value) return false;
+    const day = String(value).slice(0, 10);
+    return (!dateFrom || day >= dateFrom) && (!dateTo || day <= dateTo);
+  };
+  const query = search.trim().toLocaleLowerCase("ar");
 
-      const searchText = search.trim().toLowerCase();
+  const filteredMovements = useMemo(() => movements.filter((row) => {
+    const item = itemMap.get(Number(row.inventory_item_id));
+    const source = row.source_type === "purchase" ? `فاتورة شراء #${row.source_id || ""}`
+      : row.order_id ? `أوردر #${row.order_id}` : row.source_type || "";
+    const matchesSearch = !query || [item?.name, source, row.notes, movementLabels[row.movement_type]]
+      .some((value) => String(value || "").toLocaleLowerCase("ar").includes(query));
+    return inDateRange(row.created_at) && matchesSearch;
+  }), [movements, itemMap, dateFrom, dateTo, query]);
 
-      const matchesSearch =
-        !searchText ||
-        item?.name.toLowerCase().includes(searchText) ||
-        movement.employee.toLowerCase().includes(searchText) ||
-        movement.source.toLowerCase().includes(searchText) ||
-        movement.notes.toLowerCase().includes(searchText);
+  const filteredPurchases = useMemo(() => purchases.filter((purchase) => {
+    const supplier = supplierMap.get(Number(purchase.supplier_id)) || "";
+    const matchesSearch = !query || [purchase.invoice_number, supplier, purchase.representative_name, purchase.notes]
+      .some((value) => String(value || "").toLocaleLowerCase("ar").includes(query));
+    return inDateRange(purchase.purchase_date) && matchesSearch && purchase.status === "received";
+  }), [purchases, supplierMap, dateFrom, dateTo, query]);
 
-      return matchesFrom && matchesTo && matchesSearch;
-    });
-  }, [dateFrom, dateTo, search]);
-
-  const reportData = useMemo(() => {
-    const purchases = filteredMovements.filter(
-      (movement) => movement.type === "purchase"
-    );
-
-    const consumption = filteredMovements.filter((movement) =>
-      ["sale", "deduction", "production_out"].includes(movement.type)
-    );
-
-    const waste = filteredMovements.filter(
-      (movement) => movement.type === "waste"
-    );
-
-    const totalPurchaseValue = purchases.reduce(
-      (sum, movement) =>
-        sum + Math.abs(movement.quantity) * movement.unitCost,
-      0
-    );
-
-    const totalConsumptionValue = consumption.reduce(
-      (sum, movement) =>
-        sum + Math.abs(movement.quantity) * movement.unitCost,
-      0
-    );
-
-    const totalWasteValue = waste.reduce(
-      (sum, movement) =>
-        sum + Math.abs(movement.quantity) * movement.unitCost,
-      0
-    );
-
-    const totalStockValue = inventoryItems.reduce(
-      (sum, item) => sum + item.currentStock * item.unitCost,
-      0
-    );
-
-    const lowStock = inventoryItems.filter(
-      (item) => item.currentStock <= item.minStock
-    );
-
-    const consumptionByItem = inventoryItems
-      .map((item) => {
-        const itemMovements = consumption.filter(
-          (movement) => movement.itemId === item.id
-        );
-
-        const quantity = itemMovements.reduce(
-          (sum, movement) => sum + Math.abs(movement.quantity),
-          0
-        );
-
-        return {
-          id: item.id,
-          name: item.name,
-          quantity,
-          unit: item.unit,
-          value: itemMovements.reduce(
-            (sum, movement) =>
-              sum + Math.abs(movement.quantity) * movement.unitCost,
-            0
-          ),
-        };
-      })
-      .filter((item) => item.quantity > 0)
-      .sort((a, b) => b.value - a.value);
-
-    return {
-      purchases,
-      consumption,
-      waste,
-      totalPurchaseValue,
-      totalConsumptionValue,
-      totalWasteValue,
-      totalStockValue,
-      lowStock,
-      consumptionByItem,
-    };
-  }, [filteredMovements]);
-
-  const selectedReport = reportTypes.find(
-    (report) => report.id === activeReport
+  const consumptionRows = filteredMovements.filter((row) =>
+    ["sale", "deduction", "production_out"].includes(row.movement_type)
   );
+  const wasteRows = filteredMovements.filter((row) => row.movement_type === "waste");
+  const lowStockItems = items.filter((item) => item.is_active && number(item.current_stock) <= number(item.min_stock));
+  const stockValue = items.filter((item) => item.is_active)
+    .reduce((sum, item) => sum + number(item.current_stock) * number(item.unit_cost), 0);
+  const purchaseValue = filteredPurchases.reduce((sum, purchase) => sum + number(purchase.total_amount), 0);
+  const consumptionValue = consumptionRows.reduce((sum, row) => sum + Math.abs(number(row.quantity)) * number(row.unit_cost), 0);
+  const wasteValue = wasteRows.reduce((sum, row) => sum + Math.abs(number(row.quantity)) * number(row.unit_cost), 0);
 
-  const totalItems = inventoryItems.length;
-  const totalMovements = filteredMovements.length;
+  const consumptionByItem = Object.values(consumptionRows.reduce((acc, row) => {
+    const id = Number(row.inventory_item_id);
+    const item = itemMap.get(id);
+    if (!acc[id]) acc[id] = { id, name: item?.name || "صنف غير معروف", quantity: 0, value: 0, unit: unitName(item) };
+    acc[id].quantity += Math.abs(number(row.quantity));
+    acc[id].value += Math.abs(number(row.quantity)) * number(row.unit_cost);
+    return acc;
+  }, {})).sort((a, b) => b.value - a.value);
 
-  const handleReset = () => {
-    setDateFrom(getMonthStart());
-    setDateTo(today);
-    setSearch("");
-  };
-
-  const handleAllPeriod = () => {
-    setDateFrom("");
-    setDateTo("");
-    setSearch("");
-  };
-
-  const handleQuickPeriod = (days) => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - (days - 1));
-
-    const toISO = (date) => {
-      const offset = date.getTimezoneOffset();
-      return new Date(date.getTime() - offset * 60000)
-        .toISOString()
-        .slice(0, 10);
-    };
-
-    setDateFrom(toISO(start));
-    setDateTo(toISO(end));
-    setSearch("");
-  };
+  const purchaseLines = filteredPurchases.flatMap((purchase) =>
+    purchaseItems.filter((line) => Number(line.purchase_id) === Number(purchase.id))
+      .map((line) => ({ ...line, purchase, item: itemMap.get(Number(line.inventory_item_id)) }))
+  ).filter((line) => !query || [line.item?.name, line.purchase.invoice_number, supplierMap.get(Number(line.purchase.supplier_id))]
+    .some((value) => String(value || "").toLocaleLowerCase("ar").includes(query)));
 
   const exportCSV = () => {
-    let rows = [];
     let headers = [];
-
+    let rows = [];
     if (activeReport === "movement") {
-      headers = ["التاريخ", "الصنف", "نوع الحركة", "الكمية", "الوحدة", "المصدر", "الموظف", "ملاحظات"];
-
-      rows = filteredMovements.map((m) => {
-        const item = inventoryItems.find((i) => i.id === m.itemId);
-        return [
-          m.date,
-          itemNameFor(m.itemId),
-          typeLabels[m.type],
-          m.quantity,
-          item?.unit,
-          m.source,
-          m.employee,
-          m.notes,
-        ];
-      });
-    } else if (activeReport === "stock") {
-      headers = ["الصنف", "الرصيد", "الوحدة", "حد الطلب", "الحالة", "تكلفة الوحدة", "قيمة المخزون"];
-
-      rows = inventoryItems.map((item) => [
-        item.name,
-        item.currentStock,
-        item.unit,
-        item.minStock,
-        item.currentStock <= item.minStock ? "منخفض" : "متوفر",
-        item.unitCost,
-        item.currentStock * item.unitCost,
-      ]);
+      headers = ["التاريخ", "الصنف", "نوع الحركة", "الكمية", "الوحدة", "المصدر", "ملاحظات"];
+      rows = filteredMovements.map((row) => [row.created_at, itemName(row.inventory_item_id), movementLabels[row.movement_type] || row.movement_type, row.quantity, unitName(itemMap.get(Number(row.inventory_item_id))), row.source_type || "", row.notes || ""]);
+    } else if (activeReport === "stock" || activeReport === "valuation") {
+      headers = ["الصنف", "الرصيد", "الوحدة", "حد الطلب", "تكلفة الوحدة", "قيمة المخزون"];
+      rows = items.filter((item) => item.is_active && (!query || item.name.toLocaleLowerCase("ar").includes(query)))
+        .map((item) => [item.name, item.current_stock, unitName(item), item.min_stock, item.unit_cost, number(item.current_stock) * number(item.unit_cost)]);
     } else if (activeReport === "low") {
-      headers = ["الصنف", "الرصيد الحالي", "حد الطلب", "العجز", "الوحدة"];
-
-      rows = reportData.lowStock.map((item) => [
-        item.name,
-        item.currentStock,
-        item.minStock,
-        Math.max(item.minStock - item.currentStock, 0),
-        item.unit,
-      ]);
+      headers = ["الصنف", "الرصيد الحالي", "حد الطلب", "الوحدة"];
+      rows = lowStockItems.filter((item) => !query || item.name.toLocaleLowerCase("ar").includes(query))
+        .map((item) => [item.name, item.current_stock, item.min_stock, unitName(item)]);
     } else if (activeReport === "consumption") {
-      headers = ["الصنف", "الكمية المستهلكة", "الوحدة", "التكلفة التقديرية"];
-
-      rows = reportData.consumptionByItem.map((item) => [
-        item.name,
-        item.quantity,
-        item.unit,
-        item.value,
-      ]);
+      headers = ["الصنف", "الكمية المستهلكة", "الوحدة", "القيمة التقديرية"];
+      rows = consumptionByItem.filter((row) => !query || row.name.toLocaleLowerCase("ar").includes(query))
+        .map((row) => [row.name, row.quantity, row.unit, row.value]);
     } else if (activeReport === "purchases") {
-      headers = ["التاريخ", "الصنف", "الكمية", "الوحدة", "تكلفة الوحدة", "الإجمالي", "المورد", "الموظف"];
-
-      rows = reportData.purchases.map((m) => {
-        const item = inventoryItems.find((i) => i.id === m.itemId);
-        return [
-          m.date,
-          itemNameFor(m.itemId),
-          m.quantity,
-          item?.unit,
-          m.unitCost,
-          m.quantity * m.unitCost,
-          m.source,
-          m.employee,
-        ];
-      });
-    } else if (activeReport === "waste") {
-      headers = ["التاريخ", "الصنف", "الكمية", "الوحدة", "القيمة", "الملاحظات", "الموظف"];
-
-      rows = reportData.waste.map((m) => {
-        const item = inventoryItems.find((i) => i.id === m.itemId);
-        return [
-          m.date,
-          itemNameFor(m.itemId),
-          Math.abs(m.quantity),
-          item?.unit,
-          Math.abs(m.quantity) * m.unitCost,
-          m.notes,
-          m.employee,
-        ];
-      });
-    } else if (activeReport === "valuation") {
-      headers = ["الصنف", "الرصيد الحالي", "الوحدة", "تكلفة الوحدة", "قيمة المخزون"];
-
-      rows = inventoryItems.map((item) => [
-        item.name,
-        item.currentStock,
-        item.unit,
-        item.unitCost,
-        item.currentStock * item.unitCost,
-      ]);
+      headers = ["التاريخ", "رقم الفاتورة", "المورد", "الصنف", "الكمية", "تكلفة الوحدة", "الإجمالي"];
+      rows = purchaseLines.map((line) => [line.purchase.purchase_date, line.purchase.invoice_number, supplierMap.get(Number(line.purchase.supplier_id)) || "", line.item?.name || "", line.quantity, line.unit_price, line.subtotal]);
+    } else {
+      headers = ["التاريخ", "الصنف", "الكمية", "الوحدة", "القيمة", "ملاحظات"];
+      rows = wasteRows.map((row) => [row.created_at, itemName(row.inventory_item_id), Math.abs(number(row.quantity)), unitName(itemMap.get(Number(row.inventory_item_id))), Math.abs(number(row.quantity)) * number(row.unit_cost), row.notes || ""]);
     }
-
-    const csv = [headers, ...rows]
-      .map((row) =>
-        row
-          .map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`)
-          .join(",")
-      )
-      .join("\n");
-
-    const blob = new Blob(["\uFEFF" + csv], {
-      type: "text/csv;charset=utf-8;",
-    });
-
+    const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-
     link.href = url;
-    link.download = `inventory-${activeReport}-${today}.csv`;
-
-    document.body.appendChild(link);
+    link.download = `arkan-inventory-${activeReport}-${todayISO()}.csv`;
     link.click();
-    document.body.removeChild(link);
-
     URL.revokeObjectURL(url);
   };
 
-  const movementColumns = [
-    {
-      key: "date",
-      label: "التاريخ",
-      render: (row) => formatDate(row.date),
-    },
-    {
-      key: "item",
-      label: "الصنف",
-      render: (row) => itemNameFor(row.itemId),
-    },
-    {
-      key: "type",
-      label: "نوع الحركة",
-      render: (row) => (
-        <span className={`status-badge ${row.quantity > 0 ? "success" : "warning"}`}>
-          {typeLabels[row.type]}
-        </span>
-      ),
-    },
-    {
-      key: "quantity",
-      label: "الكمية",
-      render: (row) => (
-        <span className={row.quantity > 0 ? "positive" : "negative"}>
-          {row.quantity > 0 ? "+" : ""}
-          {formatNumber(row.quantity)}
-        </span>
-      ),
-    },
-    {
-      key: "unit",
-      label: "الوحدة",
-      render: (row) =>
-        inventoryItems.find((item) => item.id === row.itemId)?.unit || "-",
-    },
-    { key: "source", label: "المصدر" },
-    { key: "employee", label: "الموظف" },
-    { key: "notes", label: "ملاحظات" },
+  const filteredItems = items.filter((item) => item.is_active && (!query || item.name.toLocaleLowerCase("ar").includes(query)));
+  const columns = activeReport === "movement" ? [
+    { label: "التاريخ", width: 12, render: (row) => dateOnly(row.created_at) },
+    { label: "الصنف", width: 20, render: (row) => itemName(row.inventory_item_id) },
+    { label: "نوع الحركة", width: 13, render: (row) => movementLabels[row.movement_type] || row.movement_type },
+    { label: "الكمية", width: 10, render: (row) => formatNumber(row.quantity) },
+    { label: "الوحدة", width: 8, render: (row) => unitName(itemMap.get(Number(row.inventory_item_id))) },
+    { label: "المصدر", width: 15, render: (row) => row.order_id ? `أوردر #${row.order_id}` : row.source_type === "purchase" ? `فاتورة #${row.source_id || ""}` : row.source_type || "—" },
+    { label: "ملاحظات", width: 22, render: (row) => row.notes || "—" },
+  ] : activeReport === "stock" || activeReport === "valuation" ? [
+    { label: "الصنف", key: "name" },
+    { label: "الرصيد", render: (row) => formatNumber(row.current_stock) },
+    { label: "الوحدة", render: (row) => unitName(row) },
+    { label: "حد الطلب", render: (row) => formatNumber(row.min_stock) },
+    { label: "تكلفة الوحدة", render: (row) => formatMoney(row.unit_cost) },
+    { label: "قيمة المخزون", render: (row) => formatMoney(number(row.current_stock) * number(row.unit_cost)) },
+  ] : activeReport === "low" ? [
+    { label: "الصنف", key: "name" },
+    { label: "الرصيد الحالي", render: (row) => formatNumber(row.current_stock) },
+    { label: "حد الطلب", render: (row) => formatNumber(row.min_stock) },
+    { label: "الوحدة", render: (row) => unitName(row) },
+  ] : activeReport === "consumption" ? [
+    { label: "الصنف", key: "name" },
+    { label: "الكمية المستهلكة", render: (row) => formatNumber(row.quantity) },
+    { label: "الوحدة", key: "unit" },
+    { label: "القيمة التقديرية", render: (row) => formatMoney(row.value) },
+  ] : activeReport === "purchases" ? [
+    { label: "التاريخ", width: 11, render: (row) => dateOnly(row.purchase.purchase_date) },
+    { label: "الفاتورة", width: 14, render: (row) => row.purchase.invoice_number || `#${row.purchase.id}` },
+    { label: "المورد", width: 15, render: (row) => supplierMap.get(Number(row.purchase.supplier_id)) || "—" },
+    { label: "الصنف", width: 20, render: (row) => row.item?.name || "—" },
+    { label: "الكمية", width: 10, render: (row) => formatNumber(row.quantity) },
+    { label: "تكلفة الوحدة", width: 14, render: (row) => formatMoney(row.unit_price) },
+    { label: "الإجمالي", width: 16, render: (row) => formatMoney(row.subtotal) },
+  ] : [
+    { label: "التاريخ", render: (row) => dateOnly(row.created_at) },
+    { label: "الصنف", render: (row) => itemName(row.inventory_item_id) },
+    { label: "الكمية", render: (row) => formatNumber(Math.abs(number(row.quantity))) },
+    { label: "الوحدة", render: (row) => unitName(itemMap.get(Number(row.inventory_item_id))) },
+    { label: "القيمة", render: (row) => formatMoney(Math.abs(number(row.quantity)) * number(row.unit_cost)) },
+    { label: "ملاحظات", render: (row) => row.notes || "—" },
   ];
 
-  const purchaseRows = reportData.purchases.map((m) => ({
-    ...m,
-    itemName: itemNameFor(m.itemId),
-    unit: inventoryItems.find((i) => i.id === m.itemId)?.unit,
-    total: m.quantity * m.unitCost,
-  }));
+  const reportRows = activeReport === "movement" ? filteredMovements
+    : activeReport === "stock" || activeReport === "valuation" ? filteredItems
+    : activeReport === "low" ? lowStockItems.filter((item) => !query || item.name.toLocaleLowerCase("ar").includes(query))
+    : activeReport === "consumption" ? consumptionByItem.filter((row) => !query || row.name.toLocaleLowerCase("ar").includes(query))
+    : activeReport === "purchases" ? purchaseLines
+    : wasteRows;
 
-  const wasteRows = reportData.waste.map((m) => ({
-    ...m,
-    itemName: itemNameFor(m.itemId),
-    unit: inventoryItems.find((i) => i.id === m.itemId)?.unit,
-    total: Math.abs(m.quantity) * m.unitCost,
-  }));
+  const printReport = () => {
+    const reportElement = document.querySelector(".inventory-reports .report");
+    if (!reportElement) return;
+
+    const printWindow = window.open("", "_blank", "width=1200,height=850");
+    if (!printWindow) {
+      window.alert("اسمح بفتح النوافذ المنبثقة من المتصفح حتى تتمكن من طباعة التقرير.");
+      return;
+    }
+
+    const reportCopy = reportElement.cloneNode(true);
+    reportCopy.querySelector(".report-actions")?.remove();
+    const reportTitle = reportCopy.querySelector("h2")?.textContent || "تقرير المخزن";
+    const printedAt = new Date();
+    const dateTime = printedAt.toLocaleString("ar-EG", { dateStyle: "full", timeStyle: "short" });
+    const period = dateFrom || dateTo
+      ? `من ${dateFrom ? dateOnly(dateFrom) : "البداية"} إلى ${dateTo ? dateOnly(dateTo) : "اليوم"}`
+      : "كل الفترات";
+    const searchLabel = search.trim() ? `بحث: ${search.trim()}` : "بدون فلتر بحث";
+    const summaryText = reportCopy.querySelector(".summary")?.textContent || `عدد السجلات: ${formatNumber(reportRows.length)}`;
+
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html>
+      <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>${reportTitle} - مطعم أركان</title>
+          <style>
+            @page { size: A4 landscape; margin: 12mm; }
+            * { box-sizing: border-box; }
+            body { margin: 0; color: #172033; background: #fff; direction: rtl; font-family: Tahoma, Arial, sans-serif; }
+            .print-sheet { width: 100%; }
+            .brand { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:0 0 14px; border-bottom:3px solid #1e3a5f; }
+            .brand-name { font-size:25px; font-weight:800; color:#17365d; margin:0 0 5px; }
+            .brand-subtitle { margin:0; color:#64748b; font-size:11px; }
+            .print-meta { text-align:left; color:#475569; font-size:10px; line-height:1.9; }
+            .report-title { margin:18px 0 10px; font-size:19px; color:#172033; }
+            .meta-strip { display:flex; flex-wrap:wrap; gap:8px 22px; padding:10px 12px; margin-bottom:14px; background:#f1f5f9; border:1px solid #d7dee8; border-radius:6px; font-size:11px; }
+            .report { width:100%; padding:0; color:#172033; }
+            .report-heading { display:none; }
+            .table-wrap { width:100%; overflow:visible; border:0; }
+            table { width:100% !important; min-width:100% !important; table-layout:fixed !important; border-collapse:collapse; text-align:right; direction:rtl; }
+            col { width:auto; }
+            th, td { padding:9px 10px; border:1px solid #aeb8c5; color:#172033; font-size:10pt; line-height:1.55; vertical-align:middle; white-space:normal; overflow-wrap:anywhere; word-break:normal; }
+            th { background:#e8eef5 !important; color:#17365d; font-weight:700; }
+            tbody tr:nth-child(even) td { background:#f7f9fc !important; }
+            .empty, .summary { margin-top:12px; padding:11px; color:#172033; background:#f8fafc; border:1px solid #cbd5e1; }
+            .summary strong { color:#17365d; }
+            thead { display:table-header-group; }
+            tr { break-inside:avoid; page-break-inside:avoid; }
+            .print-footer { margin-top:16px; padding-top:8px; border-top:1px solid #cbd5e1; color:#64748b; font-size:9px; display:flex; justify-content:space-between; }
+            @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+          </style>
+        </head>
+        <body>
+          <main class="print-sheet">
+            <header class="brand">
+              <div><div class="brand-name">مطعم أركان</div><p class="brand-subtitle">إدارة المخزون والتقارير</p></div>
+              <div class="print-meta"><div>تاريخ ووقت الطباعة: ${dateTime}</div><div>المكان: مطعم أركان</div></div>
+            </header>
+            <h1 class="report-title">${reportTitle}</h1>
+            <div class="meta-strip"><span><strong>الفترة:</strong> ${period}</span><span><strong>الفلاتر:</strong> ${searchLabel}</span><span><strong>عدد السجلات:</strong> ${formatNumber(reportRows.length)}</span></div>
+            ${reportCopy.outerHTML}
+            <footer class="print-footer"><span>مطعم أركان - تقرير داخلي</span><span>تم إنشاء التقرير إلكترونيًا</span></footer>
+          </main>
+        </body>
+      </html>`);
+    printWindow.document.close();
+    window.setTimeout(() => {
+      if (!printWindow.closed) {
+        printWindow.focus();
+        printWindow.print();
+      }
+    }, 700);
+  };
 
   return (
-    <main className="inventory-reports" dir="rtl">
-      <div className="page-header">
+    <main dir="rtl" className="inventory-reports">
+      <header className="header">
         <div>
           <div className="breadcrumb">المخزن / التقارير</div>
           <h1>تقارير المخزن</h1>
-          <p>تابع حركة المخزون والأرصدة والمشتريات والاستهلاك والهالك.</p>
+          <p>التقارير مرتبطة مباشرة ببيانات المخزن في Supabase.</p>
         </div>
-
-        <div className="header-actions">
-          <button className="btn btn-light" onClick={() => window.print()}>
-            <span>▧</span>
-            طباعة التقرير
-          </button>
-
-          <button className="btn btn-primary" onClick={exportCSV}>
-            <span>⇩</span>
-            تصدير Excel / CSV
-          </button>
+        <div className="actions">
+          <button onClick={loadData} disabled={loading}>↻ تحديث البيانات</button>
+          <button className="primary" onClick={exportCSV} disabled={loading}>تصدير CSV</button>
         </div>
-      </div>
+      </header>
 
-      <section className="filter-panel">
-        <div className="filter-heading">
-          <div>
-            <h3>الفترة الزمنية</h3>
-            <p>حدد تاريخ البداية والنهاية لعرض بيانات التقارير المطلوبة.</p>
-          </div>
+      {error && <div className="error"><strong>تعذر تحميل التقارير من قاعدة البيانات</strong><span>{error}</span><small>تأكد من تسجيل الدخول وامتلاك صلاحية قراءة المخزن أو التقارير.</small></div>}
 
-          <button className="reset-btn" onClick={handleReset}>
-            ↻ إعادة تعيين
-          </button>
-        </div>
-
-        <div className="filter-controls">
-          <label className="date-field">
-            <span>من تاريخ</span>
-            <input
-              type="date"
-              value={dateFrom}
-              max={dateTo || today}
-              onChange={(e) => setDateFrom(e.target.value)}
-            />
-          </label>
-
-          <label className="date-field">
-            <span>إلى تاريخ</span>
-            <input
-              type="date"
-              value={dateTo}
-              min={dateFrom || undefined}
-              max={today}
-              onChange={(e) => setDateTo(e.target.value)}
-            />
-          </label>
-
-          <div className="quick-filters">
-            <button onClick={() => handleQuickPeriod(7)}>آخر 7 أيام</button>
-            <button onClick={() => handleQuickPeriod(30)}>آخر 30 يوم</button>
-            <button onClick={handleAllPeriod}>كل الفترات</button>
-          </div>
-        </div>
-
-        <div className="filter-footer">
-          <span>
-            <span className="live-dot" />
-            يتم تحديث التقارير تلقائيًا عند تغيير التاريخ
-          </span>
-
-          <span className="selected-period">
-            {dateFrom || "بداية البيانات"} — {dateTo || "حتى الآن"}
-          </span>
-        </div>
+      <section className="filters">
+        <label>من تاريخ<input type="date" value={dateFrom} max={dateTo || todayISO()} onChange={(event) => setDateFrom(event.target.value)} /></label>
+        <label>إلى تاريخ<input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} /></label>
+        <label className="search">بحث<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث عن صنف أو فاتورة..." /></label>
+        <button onClick={() => { setDateFrom(""); setDateTo(""); setSearch(""); }}>كل الفترات</button>
       </section>
 
-      <section className="stats-grid">
-        <StatCard
-          title="قيمة المخزون الحالية"
-          value={formatCurrency(reportData.totalStockValue)}
-          subtitle="إجمالي قيمة الأرصدة الحالية"
-          icon="▤"
-          color="blue"
-        />
-
-        <StatCard
-          title="عدد الأصناف"
-          value={formatNumber(totalItems)}
-          subtitle="إجمالي الأصناف المسجلة"
-          icon="▦"
-          color="purple"
-        />
-
-        <StatCard
-          title="أصناف منخفضة"
-          value={formatNumber(reportData.lowStock.length)}
-          subtitle="تحتاج إلى إعادة طلب"
-          icon="⚠"
-          color="orange"
-        />
-
-        <StatCard
-          title="إجمالي الحركات"
-          value={formatNumber(totalMovements)}
-          subtitle="داخل الفترة المحددة"
-          icon="↕"
-          color="green"
-        />
+      <section className="stats">
+        <article><span>عدد الأصناف النشطة</span><strong>{formatNumber(items.filter((item) => item.is_active).length)}</strong></article>
+        <article><span>حركات الفترة</span><strong>{formatNumber(filteredMovements.length)}</strong></article>
+        <article><span>قيمة المشتريات</span><strong>{formatMoney(purchaseValue)}</strong></article>
+        <article><span>قيمة المخزون الحالي</span><strong>{formatMoney(stockValue)}</strong></article>
       </section>
 
-      <section className="report-tabs">
-        <div className="section-heading">
-          <div>
-            <h2>أنواع التقارير</h2>
-            <p>اختر التقرير الذي تريد عرضه.</p>
+      <nav className="tabs">{reportTypes.map((report) => <button key={report.id} className={activeReport === report.id ? "active" : ""} onClick={() => setActiveReport(report.id)}>{report.label}</button>)}</nav>
+
+      <section className="report">
+        <div className="report-heading">
+          <div><h2>{reportTypes.find((report) => report.id === activeReport)?.label}</h2><p>{loading ? "جارٍ تحميل البيانات..." : `عدد السجلات: ${formatNumber(reportRows.length)}`}</p></div>
+          <div className="report-actions">
+            <span>{lastUpdated ? `آخر تحديث: ${lastUpdated.toLocaleTimeString("ar-EG")}` : ""}</span>
+            <button className="print-button" onClick={printReport} disabled={loading || !!error || !reportRows.length}>🖨️ طباعة التقرير</button>
           </div>
         </div>
-
-        <div className="tabs-list">
-          {reportTypes.map((report) => (
-            <button
-              key={report.id}
-              onClick={() => setActiveReport(report.id)}
-              className={`report-tab ${activeReport === report.id ? "active" : ""}`}
-            >
-              <span className="tab-icon">{report.icon}</span>
-              {report.label}
-            </button>
-          ))}
-        </div>
+        {loading ? <div className="empty">جارٍ تحميل بيانات التقارير من قاعدة البيانات...</div> : !error ? <Table columns={columns} rows={reportRows} /> : null}
+        {activeReport === "consumption" && !loading && !error && <p className="summary">إجمالي قيمة الاستهلاك التقديرية للفترة: <strong>{formatMoney(consumptionValue)}</strong></p>}
+        {activeReport === "waste" && !loading && !error && <p className="summary">إجمالي قيمة الهالك التقديرية للفترة: <strong>{formatMoney(wasteValue)}</strong></p>}
+        {activeReport === "purchases" && !loading && !error && <p className="summary">إجمالي فواتير المشتريات للفترة: <strong>{formatMoney(purchaseValue)}</strong></p>}
+        {activeReport === "low" && !loading && !error && <p className="summary">عدد الأصناف عند حد الطلب أو أقل: <strong>{formatNumber(lowStockItems.length)}</strong></p>}
       </section>
 
-      <section className="report-content">
-        <div className="report-header">
-          <div>
-            <h2>{selectedReport?.label}</h2>
-            <p>{selectedReport?.description}</p>
-          </div>
-
-          <div className="report-search">
-            <span>⌕</span>
-            <input
-              type="text"
-              placeholder="ابحث في التقرير..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {activeReport === "movement" && (
-          <>
-            <div className="mini-stats">
-              <div>
-                <span>عدد الحركات</span>
-                <strong>{formatNumber(filteredMovements.length)}</strong>
-              </div>
-
-              <div>
-                <span>حركات الإضافة</span>
-                <strong className="positive">
-                  {formatNumber(filteredMovements.filter((m) => m.quantity > 0).length)}
-                </strong>
-              </div>
-
-              <div>
-                <span>حركات الخصم</span>
-                <strong className="negative">
-                  {formatNumber(filteredMovements.filter((m) => m.quantity < 0).length)}
-                </strong>
-              </div>
-            </div>
-
-            <ReportTable columns={movementColumns} rows={filteredMovements} />
-          </>
-        )}
-
-        {activeReport === "stock" && (
-          <ReportTable
-            columns={[
-              { key: "name", label: "اسم الصنف" },
-              {
-                key: "currentStock",
-                label: "الرصيد الحالي",
-                render: (r) => formatNumber(r.currentStock),
-              },
-              { key: "unit", label: "الوحدة" },
-              {
-                key: "minStock",
-                label: "حد الطلب",
-                render: (r) => formatNumber(r.minStock),
-              },
-              {
-                key: "status",
-                label: "الحالة",
-                render: (r) => (
-                  <span className={`status-badge ${r.currentStock <= r.minStock ? "danger" : "success"}`}>
-                    {r.currentStock <= r.minStock ? "مخزون منخفض" : "متوفر"}
-                  </span>
-                ),
-              },
-              {
-                key: "unitCost",
-                label: "تكلفة الوحدة",
-                render: (r) => formatCurrency(r.unitCost),
-              },
-              {
-                key: "value",
-                label: "قيمة المخزون",
-                render: (r) => formatCurrency(r.currentStock * r.unitCost),
-              },
-            ]}
-            rows={inventoryItems.filter((item) =>
-              !search || item.name.toLowerCase().includes(search.toLowerCase())
-            )}
-          />
-        )}
-
-        {activeReport === "low" && (
-          <>
-            <div className="alert-banner">
-              <span className="alert-icon">⚠</span>
-
-              <div>
-                <strong>تنبيه المخزون</strong>
-                <p>الأصناف التالية وصلت إلى حد الطلب أو أصبحت أقل منه.</p>
-              </div>
-
-              <strong>{reportData.lowStock.length} أصناف</strong>
-            </div>
-
-            <ReportTable
-              columns={[
-                { key: "name", label: "اسم الصنف" },
-                {
-                  key: "currentStock",
-                  label: "الرصيد الحالي",
-                  render: (r) => formatNumber(r.currentStock),
-                },
-                {
-                  key: "minStock",
-                  label: "حد الطلب",
-                  render: (r) => formatNumber(r.minStock),
-                },
-                {
-                  key: "shortage",
-                  label: "الكمية المطلوبة",
-                  render: (r) =>
-                    formatNumber(Math.max(r.minStock - r.currentStock, 0)),
-                },
-                { key: "unit", label: "الوحدة" },
-                {
-                  key: "status",
-                  label: "الحالة",
-                  render: (r) => (
-                    <span className="status-badge danger">
-                      {r.currentStock === 0 ? "نفد المخزون" : "يحتاج إعادة طلب"}
-                    </span>
-                  ),
-                },
-              ]}
-              rows={reportData.lowStock.filter((item) =>
-                !search || item.name.toLowerCase().includes(search.toLowerCase())
-              )}
-            />
-          </>
-        )}
-
-        {activeReport === "consumption" && (
-          <>
-            <div className="mini-stats">
-              <div>
-                <span>إجمالي قيمة الاستهلاك</span>
-                <strong>{formatCurrency(reportData.totalConsumptionValue)}</strong>
-              </div>
-
-              <div>
-                <span>عدد الأصناف المستهلكة</span>
-                <strong>{reportData.consumptionByItem.length}</strong>
-              </div>
-
-              <div>
-                <span>عدد حركات الاستهلاك</span>
-                <strong>{reportData.consumption.length}</strong>
-              </div>
-            </div>
-
-            <div className="chart-panel">
-              <h3>الاستهلاك حسب الصنف</h3>
-
-              {reportData.consumptionByItem.length ? (
-                <div className="bars-list">
-                  {reportData.consumptionByItem.map((item) => {
-                    const maxValue = Math.max(
-                      ...reportData.consumptionByItem.map((x) => x.value),
-                      1
-                    );
-
-                    return (
-                      <div className="bar-row" key={item.id}>
-                        <span className="bar-label">{item.name}</span>
-
-                        <div className="bar-track">
-                          <div
-                            className="bar-fill"
-                            style={{
-                              width: `${(item.value / maxValue) * 100}%`,
-                            }}
-                          />
-                        </div>
-
-                        <strong>{formatCurrency(item.value)}</strong>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="empty-state">لا توجد بيانات استهلاك.</div>
-              )}
-            </div>
-
-            <ReportTable
-              columns={[
-                { key: "name", label: "الصنف" },
-                {
-                  key: "quantity",
-                  label: "الكمية المستهلكة",
-                  render: (r) => formatNumber(r.quantity),
-                },
-                { key: "unit", label: "الوحدة" },
-                {
-                  key: "value",
-                  label: "التكلفة التقديرية",
-                  render: (r) => formatCurrency(r.value),
-                },
-              ]}
-              rows={reportData.consumptionByItem.filter((item) =>
-                !search || item.name.toLowerCase().includes(search.toLowerCase())
-              )}
-            />
-          </>
-        )}
-
-        {activeReport === "purchases" && (
-          <>
-            <div className="mini-stats">
-              <div>
-                <span>عدد عمليات الشراء</span>
-                <strong>{reportData.purchases.length}</strong>
-              </div>
-
-              <div>
-                <span>إجمالي المشتريات</span>
-                <strong>{formatCurrency(reportData.totalPurchaseValue)}</strong>
-              </div>
-
-              <div>
-                <span>عدد الأصناف المشتراة</span>
-                <strong>
-                  {new Set(reportData.purchases.map((m) => m.itemId)).size}
-                </strong>
-              </div>
-            </div>
-
-            <ReportTable
-              columns={[
-                {
-                  key: "date",
-                  label: "التاريخ",
-                  render: (r) => formatDate(r.date),
-                },
-                { key: "itemName", label: "الصنف" },
-                {
-                  key: "quantity",
-                  label: "الكمية",
-                  render: (r) => formatNumber(r.quantity),
-                },
-                { key: "unit", label: "الوحدة" },
-                {
-                  key: "unitCost",
-                  label: "تكلفة الوحدة",
-                  render: (r) => formatCurrency(r.unitCost),
-                },
-                {
-                  key: "total",
-                  label: "الإجمالي",
-                  render: (r) => formatCurrency(r.total),
-                },
-                { key: "source", label: "المورد" },
-                { key: "employee", label: "الموظف" },
-              ]}
-              rows={purchaseRows.filter((r) =>
-                !search || r.itemName.toLowerCase().includes(search.toLowerCase())
-              )}
-            />
-          </>
-        )}
-
-        {activeReport === "waste" && (
-          <>
-            <div className="mini-stats">
-              <div>
-                <span>عدد حركات الهالك</span>
-                <strong>{reportData.waste.length}</strong>
-              </div>
-
-              <div>
-                <span>إجمالي تكلفة الهالك</span>
-                <strong className="negative">
-                  {formatCurrency(reportData.totalWasteValue)}
-                </strong>
-              </div>
-
-              <div>
-                <span>عدد الأصناف المتأثرة</span>
-                <strong>
-                  {new Set(reportData.waste.map((m) => m.itemId)).size}
-                </strong>
-              </div>
-            </div>
-
-            <ReportTable
-              columns={[
-                {
-                  key: "date",
-                  label: "التاريخ",
-                  render: (r) => formatDate(r.date),
-                },
-                { key: "itemName", label: "الصنف" },
-                {
-                  key: "quantity",
-                  label: "الكمية",
-                  render: (r) => formatNumber(Math.abs(r.quantity)),
-                },
-                { key: "unit", label: "الوحدة" },
-                {
-                  key: "total",
-                  label: "قيمة الهالك",
-                  render: (r) => formatCurrency(r.total),
-                },
-                { key: "notes", label: "السبب / الملاحظات" },
-                { key: "employee", label: "الموظف" },
-              ]}
-              rows={wasteRows.filter((r) =>
-                !search || r.itemName.toLowerCase().includes(search.toLowerCase())
-              )}
-            />
-          </>
-        )}
-
-        {activeReport === "valuation" && (
-          <>
-            <div className="valuation-card">
-              <div>
-                <span>إجمالي القيمة الحالية للمخزون</span>
-                <strong>{formatCurrency(reportData.totalStockValue)}</strong>
-                <small>بناءً على الرصيد الحالي وتكلفة الوحدة</small>
-              </div>
-
-              <div className="valuation-icon">ج.م</div>
-            </div>
-
-            <ReportTable
-              columns={[
-                { key: "name", label: "الصنف" },
-                {
-                  key: "currentStock",
-                  label: "الرصيد الحالي",
-                  render: (r) => formatNumber(r.currentStock),
-                },
-                { key: "unit", label: "الوحدة" },
-                {
-                  key: "unitCost",
-                  label: "تكلفة الوحدة",
-                  render: (r) => formatCurrency(r.unitCost),
-                },
-                {
-                  key: "value",
-                  label: "قيمة المخزون",
-                  render: (r) => formatCurrency(r.currentStock * r.unitCost),
-                },
-              ]}
-              rows={inventoryItems.filter((item) =>
-                !search || item.name.toLowerCase().includes(search.toLowerCase())
-              )}
-            />
-          </>
-        )}
-
-        <div className="report-footer">
-          <span>
-            عدد السجلات المعروضة:{" "}
-            {formatNumber(
-              activeReport === "movement"
-                ? filteredMovements.length
-                : activeReport === "purchases"
-                ? purchaseRows.filter((r) =>
-                    !search || r.itemName.toLowerCase().includes(search.toLowerCase())
-                  ).length
-                : activeReport === "waste"
-                ? wasteRows.filter((r) =>
-                    !search || r.itemName.toLowerCase().includes(search.toLowerCase())
-                  ).length
-                : activeReport === "low"
-                ? reportData.lowStock.filter((r) =>
-                    !search || r.name.toLowerCase().includes(search.toLowerCase())
-                  ).length
-                : activeReport === "consumption"
-                ? reportData.consumptionByItem.filter((r) =>
-                    !search || r.name.toLowerCase().includes(search.toLowerCase())
-                  ).length
-                : inventoryItems.filter((r) =>
-                    !search || r.name.toLowerCase().includes(search.toLowerCase())
-                  ).length
-            )}
-          </span>
-
-          <span>آخر تحديث: {formatDate(today)}</span>
-        </div>
-      </section>
-
-      <style jsx>{`
-        .inventory-reports {
-          direction: rtl;
+      <style jsx global>{`
+        .inventory-reports .table-wrap {
+          display: block;
           width: 100%;
-          padding: 10px 0 40px;
-          color: #ffffff;
-          font-family: inherit;
-          background: #000000;
-          color-scheme: dark;
-        }
-
-        .page-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 20px;
-          margin-bottom: 25px;
-          flex-wrap: wrap;
-        }
-
-        .breadcrumb {
-          color: #9ca3af;
-          font-size: 13px;
-          font-weight: 600;
-          margin-bottom: 9px;
-        }
-
-        .page-header h1 {
-          color: #ffffff;
-          font-size: 28px;
-          font-weight: 900;
-          margin: 0 0 8px;
-          letter-spacing: -0.5px;
-        }
-
-        .page-header p,
-        .section-heading p,
-        .report-header p,
-        .filter-heading p {
-          color: #cbd5e1;
-          font-size: 13px;
-          font-weight: 500;
-          margin: 0;
-          line-height: 1.8;
-        }
-
-        .header-actions {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-
-        .btn {
-          border: 1px solid #374151;
-          border-radius: 10px;
-          padding: 11px 17px;
-          font-size: 13px;
-          font-weight: 800;
-          cursor: pointer;
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          transition: 0.2s;
-        }
-
-        .btn-light {
-          color: #ffffff;
-          background: #1f2937;
-          border-color: #374151;
-        }
-
-        .btn-light:hover {
-          background: #374151;
-        }
-
-        .btn-primary {
-          color: #ffffff;
-          background: #244cc5;
-          border-color: #244cc5;
-        }
-
-        .btn-primary:hover {
-          background: #193ba5;
-        }
-
-        .filter-panel,
-        .report-tabs,
-        .report-content {
-          background: #111111;
-          border: 1px solid #303030;
-          border-radius: 15px;
-          padding: 22px;
-          margin-bottom: 20px;
-          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-        }
-
-        .filter-heading {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 20px;
-        }
-
-        .filter-heading h3,
-        .section-heading h2,
-        .report-header h2 {
-          color: #ffffff;
-          font-size: 17px;
-          margin: 0 0 7px;
-          font-weight: 900;
-        }
-
-        .reset-btn {
-          background: #1e293b;
-          color: #93c5fd;
-          border: 1px solid #334155;
-          border-radius: 9px;
-          padding: 10px 14px;
-          cursor: pointer;
-          font-weight: 800;
-          font-size: 12px;
-        }
-
-        .reset-btn:hover {
-          background: #263449;
-        }
-
-        .filter-controls {
-          display: flex;
-          align-items: end;
-          gap: 15px;
-          flex-wrap: wrap;
-        }
-
-        .date-field {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          min-width: 180px;
-          flex: 1;
-        }
-
-        .date-field span {
-          color: #e5e7eb;
-          font-size: 13px;
-          font-weight: 800;
-        }
-
-        .date-field input,
-        .report-search input {
-          background: #1f1f1f;
-          color: #ffffff;
-          border: 1px solid #444444;
-          border-radius: 9px;
-          padding: 12px;
-          outline: none;
-          font-family: inherit;
-          font-size: 13px;
-          font-weight: 600;
-          width: 100%;
-          box-sizing: border-box;
-          color-scheme: dark;
-        }
-
-        .date-field input:focus,
-        .report-search input:focus {
-          border-color: #3157d5;
-          box-shadow: 0 0 0 3px rgba(49, 87, 213, 0.2);
-        }
-
-        .quick-filters {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .quick-filters button {
-          background: #222222;
-          border: 1px solid #3b3b3b;
-          color: #e5e7eb;
-          border-radius: 9px;
-          padding: 11px 13px;
-          font-size: 12px;
-          font-weight: 800;
-          cursor: pointer;
-        }
-
-        .quick-filters button:hover {
-          background: #263449;
-          color: #93c5fd;
-          border-color: #526b9c;
-        }
-
-        .filter-footer {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          flex-wrap: wrap;
-          border-top: 1px solid #303030;
-          padding-top: 14px;
-          margin-top: 18px;
-          color: #cbd5e1;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .live-dot {
-          display: inline-block;
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #22c55e;
-          margin-left: 7px;
-        }
-
-        .selected-period {
-          color: #93c5fd;
-          font-weight: 800;
-        }
-
-        /* Statistics Cards */
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 15px;
-          margin-bottom: 20px;
-        }
-
-        .stat-card {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          background: #111111;
-          border: 1px solid #303030;
-          border-radius: 14px;
-          padding: 19px;
-          min-width: 0;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-          transition: 0.2s;
-        }
-
-        .stat-card:hover {
-          transform: translateY(-3px);
-          background: #191919;
-          border-color: #4b5563;
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-        }
-
-        .stat-icon {
-          width: 46px;
-          height: 46px;
-          border-radius: 12px;
-          display: grid;
-          place-items: center;
-          font-size: 21px;
-          font-weight: 900;
-          flex-shrink: 0;
-        }
-
-        .stat-icon.blue {
-          background: #dbeafe;
-          color: #1d4ed8;
-        }
-
-        .stat-icon.purple {
-          background: #ede9fe;
-          color: #6d28d9;
-        }
-
-        .stat-icon.orange {
-          background: #ffedd5;
-          color: #c2410c;
-        }
-
-        .stat-icon.green {
-          background: #dcfce7;
-          color: #15803d;
-        }
-
-        .stat-content {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          min-width: 0;
-        }
-
-        .stat-title {
-          font-size: 12px;
-          color: #ffffff;
-          font-weight: 800;
-        }
-
-        .stat-content strong {
-          color: #ffffff;
-          font-size: 20px;
-          font-weight: 900;
-          overflow-wrap: anywhere;
-        }
-
-        .stat-content small {
-          color: #cbd5e1;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .section-heading {
-          margin-bottom: 17px;
-        }
-
-        .tabs-list {
-          display: flex;
-          gap: 9px;
-          flex-wrap: wrap;
-        }
-
-        .report-tab {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          border: 1px solid #3b3b3b;
-          background: #1c1c1c;
-          color: #e5e7eb;
-          padding: 11px 15px;
-          border-radius: 10px;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 12px;
-          font-weight: 800;
-          transition: 0.2s;
-        }
-
-        .report-tab:hover {
-          background: #263449;
-          border-color: #526b9c;
-          color: #bfdbfe;
-        }
-
-        .report-tab.active {
-          background: #244cc5;
-          color: #ffffff;
-          border-color: #244cc5;
-          box-shadow: 0 4px 10px rgba(36, 76, 197, 0.25);
-        }
-
-        .tab-icon {
-          font-size: 16px;
-        }
-
-        .report-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 15px;
-          flex-wrap: wrap;
-          margin-bottom: 21px;
-        }
-
-        .report-search {
-          position: relative;
-          width: 260px;
-        }
-
-        .report-search span {
-          position: absolute;
-          right: 12px;
-          top: 9px;
-          font-size: 19px;
-          color: #cbd5e1;
-        }
-
-        .report-search input {
-          padding-right: 37px;
-        }
-
-        .report-search input::placeholder {
-          color: #9ca3af;
-          font-weight: 500;
-        }
-
-        .mini-stats {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 13px;
-          margin-bottom: 19px;
-        }
-
-        .mini-stats > div {
-          padding: 16px;
-          background: #1b1b1b;
-          border: 1px solid #353535;
-          border-radius: 11px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .mini-stats span {
-          color: #cbd5e1;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .mini-stats strong {
-          color: #ffffff;
-          font-size: 19px;
-          font-weight: 900;
-        }
-
-        .positive {
-          color: #22c55e !important;
-          font-weight: 900;
-        }
-
-        .negative {
-          color: #f87171 !important;
-          font-weight: 900;
-        }
-
-        .table-wrapper {
-          width: 100%;
+          max-width: 100%;
           overflow-x: auto;
-          border: 1px solid #383838;
-          border-radius: 11px;
-          background: #111111;
+          border: 1px solid #3b4960;
+          border-radius: 12px;
+          background: #0f172a;
         }
-
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 750px;
+        .inventory-reports .table-wrap table {
+          display: table;
+          width: 100% !important;
+          min-width: 100% !important;
+          border-collapse: separate;
+          border-spacing: 0;
+          table-layout: fixed !important;
+          direction: rtl;
           text-align: right;
         }
-
-        th {
-          background: #252525;
-          color: #ffffff;
+        .inventory-reports .table-wrap th,
+        .inventory-reports .table-wrap td {
+          box-sizing: border-box;
           padding: 15px 14px;
-          font-size: 12px;
-          font-weight: 900;
-          white-space: nowrap;
-          border-bottom: 1px solid #404040;
+          border-bottom: 1px solid #334155;
+          border-left: 1px solid #293548;
+          min-width: 0;
+          font-size: 14px;
+          line-height: 1.85;
+          text-align: right;
+          vertical-align: middle;
+          white-space: normal !important;
+          overflow-wrap: anywhere;
+          word-break: normal;
         }
-
-        td {
-          color: #e5e7eb;
-          padding: 14px;
-          font-size: 12px;
-          font-weight: 600;
-          border-top: 1px solid #303030;
-          white-space: nowrap;
-        }
-
-        tbody tr:nth-child(even) {
-          background: #191919;
-        }
-
-        tbody tr:hover {
-          background: #262626;
-        }
-
-        .status-badge {
-          display: inline-flex;
-          align-items: center;
-          padding: 6px 10px;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 900;
-        }
-
-        .status-badge.success {
-          background: #14532d;
-          color: #bbf7d0;
-        }
-
-        .status-badge.warning {
-          background: #713f12;
-          color: #fde68a;
-        }
-
-        .status-badge.danger {
-          background: #7f1d1d;
-          color: #fecaca;
-        }
-
-        .alert-banner {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          background: #422006;
-          border: 1px solid #854d0e;
-          border-radius: 11px;
-          padding: 15px;
-          margin-bottom: 18px;
-        }
-
-        .alert-icon {
-          font-size: 24px;
-          color: #fbbf24;
-        }
-
-        .alert-banner div {
-          flex: 1;
-        }
-
-        .alert-banner strong {
-          font-size: 13px;
-          color: #fde68a;
-          font-weight: 900;
-        }
-
-        .alert-banner p {
-          font-size: 12px;
-          color: #fef3c7;
-          margin: 5px 0 0;
-        }
-
-        .chart-panel {
-          border: 1px solid #383838;
-          border-radius: 12px;
-          padding: 19px;
-          margin-bottom: 19px;
-          background: #171717;
-        }
-
-        .chart-panel h3 {
-          color: #ffffff;
-          font-size: 15px;
-          font-weight: 900;
-          margin: 0 0 21px;
-        }
-
-        .bars-list {
-          display: flex;
-          flex-direction: column;
-          gap: 17px;
-        }
-
-        .bar-row {
-          display: grid;
-          grid-template-columns: 100px minmax(80px, 1fr) 110px;
-          gap: 12px;
-          align-items: center;
-        }
-
-        .bar-label {
-          font-size: 12px;
-          color: #e5e7eb;
-          font-weight: 700;
-        }
-
-        .bar-track {
-          height: 11px;
-          background: #333333;
-          border-radius: 20px;
-          overflow: hidden;
-        }
-
-        .bar-fill {
-          height: 100%;
-          background: #3157d5;
-          border-radius: 20px;
-          min-width: 2px;
-        }
-
-        .bar-row strong {
-          color: #ffffff;
-          font-size: 11px;
-          font-weight: 900;
-          text-align: left;
-        }
-
-        .valuation-card {
-          background: #172554;
-          border: 1px solid #263f78;
-          border-radius: 13px;
-          padding: 22px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 19px;
-        }
-
-        .valuation-card div:first-child {
-          display: flex;
-          flex-direction: column;
-          gap: 9px;
-        }
-
-        .valuation-card span {
-          font-size: 13px;
-          color: #dbeafe;
+        .inventory-reports .table-wrap th {
+          background: #26364d;
+          color: #fff;
           font-weight: 800;
-        }
-
-        .valuation-card strong {
-          color: #ffffff;
-          font-size: 28px;
-          font-weight: 900;
-        }
-
-        .valuation-card small {
-          color: #bfdbfe;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .valuation-icon {
-          width: 58px;
-          height: 58px;
-          border-radius: 14px;
-          background: #d6e1ff;
-          color: #193ba5;
-          display: grid;
-          place-items: center;
-          font-size: 17px;
-          font-weight: 900;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 45px 15px;
-          color: #cbd5e1;
           font-size: 13px;
-          font-weight: 600;
+          letter-spacing: .1px;
         }
-
-        .empty-icon {
-          font-size: 34px;
-          margin-bottom: 13px;
-          color: #9ca3af;
+        .inventory-reports .table-wrap td { color: #e5edf8; }
+        .inventory-reports .table-wrap tbody tr:nth-child(even) td { background: #172438; }
+        .inventory-reports .table-wrap tbody tr:hover td { background: #20324b; }
+        .inventory-reports .table-wrap tbody tr:last-child td { border-bottom: 0; }
+        .inventory-reports .table-wrap th:last-child,
+        .inventory-reports .table-wrap td:last-child { border-left: 0; }
+        .inventory-reports .table-wrap tbody tr { height: 58px; }
+        @media (max-width: 750px) {
+          .inventory-reports .table-wrap table { min-width: 760px !important; }
         }
-
-        .empty-state strong {
-          display: block;
-          color: #ffffff;
-          font-weight: 900;
-          margin-bottom: 7px;
-        }
-
-        .empty-state p {
-          color: #9ca3af;
-          margin: 0;
-          font-size: 12px;
-        }
-
-        .report-footer {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          flex-wrap: wrap;
-          color: #cbd5e1;
-          font-size: 12px;
-          font-weight: 600;
-          padding-top: 16px;
-          margin-top: 18px;
-          border-top: 1px solid #303030;
-        }
-
-        @media (max-width: 1000px) {
-          .stats-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-        }
-
-        @media (max-width: 650px) {
-          .page-header {
-            align-items: flex-start;
-          }
-
-          .page-header h1 {
-            font-size: 23px;
-          }
-
-          .header-actions {
-            width: 100%;
-          }
-
-          .header-actions button {
-            flex: 1;
-            justify-content: center;
-          }
-
-          .filter-panel,
-          .report-tabs,
-          .report-content {
-            padding: 15px;
-          }
-
-          .filter-heading {
-            align-items: flex-start;
-          }
-
-          .filter-controls {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .date-field {
-            width: 100%;
-          }
-
-          .quick-filters {
-            width: 100%;
-          }
-
-          .quick-filters button {
-            flex: 1;
-          }
-
-          .stats-grid {
-            grid-template-columns: 1fr 1fr;
-            gap: 9px;
-          }
-
-          .stat-card {
-            padding: 12px 9px;
-            gap: 8px;
-          }
-
-          .stat-icon {
-            width: 36px;
-            height: 36px;
-            font-size: 16px;
-          }
-
-          .stat-content strong {
-            font-size: 15px;
-          }
-
-          .stat-content small {
-            font-size: 9px;
-          }
-
-          .tabs-list {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .report-tab {
-            justify-content: center;
-            padding: 10px 6px;
-            font-size: 11px;
-          }
-
-          .report-search {
-            width: 100%;
-          }
-
-          .mini-stats {
-            grid-template-columns: 1fr;
-          }
-
-          .bar-row {
-            grid-template-columns: 75px minmax(50px, 1fr) 80px;
-            gap: 7px;
-          }
-
-          .bar-label {
-            font-size: 10px;
-          }
-
-          .bar-row strong {
-            font-size: 9px;
-          }
-
-          .valuation-card strong {
-            font-size: 21px;
-          }
-        }
-
-        @media print {
-          .header-actions,
-          .filter-panel,
-          .report-tabs,
-          .report-search,
-          .reset-btn {
-            display: none !important;
-          }
-
-          .inventory-reports {
-            background: #ffffff;
-            color: #000000;
-          }
-
-          .report-content,
-          .stat-card {
-            box-shadow: none;
-            break-inside: avoid;
-          }
-
-          .table-wrapper {
-            overflow: visible;
-          }
-
-          table {
-            min-width: 100%;
-          }
-
-          th,
-          td {
-            font-size: 10px;
-            padding: 7px;
-          }
-        }
+      `}</style>
+      <style jsx>{`
+        .inventory-reports{color:#f8fafc;padding:12px 0 40px;direction:rtl}
+        .header,.report-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+        .header{margin-bottom:22px}.breadcrumb{color:#94a3b8;font-size:13px;margin-bottom:7px}
+        h1{font-size:27px;margin:0 0 7px;font-weight:900}p{color:#aebbd0;margin:0;font-size:13px;line-height:1.8}
+        .actions{display:flex;gap:9px}button{border:1px solid #39465a;background:#202b3c;color:#f8fafc;padding:10px 14px;border-radius:9px;font-weight:700;cursor:pointer}
+        button:disabled{opacity:.5;cursor:not-allowed}.actions .primary{background:#244cc5;border-color:#244cc5}
+        .filters,.report,.stats article,.tabs{background:#111827;border:1px solid #293548;border-radius:13px}
+        .filters{display:flex;align-items:end;gap:12px;flex-wrap:wrap;padding:17px;margin-bottom:17px}
+        label{display:flex;flex-direction:column;gap:7px;color:#cbd5e1;font-size:12px;font-weight:700;min-width:155px;flex:1}
+        input{background:#0b1220;border:1px solid #3b4960;color:white;border-radius:8px;padding:10px;min-height:40px}
+        .search{flex:2}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:17px}
+        .stats article{padding:16px;display:flex;flex-direction:column;gap:9px}.stats span{font-size:12px;color:#aebbd0}.stats strong{font-size:20px}
+        .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px;margin-bottom:17px}.tabs button.active{background:#244cc5;border-color:#244cc5}
+        .report{padding:22px}.report-heading{margin-bottom:20px;align-items:flex-start}.report-heading h2{font-size:20px;margin:0 0 7px;font-weight:900}
+        .report-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.report-heading span{font-size:12px;color:#94a3b8}
+        .print-button{background:#14532d;border-color:#166534;padding:10px 16px}
+        .table-wrap{display:block;width:100%;max-width:100%;overflow-x:auto;border:1px solid #3b4960;border-radius:10px}
+        table{display:table;width:100% !important;min-width:100% !important;border-collapse:collapse;table-layout:fixed;text-align:right;direction:rtl}
+        col{width:auto}
+        th,td{padding:17px 16px;border-bottom:1px solid #334155;border-left:1px solid #293548;font-size:14px;line-height:1.9;vertical-align:middle;text-align:right;min-width:0}
+        th{background:#202b3c;color:#f1f5f9;font-size:14px;font-weight:900;white-space:normal}
+        td{color:#f1f5f9;white-space:normal;overflow-wrap:anywhere;word-break:normal;min-width:0}
+        th:last-child,td:last-child{border-left:0}
+        tbody tr{min-height:58px}
+        tbody tr:nth-child(even){background:#172235}tbody tr:hover{background:#1e293b}
+        tbody tr:last-child td{border-bottom:0}
+        .empty{padding:35px;text-align:center;color:#cbd5e1}.error{display:flex;flex-direction:column;gap:7px;background:#451a1a;border:1px solid #991b1b;border-radius:10px;padding:14px;margin-bottom:15px;color:#fecaca}
+        .error span{overflow-wrap:anywhere;font-size:13px}.error small{color:#fca5a5}.summary{margin-top:15px;background:#172554;padding:13px;border-radius:9px}.summary strong{color:#fff}
+        @media(max-width:750px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.header{align-items:flex-start}.actions{width:100%}.actions button{flex:1}.report{padding:14px}.report-actions{width:100%;justify-content:space-between}}
+        @media(max-width:450px){.stats{grid-template-columns:1fr 1fr}.stats article{padding:11px}.stats strong{font-size:15px}.filters{align-items:stretch}label{min-width:100%}}
       `}</style>
     </main>
   );
