@@ -133,6 +133,9 @@ export default function AttendancePage(){
        <div style={box}><strong>إجمالي الخصومات مع العجز</strong><div>{money(totalDeductions)}</div></div>
        <div style={box}><strong>الحوافز والإضافات</strong><div>{money(payrollItem.additions)}</div></div>
        <div style={box}><strong>سعر الساعة</strong><div>{money(hourlyRate)}</div></div>
+       <div style={box}><strong>أجر اليوم</strong><div>{money(Number(payrollDetails.contract_monthly_salary||0)/30)}</div></div>
+       <div style={box}><strong>أيام مدة الاستحقاق</strong><div>{payrollDetails.eligible_days??0} يوم</div></div>
+       <div style={box}><strong>إجمالي الأيام المدفوعة</strong><div>{Number(payrollDetails.paid_days_total??0).toFixed(2)} يوم</div></div>
        <div style={{...box,gridColumn:"span 2"}}><strong>صافي الراتب بعد الإضافي والعجز والخصومات والحوافز</strong><div style={{fontSize:22,fontWeight:800}}>{money(payrollItem.net_salary)}</div></div>
        <div style={box}><strong>فترة الاستحقاق</strong><div>{payrollDetails.eligible_start||month+"-01"} إلى {payrollDetails.eligible_end||month+"-"+new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate()}</div></div>
       </div>
