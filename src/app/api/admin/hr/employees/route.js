@@ -93,7 +93,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "كود الحضور مستخدم لموظف آخر. اختر كودًا مختلفًا." }, { status: 409 });
     }
     values.attendance_pin_hash = hashAttendanceCode(code);
-    const { data, error } = await auth.db.from("hr_employees").insert(values).select("id,full_name,phone,photo_path,job_title,department,hire_date,employment_status,monthly_salary,overtime_hour_rate,paid_leave_days,daily_work_hours,notes").single();
+    const { data, error } = await auth.db.from("hr_employees").insert(values).select("id,full_name,phone,photo_path,job_title,department,hire_date,employment_status,monthly_salary,paid_leave_days,daily_work_hours,notes").single();
     if (error) throw error;
     return NextResponse.json({ employee: data }, { status: 201 });
   } catch (error) {
@@ -183,7 +183,7 @@ export async function PATCH(request) {
     }
     const { data, error } = await auth.db.from("hr_employees")
       .update({ ...values, updated_at: new Date().toISOString() }).eq("id", id)
-      .select("id,full_name,phone,photo_path,job_title,department,hire_date,employment_status,monthly_salary,overtime_hour_rate,paid_leave_days,daily_work_hours,notes").single();
+      .select("id,full_name,phone,photo_path,job_title,department,hire_date,employment_status,monthly_salary,paid_leave_days,daily_work_hours,notes").single();
     if (error) throw error;
     return NextResponse.json({ employee: data });
   } catch (error) {
