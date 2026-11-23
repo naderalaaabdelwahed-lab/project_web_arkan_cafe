@@ -72,7 +72,8 @@ export async function GET(request) {
       const photoUrl = employee.photo_path
         ? (await auth.db.storage.from("hr-employee-photos").createSignedUrl(employee.photo_path, 300)).data?.signedUrl || null
         : null;
-      const { attendance_pin_hash, ...safeEmployee } = employee;\n      return { ...safeEmployee, has_attendance_code: Boolean(attendance_pin_hash), photo_url: photoUrl };
+      const { attendance_pin_hash, ...safeEmployee } = employee;
+      return { ...safeEmployee, has_attendance_code: Boolean(attendance_pin_hash), photo_url: photoUrl };
     }));
     return NextResponse.json({ employees });
   } catch (error) {
