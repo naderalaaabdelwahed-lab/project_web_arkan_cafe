@@ -11,7 +11,9 @@ export default function HrEmployeesPage() {
   const [employees,setEmployees] = useState([]);
   const [form,setForm] = useState(empty);
   const [editing,setEditing] = useState(null);
-  const [photo,setPhoto] = useState(null);\n  const [loading,setLoading] = useState(true);
+  const [photo,setPhoto] = useState(null);
+  const [pin,setPin] = useState("");
+  const [loading,setLoading] = useState(true);
   const [saving,setSaving] = useState(false);
   const [error,setError] = useState("");
   const [message,setMessage] = useState("");
