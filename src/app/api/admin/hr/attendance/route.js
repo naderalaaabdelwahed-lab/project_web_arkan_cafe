@@ -69,6 +69,7 @@ export async function PATCH(request){
   if(changesOut)updates.check_out_at=parseLocal(b.check_out_local);
   const checkIn=changesIn?updates.check_in_at:current.check_in_at;
   const checkOut=changesOut?updates.check_out_at:current.check_out_at;
+  if(checkOut&&!checkIn)return NextResponse.json({error:"لا يمكن تسجيل الانصراف بدون وقت حضور."},{status:400});
   if(checkIn&&checkOut&&new Date(checkOut)<=new Date(checkIn))return NextResponse.json({error:"وقت الانصراف لازم يكون بعد وقت الحضور."},{status:400});
   if(changesIn)updates.check_in_method="manager";
   if(changesOut)updates.check_out_method="manager";
