@@ -72,6 +72,7 @@ npm run build
 - HR employees are separate from website/Auth employee accounts.
 - The attendance kiosk supports OpenCV YuNet + SFace face matching through a local Python service, with PIN as fallback. The first setup requires downloading the model files and keeping the local face service running.
 - Face templates are AES-256-GCM encrypted in Supabase. Configure `HR_FACE_ENCRYPTION_KEY` and never commit it. The service processes camera frames in memory and does not persist enrollment photos.
+- Initial match threshold settings (`HR_FACE_MATCH_THRESHOLD=0.45`, `HR_FACE_MATCH_MARGIN=0.06`) are starting values only and must be calibrated with consented camera samples before operational use.
 - Face matching currently does **not** provide reliable liveness / anti-spoof protection. A printed photo or replayed screen may fool a basic matcher. Do not rely on face-only attendance for payroll until liveness, employee consent, camera conditions, false-accept/false-reject rates and local legal requirements have been tested.
 - Pending absences are generated automatically by a Supabase Cron job every 15 minutes. The job uses Cairo local time and supports overnight shifts.
 - Payroll formulas currently use a 30-day salary basis and a 26-day lateness divisor. Confirm these rules, overtime rates, and leave policy with the restaurant before using payroll for actual payment.
