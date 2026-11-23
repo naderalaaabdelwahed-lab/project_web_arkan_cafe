@@ -9,7 +9,7 @@ export async function POST(request){
   const b=await request.json();
   if(b.action==="adjustment"){
    const employee_id=String(b.employee_id||""),adjustment_date=String(b.adjustment_date||""),amount=Number(b.amount),adjustment_type=String(b.adjustment_type||""),reason=String(b.reason||"").trim();
-   if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^(\\d{4})-(\\d{2})-(\\d{2})$/.test(adjustment_date)||!Number.isFinite(amount)||amount<=0||!["addition","deduction"].includes(adjustment_type)||reason.length<2)
+   if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^(\d{4})-(\d{2})-(\d{2})$/.test(adjustment_date)||!Number.isFinite(amount)||amount<=0||!["addition","deduction"].includes(adjustment_type)||reason.length<2)
     return NextResponse.json({error:"راجع بيانات الإضافة أو الخصم."},{status:400});
    const {data:existingRun,error:runError}=await a.db.from("hr_payroll_runs").select("id,status").lte("period_start",adjustment_date).gte("period_end",adjustment_date).limit(1).maybeSingle();
    if(runError)throw runError;
@@ -19,7 +19,7 @@ export async function POST(request){
    return NextResponse.json({adjustment:data},{status:201});
   }
   const start=String(b.period_start||""),end=String(b.period_end||"");
-  if(!/^(\\d{4})-(\\d{2})-(\\d{2})$/.test(start)||!/^(\\d{4})-(\\d{2})-(\\d{2})$/.test(end)||end<start)
+  if(!/^(\d{4})-(\d{2})-(\d{2})$/.test(start)||!/^(\d{4})-(\d{2})-(\d{2})$/.test(end)||end<start)
    return NextResponse.json({error:"حدد فترة صحيحة."},{status:400});
   const {data,error}=await a.db.rpc("hr_create_payroll_run",{
    p_period_start:start,p_period_end:end,p_created_by:a.user.id
