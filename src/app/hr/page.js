@@ -1,77 +1,47 @@
 "use client";
-import {useCallback,useEffect,useState} from "react";
-import {useRouter} from "next/navigation";
-import Link from "next/link";
-import {supabase} from "@/lib/supabase";
+import {useState} from "react";
 
 export default function HrHome(){
- const router=useRouter();
- const [session,setSession]=useState(null),[username,setUsername]=useState(""),[password,setPassword]=useState("");
- const [data,setData]=useState(null),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[error,setError]=useState("");
- const load=useCallback(async(currentSession)=>{
-  if(!currentSession?.access_token){setLoading(false);return;}
+ const [action,setAction]=useState("check_in");
+ const [code,setCode]=useState("");
+ const [busy,setBusy]=useState(false);
+ const [error,setError]=useState("");
+ const [result,setResult]=useState(null);
+
+ async function submit(e){
+  e.preventDefault();setBusy(true);setError("");setResult(null);
   try{
-   const r=await fetch("/api/hr/me",{headers:{Authorization:"Bearer "+currentSession.access_token},cache:"no-store"});
-   const j=await r.json();if(!r.ok)throw new Error(j.error||"تعذر تحميل الحساب.");
-   setData(j);setError("");
-  }catch(e){setError(e.message);setData(null);}
-  finally{setLoading(false);}
- },[]);
- useEffect(()=>{
-  let alive=true;
-  supabase.auth.getSession().then(async({data,error})=>{
-   if(!alive)return;
-   if(error){setError(error.message);setLoading(false);return;}
-   setSession(data.session);
-   if(data.session){
-    const {data:isAdmin}=await supabase.rpc("is_admin");
-    if(isAdmin===true){router.replace("/hr/manage");return;}
-    await load(data.session);
-   }else setLoading(false);
-  });
-  const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{
-   if(!alive)return;setSession(next);setData(null);setLoading(Boolean(next));
-   if(next)load(next);else setLoading(false);
-  });
-  return()=>{alive=false;subscription.unsubscribe();};
- },[load,router]);
- async function login(e){
-  e.preventDefault();setBusy(true);setError("");
-  try{
-   const clean=username.trim().toLowerCase();
-   const {data:result,error:authError}=await supabase.auth.signInWithPassword({email:clean+"@employees.arkan.local",password});
-   if(authError)throw authError;
-   if(result.user?.app_metadata?.account_type!=="hr_employee"){await supabase.auth.signOut();throw new Error("هذا الحساب غير مخصص للحضور والانصراف. استخدم بوابة الإدارة.");}
-   setSession(result.session);await load(result.session);
-  }catch(e){setError(e.message==="هذا الحساب غير مخصص للحضور والانصراف. استخدم بوابة الإدارة."?e.message:"اسم المستخدم أو كلمة المرور غير صحيحة.");}
+   const response=await fetch("/api/hr/attendance-code",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,code})});
+   const data=await response.json();
+   if(!response.ok)throw new Error(data.error||"تعذر تسجيل العملية.");
+   setResult(data);setCode("");
+  }catch(e){setError(e.message);}
   finally{setBusy(false);}
  }
- async function logout(){await supabase.auth.signOut();setSession(null);setData(null);}
- if(loading)return <main dir="rtl" style={{minHeight:"100vh",background:"#100d0b",color:"#e4bd75",display:"grid",placeItems:"center"}}>جارٍ تحميل بوابة الموظفين...</main>;
- if(!session)return <main dir="rtl" style={{minHeight:"100vh",background:"radial-gradient(circle at top,#332719 0,#100d0b 48%)",color:"#f4e9d8",display:"grid",placeItems:"center",padding:20}}>
-  <form onSubmit={login} style={{width:"min(100%,440px)",boxSizing:"border-box",background:"#211b14",border:"1px solid #59472d",borderRadius:20,padding:30,display:"grid",gap:17,boxShadow:"0 25px 80px #0008"}}>
-   <div style={{textAlign:"center"}}><div style={{fontSize:34,fontWeight:900}}>ARKAN<span style={{color:"#c9a45c"}}>.</span></div><h1 style={{margin:"8px 0",fontSize:25}}>بوابة الموظفين</h1><p style={{color:"#ad9e88",margin:0}}>تسجيل الحضور والانصراف</p></div>
-   <label style={{display:"grid",gap:8}}>اسم المستخدم<input required autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)} className="hr-field"/></label>
-   <label style={{display:"grid",gap:8}}>كلمة المرور<input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} className="hr-field"/></label>
-   {error&&<div className="hr-alert" role="alert">{error}</div>}
-   <button disabled={busy} className="hr-action">{busy?"جارٍ تسجيل الدخول...":"تسجيل الدخول"}</button>
-   <Link href="/" style={{textAlign:"center",color:"#c9a45c",textDecoration:"none"}}>العودة للموقع</Link>
-  </form>
- </main>;
- return <main className="hr-content" dir="rtl">
-  <header className="hr-page-heading" style={{display:"flex",justifyContent:"space-between",gap:14,alignItems:"center",flexWrap:"wrap"}}>
-   <div><h1>أهلاً، {data?.employee?.full_name||"بك"} 👋</h1><p>{data?.employee?.job_title||"موظف"} · {data?.employee?.department||"ARKAN"} · حساب مخصص للحضور والانصراف</p></div>
-   <button onClick={logout} className="hr-action secondary">تسجيل الخروج</button>
-  </header>
-  {error&&<div className="hr-alert" role="alert">{error}</div>}
-  <section className="hr-panel">
-   <div className="hr-page-heading"><h1 style={{fontSize:23}}>جاهز تسجل حضورك؟</h1><p>من هنا تقدر تسجل حضورك وانصرافك وتراجع سجلك الشخصي فقط.</p></div>
-   <div className="hr-stat-grid" style={{margin:"22px 0"}}>
-    <div className="hr-stat"><span>تاريخ اليوم</span><strong>{data?.today||"—"}</strong></div>
-    <div className="hr-stat"><span>الشيفت الحالي</span><strong>{data?.shift?.name||"غير محدد"}</strong></div>
-   </div>
-   <Link href="/hr/attendance" className="hr-action" style={{display:"inline-block",textDecoration:"none"}}>فتح صفحة الحضور والانصراف ←</Link>
-  </section>
-  <section className="hr-panel"><h2 style={{marginTop:0}}>آخر تسجيل حضور</h2><p style={{color:"#ad9e88"}}>{data?.attendance?.[0]?.shift_date||"لا توجد سجلات حتى الآن"}</p></section>
+ const recordedAt=result?.recorded_at?new Date(result.recorded_at).toLocaleString("ar-EG",{timeZone:"Africa/Cairo",dateStyle:"full",timeStyle:"short"}):"";
+ return <main dir="rtl" style={{minHeight:"100vh",background:"radial-gradient(ellipse at 50% 0%,#3b2b18 0%,#17120d 48%,#100d0b 100%)",color:"#f4e9d8",display:"grid",placeItems:"center",padding:"30px 16px",boxSizing:"border-box"}}>
+  <div style={{width:"min(100%,560px)",display:"grid",gap:18}}>
+   <header style={{textAlign:"center",padding:"12px 0 8px"}}>
+    <div style={{fontSize:35,fontWeight:950,letterSpacing:1}}>ARKAN<span style={{color:"#c9a45c"}}>.</span></div>
+    <div style={{fontSize:12,letterSpacing:3,color:"#c9a45c",fontWeight:800,marginTop:3}}>EMPLOYEE ATTENDANCE</div>
+    <h1 style={{fontSize:27,margin:"18px 0 8px"}}>تسجيل الحضور والانصراف</h1>
+    <p style={{color:"#ad9e88",margin:0,lineHeight:1.8}}>اختار العملية، اكتب كودك الشخصي، وسجّل وقتك بسهولة.</p>
+   </header>
+   <form onSubmit={submit} style={{background:"linear-gradient(145deg,#241d15,#19140f)",border:"1px solid #59472d",borderRadius:20,padding:24,display:"grid",gap:20,boxShadow:"0 24px 80px #0008"}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+     <button type="button" onClick={()=>{setAction("check_in");setError("");setResult(null);}} aria-pressed={action==="check_in"} style={{padding:"16px 10px",borderRadius:12,border:action==="check_in"?"1px solid #d6b875":"1px solid #51422d",background:action==="check_in"?"linear-gradient(135deg,#c9a45c,#9b7437)":"#17130f",color:action==="check_in"?"#17120b":"#d8cbb5",fontSize:17,fontWeight:900,cursor:"pointer"}}><span style={{display:"block",fontSize:23,marginBottom:5}}>↘</span>حضور</button>
+     <button type="button" onClick={()=>{setAction("check_out");setError("");setResult(null);}} aria-pressed={action==="check_out"} style={{padding:"16px 10px",borderRadius:12,border:action==="check_out"?"1px solid #d6b875":"1px solid #51422d",background:action==="check_out"?"linear-gradient(135deg,#c9a45c,#9b7437)":"#17130f",color:action==="check_out"?"#17120b":"#d8cbb5",fontSize:17,fontWeight:900,cursor:"pointer"}}><span style={{display:"block",fontSize:23,marginBottom:5}}>↗</span>انصراف</button>
+    </div>
+    <label style={{display:"grid",gap:10,color:"#e8ddca",fontWeight:800}}>
+     كود الحضور والانصراف
+     <input required type="password" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} minLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\\D/g,"").slice(0,6))} placeholder="••••••" style={{width:"100%",boxSizing:"border-box",textAlign:"center",fontSize:28,letterSpacing:12,fontWeight:900,padding:"16px 12px",borderRadius:12,border:"1px solid #665334",background:"#100d0b",color:"#f4e9d8",outlineColor:"#c9a45c"}}/>
+     <small style={{fontWeight:400,color:"#9f917d"}}>الكود مكوّن من 6 أرقام. خليه سري وما تشاركهوش مع أي حد.</small>
+    </label>
+    {error&&<div role="alert" style={{padding:13,borderRadius:10,background:"#482323",border:"1px solid #754343",color:"#ffc5c5"}}>{error}</div>}
+    {result&&<div role="status" style={{padding:15,borderRadius:10,background:"#193a2c",border:"1px solid #31684c",color:"#b5f0ca",lineHeight:1.9}}><strong>تم تسجيل {action==="check_in"?"الحضور":"الانصراف"} بنجاح ✓</strong><div>الموظف: {result.employee_name}</div><div>الوقت: {recordedAt}</div></div>}
+    <button disabled={busy||code.length!==6} type="submit" style={{padding:15,border:0,borderRadius:12,background:"#c9a45c",color:"#17120b",fontSize:17,fontWeight:900,cursor:busy?"wait":"pointer",opacity:busy||code.length!==6?.6:1}}>{busy?"جارٍ تسجيل العملية...":action==="check_in"?"تأكيد تسجيل الحضور":"تأكيد تسجيل الانصراف"}</button>
+   </form>
+   <footer style={{textAlign:"center",color:"#81745f",fontSize:12,lineHeight:1.8}}>يتم حفظ وقت التسجيل تلقائيًا بتوقيت القاهرة.<br/>لو الكود مش شغال، تواصل مع المدير المسؤول.</footer>
+  </div>
  </main>;
 }
