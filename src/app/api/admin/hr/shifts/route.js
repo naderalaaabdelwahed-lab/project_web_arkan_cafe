@@ -125,3 +125,30 @@ export async function PATCH(request) {
     return NextResponse.json({ error: error.message || "تعذر تعديل الشيفت." }, { status: 400 });
   }
 }
+
+ 
+export async function DELETE(request) {
+  try {
+    const auth = await authorize(request);
+    if (auth.response) return auth.response;
+    const body = await request.json();
+    const id = String(body.id || "");
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "معرّف الشيفت غير صحيح." }, { status: 400 });
+
+    const { count, error: assignmentError } = await auth.db
+      .from("hr_employee_shift_assignments")
+      .select("id", { count: "exact", head: true })
+      .eq("shift_id", id);
+    if (assignmentError) throw assignmentError;
+    if (count > 0) {
+      return NextResponse.json({ error: "لا يمكن حذف الشيفت لأنه مرتبط بتكليفات موظفين. أوقف الشيفت بدلًا من حذفه." }, { status: 409 });
+    }
+
+    const { error } = await auth.db.from("hr_shifts").delete().eq("id", id);
+    if (error) throw error;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("HR shifts DELETE:", error);
+    return NextResponse.json({ error: error.message || "تعذر حذف الشيفت." }, { status: 400 });
+  }
+}
