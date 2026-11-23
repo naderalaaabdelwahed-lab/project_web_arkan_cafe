@@ -1,138 +1,116 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash, scryptSync, timingSafeEqual } from "node:crypto";
-import { cosineSimilarity, decryptFaceEmbedding, extractFaceEmbedding } from "@/lib/hr-face";
 
-
+function dbClient() {
+ const url=process.env.NEXT_PUBLIC_SUPABASE_URL, secret=process.env.SUPABASE_SERVICE_ROLE_KEY;
+ if(!url||!secret) throw new Error("Supabase server configuration is missing.");
+ return createClient(url,secret,{auth:{autoRefreshToken:false,persistSession:false}});
+}
 function cairoParts(date) {
- const parts = new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date);
+ const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date);
  return Object.fromEntries(parts.map(p=>[p.type,p.value]));
 }
 function cairoDate(date) { const p=cairoParts(date); return p.year+"-"+p.month+"-"+p.day; }
 function cairoWeekday(dateString) { return new Date(dateString+"T00:00:00Z").getUTCDay(); }
 function cairoLocalToUtc(dateString,timeString) {
- const [y,m,d]=dateString.split("-").map(Number), [hh,mm]=timeString.slice(0,5).split(":").map(Number);
- const target=Date.UTC(y,m-1,d,hh,mm,0);
- let guess=target;
- for(let i=0;i<3;i++){
-  const p=cairoParts(new Date(guess));
-  const represented=Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day),Number(p.hour),Number(p.minute),Number(p.second));
-  guess += target-represented;
- }
+ const [y,m,d]=dateString.split("-").map(Number),[hh,mm]=String(timeString).slice(0,5).split(":").map(Number);
+ const target=Date.UTC(y,m-1,d,hh,mm,0); let guess=target;
+ for(let i=0;i<3;i++){const p=cairoParts(new Date(guess));const represented=Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day),Number(p.hour),Number(p.minute),Number(p.second));guess+=target-represented;}
  return new Date(guess);
 }
-async function assignedShift(db, employeeId, dateString) {
+async function authorizedDevice(request,db) {
+ const token=request.headers.get("x-ark-kiosk-token")||"";
+ if(!/^[a-f0-9]{64}$/i.test(token)) return null;
+ const digest=createHash("sha256").update(token).digest("hex");
+ const {data,error}=await db.from("hr_kiosk_devices").select("id").eq("token_hash",digest).eq("is_active",true).maybeSingle();
+ if(error) throw error;
+ return data||null;
+}
+async function assignedShift(db,employeeId,dateString) {
  const weekday=cairoWeekday(dateString);
  const {data:rows,error}=await db.from("hr_employee_shift_assignments").select("id,shift_id,effective_from,effective_to,weekday,hr_shifts(*)").eq("employee_id",employeeId).lte("effective_from",dateString);
  if(error) throw error;
- return (rows||[]).find(a=> (!a.effective_to||a.effective_to>=dateString) && (a.weekday===null||a.weekday===weekday) && a.hr_shifts?.is_active) || null;
+ return (rows||[]).find(a=>(!a.effective_to||a.effective_to>=dateString)&&(a.weekday===null||a.weekday===weekday)&&a.hr_shifts?.is_active)||null;
+}
+function validPin(pin,hash) {
+ const [salt,stored]=String(hash||"").split(":");
+ if(!salt||!stored) return false;
+ const actual=scryptSync(pin,salt,64),expected=Buffer.from(stored,"hex");
+ return expected.length===actual.length&&timingSafeEqual(actual,expected);
+}
+export async function GET(request) {
+ try {
+  const db=dbClient(),device=await authorizedDevice(request,db);
+  if(!device) return NextResponse.json({error:"جهاز الحضور غير مُفعّل."},{status:401});
+  const {data,error}=await db.from("hr_employees").select("id,full_name,job_title,department").eq("employment_status","active").order("full_name");
+  if(error) throw error;
+  return NextResponse.json({employees:data||[]});
+ } catch(error) {
+  console.error("HR kiosk employees:",error);
+  return NextResponse.json({error:"تعذر تحميل قائمة الموظفين."},{status:500});
+ }
 }
 export async function POST(request) {
  try {
-  const deviceToken=request.headers.get("x-ark-kiosk-token")||"";
-  if(!/^[a-f0-9]{64}$/i.test(deviceToken)) return NextResponse.json({error:"جهاز الحضور غير مُفعّل."},{status:401});
-  const url=process.env.NEXT_PUBLIC_SUPABASE_URL, secret=process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if(!url||!secret) throw new Error("Supabase server configuration is missing.");
-  const db=createClient(url,secret,{auth:{autoRefreshToken:false,persistSession:false}});
-  const digest=createHash("sha256").update(deviceToken).digest("hex");
-  const {data:device,error:deviceError}=await db.from("hr_kiosk_devices").select("id").eq("token_hash",digest).eq("is_active",true).maybeSingle();
-  if(deviceError||!device) return NextResponse.json({error:"جهاز الحضور غير مُفعّل."},{status:401});
+  const db=dbClient(),device=await authorizedDevice(request,db);
+  if(!device) return NextResponse.json({error:"جهاز الحضور غير مُفعّل."},{status:401});
   const {count:recentFailures,error:rateError}=await db.from("hr_kiosk_attempts").select("id",{count:"exact",head:true}).eq("device_id",device.id).eq("succeeded",false).gte("attempted_at",new Date(Date.now()-5*60*1000).toISOString());
   if(rateError) throw rateError;
   if((recentFailures||0)>=8) return NextResponse.json({error:"تم إيقاف المحاولات مؤقتًا بسبب إدخال أرقام خاطئة متكررة. تواصل مع المدير."},{status:429});
-  const body=await request.json(), pin=String(body.pin||""), action=String(body.action||""), imageBase64=body.image_base64;
-  const useFace=typeof imageBase64==="string" && imageBase64.length>100;
-  if((!useFace&&!/^\d{4,8}$/.test(pin))||!["check_in","check_out"].includes(action)) return NextResponse.json({error:"التقط صورة واضحة للوجه أو أدخل الرقم السري، وحدد العملية."},{status:400});
-  let employee=null;
-  if(useFace){
-   let probe;
-   try { probe=await extractFaceEmbedding(imageBase64); }
-   catch(error) { return NextResponse.json({error:error.message||"تعذر تحليل الوجه."},{status:422}); }
-   const {data:profiles,error:profileError}=await db.from("hr_employee_face_profiles")
-    .select("employee_id,embedding_ciphertext,embedding_iv,embedding_auth_tag,model_version,hr_employees!inner(id,full_name,daily_work_hours,employment_status)")
-    .eq("hr_employees.employment_status","active");
-   if(profileError) throw profileError;
-   const ranked=(profiles||[]).map(profile=>({
-    employee:profile.hr_employees,
-    score:profile.model_version==="opencv-yunet-sface-2021dec"
-      ? cosineSimilarity(probe,decryptFaceEmbedding(profile)) : -1
-   })).sort((a,b)=>b.score-a.score);
-   const thresholdValue=Number(process.env.HR_FACE_MATCH_THRESHOLD??0.45);
-   const marginValue=Number(process.env.HR_FACE_MATCH_MARGIN??0.06);
-   const threshold=Number.isFinite(thresholdValue)?Math.min(0.99,Math.max(0.2,thresholdValue)):0.45;
-   const margin=Number.isFinite(marginValue)?Math.min(0.5,Math.max(0,marginValue)):0.06;
-   if(!ranked.length || ranked[0].score<threshold || (ranked[1] && ranked[0].score-ranked[1].score<margin)){
-    await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false});
-    return NextResponse.json({error:"لم نتمكن من تأكيد هويتك. قرّب وجهك من الكاميرا أو استخدم الرقم السري."},{status:401});
-   }
-   employee=ranked[0].employee;
-  } else {
-   const {data:employees,error}=await db.from("hr_employees").select("id,full_name,attendance_pin_hash,daily_work_hours").eq("employment_status","active").not("attendance_pin_hash","is",null);
-   if(error) throw error;
-   const matches=(employees||[]).filter(e=>{
-    const [salt,stored]=String(e.attendance_pin_hash||"").split(":");
-    if(!salt||!stored)return false;
-    const actual=scryptSync(pin,salt,64), expected=Buffer.from(stored,"hex");
-    return expected.length===actual.length && timingSafeEqual(actual,expected);
-   });
-   if(matches.length!==1) { await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false}); return NextResponse.json({error:"الرقم السري غير صحيح."},{status:401}); }
-   employee=matches[0];
+  const body=await request.json(),employeeId=String(body.employee_id||""),pin=String(body.pin||""),action=String(body.action||"");
+  if(!/^[0-9a-f-]{36}$/i.test(employeeId)||!/^\d{4,8}$/.test(pin)||!["check_in","check_out"].includes(action))
+   return NextResponse.json({error:"اختار اسمك والعملية وأدخل الكود الصحيح."},{status:400});
+  const {data:employee,error:employeeError}=await db.from("hr_employees").select("id,full_name,attendance_pin_hash,daily_work_hours").eq("id",employeeId).eq("employment_status","active").maybeSingle();
+  if(employeeError) throw employeeError;
+  if(!employee||!validPin(pin,employee.attendance_pin_hash)) {
+   await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false});
+   return NextResponse.json({error:"الكود غير صحيح."},{status:401});
   }
   await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:true});
-  const attendanceMethod=useFace?"face":"pin";
-  const now=new Date(), todayCairo=cairoDate(now);
+  const now=new Date(),today=cairoDate(now);
   await db.from("hr_kiosk_devices").update({last_seen_at:now.toISOString()}).eq("id",device.id);
-  if(action==="check_in"){
-   const {data:open}=await db.from("hr_attendance").select("id").eq("employee_id",employee.id).is("check_out_at",null).not("check_in_at","is",null).maybeSingle();
-   if(open)return NextResponse.json({error:"أنت مسجل حضور بالفعل ولم تسجل الانصراف."},{status:409});
-   const assignment=await assignedShift(db,employee.id,todayCairo);
-   let shiftDate=todayCairo, shift=assignment?.hr_shifts||null;
-   const prev=new Date(Date.parse(todayCairo+"T00:00:00Z")-86400000).toISOString().slice(0,10);
-   const prevAssignment=await assignedShift(db,employee.id,prev), prevShift=prevAssignment?.hr_shifts;
-   if(prevShift?.crosses_midnight){
-    const prevStart=cairoLocalToUtc(prev,prevShift.start_time);
-    let prevEnd=cairoLocalToUtc(prev,prevShift.end_time);if(prevEnd<=prevStart)prevEnd=new Date(prevEnd.getTime()+86400000);
-    const graceStart=new Date(prevStart.getTime()-Number(prevShift.grace_minutes||0)*60000);
-    if(now>=graceStart&&now<=prevEnd){shiftDate=prev;shift=prevShift;}
-   }
-   const {data:existing}=await db.from("hr_attendance").select("id,check_in_at,check_out_at").eq("employee_id",employee.id).eq("shift_date",shiftDate).maybeSingle();
-   if(existing?.check_in_at)return NextResponse.json({error:"تم تسجيل حضورك لهذا اليوم بالفعل."},{status:409});
+  if(action==="check_in") {
+   const assignment=await assignedShift(db,employee.id,today),shift=assignment?.hr_shifts||null;
+   const {data:existing,error:existingError}=await db.from("hr_attendance").select("id,check_in_at").eq("employee_id",employee.id).eq("shift_date",today).maybeSingle();
+   if(existingError) throw existingError;
+   if(existing?.check_in_at) return NextResponse.json({error:"تم تسجيل حضورك لهذا اليوم بالفعل."},{status:409});
    let lateMinutes=0;
-   if(shift?.is_flexible && shift.latest_check_in){
-    const latest=cairoLocalToUtc(shiftDate,shift.latest_check_in);
-    const cutoff=new Date(latest.getTime()+Number(shift.grace_minutes||0)*60000);
+   if(shift?.is_flexible&&shift.latest_check_in) {
+    const latest=cairoLocalToUtc(today,shift.latest_check_in),cutoff=new Date(latest.getTime()+Number(shift.grace_minutes||0)*60000);
     if(now>cutoff) return NextResponse.json({error:"انتهى وقت الحضور المسموح لهذا الشيفت."},{status:409});
-   } else if(shift){
-    const start=cairoLocalToUtc(shiftDate,shift.start_time);
+   } else if(shift) {
+    const start=cairoLocalToUtc(today,shift.start_time);
     lateMinutes=Math.max(0,Math.floor((now-start)/60000)-Number(shift.grace_minutes||0));
    }
-   const {error:insertError}=await db.from("hr_attendance").insert({employee_id:employee.id,shift_date:shiftDate,check_in_at:now.toISOString(),check_in_method:attendanceMethod,attendance_status:"present",late_minutes:lateMinutes});
-   if(insertError)throw insertError;
-   return NextResponse.json({success:true,employee_name:employee.full_name,action:"check_in",recorded_at:now.toISOString()});
+   const payload={employee_id:employee.id,shift_date:today,check_in_at:now.toISOString(),check_in_method:"pin",attendance_status:"present",late_minutes,updated_at:now.toISOString()};
+   const {error:saveError}=existing
+    ? await db.from("hr_attendance").update(payload).eq("id",existing.id)
+    : await db.from("hr_attendance").insert(payload);
+   if(saveError) {
+    if(saveError.code==="23505") return NextResponse.json({error:"تم تسجيل حضورك لهذا اليوم بالفعل."},{status:409});
+    throw saveError;
+   }
+   return NextResponse.json({success:true,employee_name:employee.full_name,action:"check_in",shift_date:today,recorded_at:now.toISOString()});
   }
   const {data:openRows,error:openError}=await db.from("hr_attendance").select("id,shift_date,check_in_at").eq("employee_id",employee.id).not("check_in_at","is",null).is("check_out_at",null).order("check_in_at",{ascending:false}).limit(1);
-  if(openError)throw openError;
+  if(openError) throw openError;
   const open=openRows?.[0];
-  if(!open)return NextResponse.json({error:"لا يوجد تسجيل حضور مفتوح لك."},{status:409});
-  const elapsedMinutes=Math.max(0,Math.round((now-new Date(open.check_in_at))/60000));
-  const assignment=await assignedShift(db,employee.id,open.shift_date);
-  const shift=assignment?.hr_shifts;
-  // Break time is excluded from both actual and scheduled working minutes.
-  const breakMinutes=shift?Number(shift.break_minutes||0):0;
-  const minutes=Math.max(0,elapsedMinutes-breakMinutes);
+  if(!open) return NextResponse.json({error:"لا يوجد تسجيل حضور مفتوح لك. راجع المدير إذا كنت نسيت تسجيل الحضور."},{status:409});
+  const elapsed=Math.max(0,Math.round((now-new Date(open.check_in_at))/60000));
+  const assignment=await assignedShift(db,employee.id,open.shift_date),shift=assignment?.hr_shifts||null;
+  const breakMinutes=shift?Number(shift.break_minutes||0):0,workedMinutes=Math.max(0,elapsed-breakMinutes);
   let overtimeMinutes=0;
-  if(shift){
+  if(shift) {
    const start=cairoLocalToUtc(open.shift_date,shift.start_time);
    let end=cairoLocalToUtc(open.shift_date,shift.end_time);
    if(shift.crosses_midnight||end<=start) end=new Date(end.getTime()+86400000);
    const planned=Math.max(0,Math.round((end-start)/60000)-breakMinutes);
-   overtimeMinutes=Math.max(0,minutes-planned);
-  } else {
-   overtimeMinutes=Math.max(0,minutes-Math.round(Number(employee.daily_work_hours||8)*60));
-  }
-  const {error:updateError}=await db.from("hr_attendance").update({check_out_at:now.toISOString(),check_out_method:attendanceMethod,worked_minutes:minutes,overtime_minutes:overtimeMinutes,updated_at:now.toISOString()}).eq("id",open.id);
-  if(updateError)throw updateError;
-  return NextResponse.json({success:true,employee_name:employee.full_name,action:"check_out",recorded_at:now.toISOString(),worked_minutes:minutes});
+   overtimeMinutes=Math.max(0,workedMinutes-planned);
+  } else overtimeMinutes=Math.max(0,workedMinutes-Math.round(Number(employee.daily_work_hours||8)*60));
+  const {error:updateError}=await db.from("hr_attendance").update({check_out_at:now.toISOString(),check_out_method:"pin",worked_minutes:workedMinutes,overtime_minutes:overtimeMinutes,updated_at:now.toISOString()}).eq("id",open.id);
+  if(updateError) throw updateError;
+  return NextResponse.json({success:true,employee_name:employee.full_name,action:"check_out",shift_date:open.shift_date,recorded_at:now.toISOString(),worked_minutes:workedMinutes});
  } catch(error) {
   console.error("HR kiosk attendance:",error);
   return NextResponse.json({error:"تعذر تسجيل العملية. حاول مرة أخرى أو تواصل مع المدير."},{status:500});
