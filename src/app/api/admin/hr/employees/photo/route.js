@@ -12,6 +12,7 @@ export async function POST(request) {
     if (!url || !publishable || !secret) throw new Error("Supabase server configuration is missing.");
     const auth = createClient(url, publishable, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: userData, error: authError } = await auth.auth.getUser(token);
+    if (!authError && userData?.user?.app_metadata?.account_type === "hr_employee") return NextResponse.json({ error: "حساب HR مخصص للحضور والانصراف الشخصي فقط." }, { status: 403 });
     if (authError || !userData?.user) return NextResponse.json({ error: "جلسة الدخول غير صالحة." }, { status: 401 });
     const db = createClient(url, secret, { auth: { autoRefreshToken: false, persistSession: false } });
     const { data: admin } = await db.from("admin_users").select("user_id").eq("user_id", userData.user.id).maybeSingle();
