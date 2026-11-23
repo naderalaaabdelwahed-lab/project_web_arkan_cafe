@@ -21,7 +21,7 @@ export default function AttendancePage(){
   if(checkOut===null)return;
   try{
    await call("/api/admin/hr/attendance",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:row.id,check_in_local:checkIn||null,check_out_local:checkOut||null})});
-   setMessage("تم تعديل الأوقات وإعادة حساب ساعات العمل والإضافي.");await load();
+   setMessage("تم تعديل الأوقات وإعادة حساب ساعات العمل والإضافي والعجز.");await load();
   }catch(e){setError(e.message)}
  }
  async function addAbsence(status){try{await call("/api/admin/hr/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:employee,shift_date:date,attendance_status:status,notes:"تم تسجيل الحالة بواسطة المدير"})});setMessage("تم حفظ الحالة.");await load()}catch(e){setError(e.message)}}
