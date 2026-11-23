@@ -53,6 +53,11 @@ const links = [
     adminOnly: true,
   },
   {
+    href: "/admin/hr/shifts",
+    label: "◷ إدارة الشيفتات",
+    adminOnly: true,
+  },
+  {
     href: "/admin/hr/kiosk",
     label: "▣ إعداد جهاز الحضور",
     adminOnly: true,
