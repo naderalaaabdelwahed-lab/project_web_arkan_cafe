@@ -43,7 +43,7 @@ export async function GET(request) {
  try {
   const db=dbClient(),device=await authorizedDevice(request,db);
   if(!device) return NextResponse.json({error:"جهاز الحضور غير مُفعّل."},{status:401});
-  const {data,error}=await db.from("hr_employees").select("id,full_name,job_title,department").eq("employment_status","active").order("full_name");
+  const {data,error}=await db.from("hr_employees").select("id,full_name,job_title,department").eq("employment_status","active").not("attendance_pin_hash","is",null).order("full_name");
   if(error) throw error;
   return NextResponse.json({employees:data||[]});
  } catch(error) {
