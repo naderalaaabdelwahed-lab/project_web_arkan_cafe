@@ -67,7 +67,7 @@ export async function GET(request) {
   try {
     const auth = await authorize(request);
     if (auth.response) return auth.response;
-    const { data, error } = await auth.db.from("hr_employees").select("id,full_name,phone,photo_path,job_title,department,hire_date,termination_date,employment_status,monthly_salary,paid_leave_days,daily_work_hours,notes,username,attendance_pin_hash,created_at").order("created_at", { ascending: false });
+    const { data, error } = await auth.db.from("hr_employees").select("id,full_name,phone,photo_path,job_title,department,hire_date,termination_date,employment_status,monthly_salary,paid_leave_days,daily_work_hours,notes,username,attendance_pin_hash,created_at,archived_at").is("archived_at", null).order("created_at", { ascending: false });
     if (error) throw error;
     const employees = await Promise.all((data || []).map(async (employee) => {
       const photoUrl = employee.photo_path
@@ -165,6 +165,20 @@ export async function PATCH(request) {
         throw linkError;
       }
       return NextResponse.json({ success: true, username, account_created: createdUser });
+    }
+    if (body.action === "archive") {
+      const { data, error } = await auth.db.from("hr_employees")
+        .update({
+          employment_status: "inactive",
+          termination_date: body.termination_date || new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()),
+          archived_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", id).is("archived_at", null)
+        .select("id,full_name,employment_status,termination_date,archived_at").maybeSingle();
+      if (error) throw error;
+      if (!data) return NextResponse.json({ error: "الموظف غير موجود أو تم أرشفته بالفعل." }, { status: 404 });
+      return NextResponse.json({ employee: data, archived: true });
     }
     if (body.action === "deactivate" || body.action === "activate") {
       const { data, error } = await auth.db.from("hr_employees")
