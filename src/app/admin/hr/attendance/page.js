@@ -45,6 +45,10 @@ export default function AttendancePage(){
  const balance=leaveBalances.find(x=>x.employee_id===employee);
  const payrollItem=payrollRun?.hr_payroll_items?.find(x=>x.employee_id===employee);
  const payrollDetails=payrollItem?.details||{};
+ const hourlyRate=Number(payrollDetails.hour_rate||0);
+ const overtimeAmount=Number(payrollDetails.overtime_amount??(Number(payrollDetails.overtime_minutes||0)/60*hourlyRate));
+ const shortageAmount=Number(payrollDetails.shortage_amount??(Number(payrollDetails.shortage_minutes||0)/60*hourlyRate));
+ const totalDeductions=Number(payrollItem?.other_deductions||0)+shortageAmount;
  const money=v=>Number(v||0).toLocaleString("ar-EG",{minimumFractionDigits:2,maximumFractionDigits:2})+" ج.م";
  const fmt=v=>v?new Date(v).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit",timeZone:"Africa/Cairo"}):"—";
  const hours=v=>(Number(v||0)/60).toFixed(2)+" ساعة";
@@ -119,10 +123,13 @@ export default function AttendancePage(){
        <div style={box}><strong>الأساسي المستحق</strong><div>{money(payrollItem.monthly_salary)}</div></div>
        <div style={box}><strong>ساعات الإضافي</strong><div>{hours(payrollDetails.overtime_minutes)}</div></div>
        <div style={box}><strong>ساعات العجز</strong><div>{hours(payrollDetails.shortage_minutes)}</div></div>
-       <div style={box}><strong>تسوية الساعات (+ / -)</strong><div>{money(payrollItem.overtime_amount)}</div></div>
-       <div style={box}><strong>الخصومات</strong><div>{money(payrollItem.other_deductions)}</div></div>
+       <div style={box}><strong>قيمة الإضافي</strong><div>{money(overtimeAmount)}</div></div>
+       <div style={box}><strong>خصم العجز</strong><div>{money(shortageAmount)}</div></div>
+       <div style={box}><strong>الخصومات الأخرى</strong><div>{money(payrollItem.other_deductions)}</div></div>
+       <div style={box}><strong>إجمالي الخصومات مع العجز</strong><div>{money(totalDeductions)}</div></div>
        <div style={box}><strong>الحوافز والإضافات</strong><div>{money(payrollItem.additions)}</div></div>
-       <div style={{...box,gridColumn:"span 2"}}><strong>صافي الراتب المستحق</strong><div style={{fontSize:22,fontWeight:800}}>{money(payrollItem.net_salary)}</div></div>
+       <div style={box}><strong>سعر الساعة</strong><div>{money(hourlyRate)}</div></div>
+       <div style={{...box,gridColumn:"span 2"}}><strong>صافي الراتب بعد الإضافي والعجز والخصومات والحوافز</strong><div style={{fontSize:22,fontWeight:800}}>{money(payrollItem.net_salary)}</div></div>
        <div style={box}><strong>فترة الاستحقاق</strong><div>{payrollDetails.eligible_start||month+"-01"} إلى {payrollDetails.eligible_end||month+"-"+new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate()}</div></div>
       </div>
       <p style={{margin:"12px 0 0"}}>حالة كشف الرواتب: {payrollRun.status==="finalized"?"معتمد":"مسودة — لم يتم الاعتماد بعد"}</p>
