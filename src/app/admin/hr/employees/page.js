@@ -11,8 +11,7 @@ export default function HrEmployeesPage() {
   const [employees,setEmployees] = useState([]);
   const [form,setForm] = useState(empty);
   const [editing,setEditing] = useState(null);
-  const [photo,setPhoto] = useState(null);\n  const [pin,setPin] = useState("");
-  const [loading,setLoading] = useState(true);
+  const [photo,setPhoto] = useState(null);\n  const [loading,setLoading] = useState(true);
   const [saving,setSaving] = useState(false);
   const [error,setError] = useState("");
   const [message,setMessage] = useState("");
@@ -58,7 +57,7 @@ export default function HrEmployeesPage() {
     } catch(e) { setError(e.message); }
     finally { setSaving(false); }
   }
-  async function savePin(employee) {\n    if (!/^\\d{4,8}$/.test(pin)) { setError("الرقم السري يجب أن يكون من 4 إلى 8 أرقام."); return; }\n    try { await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:"set_pin",pin})}); setPin(""); setMessage("تم تعيين الرقم السري للحضور."); } catch(e) { setError(e.message); }\n  }\n  async function promptPin(employee) {
+  async function promptPin(employee) {
     const value = window.prompt("حدد رقم حضور سري من 4 إلى 8 أرقام للموظف " + employee.full_name);
     if (value === null) return;
     try {
