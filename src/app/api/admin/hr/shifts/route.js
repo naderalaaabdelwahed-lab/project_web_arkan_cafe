@@ -102,7 +102,18 @@ export async function PATCH(request) {
     const body = await request.json();
     const id = String(body.id || "");
     if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "معرّف الشيفت غير صحيح." }, { status: 400 });
-    const { data, error } = await auth.db.from("hr_shifts").update({ is_active: body.is_active === true }).eq("id", id).select("*").single();
+    const values = body.action === "update" ? {
+      name: String(body.name || "").trim(),
+      start_time: String(body.start_time || ""),
+      end_time: String(body.end_time || ""),
+      crosses_midnight: String(body.end_time || "") < String(body.start_time || ""),
+      break_minutes: Number(body.break_minutes ?? 0),
+      grace_minutes: Number(body.grace_minutes ?? 0),
+    } : { is_active: body.is_active === true };
+    if (body.action === "update" && (values.name.length < 2 || values.name.length > 80 || !timePattern.test(values.start_time) || !timePattern.test(values.end_time) || values.start_time === values.end_time || !Number.isInteger(values.break_minutes) || values.break_minutes < 0 || values.break_minutes > 600 || !Number.isInteger(values.grace_minutes) || values.grace_minutes < 0 || values.grace_minutes > 240)) {
+      return NextResponse.json({ error: "راجع بيانات الشيفت." }, { status: 400 });
+    }
+    const { data, error } = await auth.db.from("hr_shifts").update(values).eq("id", id).select("*").single();
     if (error) throw error;
     return NextResponse.json({ shift: data });
   } catch (error) {
