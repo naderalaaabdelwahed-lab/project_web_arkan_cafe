@@ -12,7 +12,7 @@ function clients() {
   };
 }
 async function context(request) {
-  const token=(request.headers.get("authorization")||"").replace(/^Bearer\\s+/i,"");
+  const token=(request.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
   if(!token) return {response:NextResponse.json({error:"سجل الدخول إلى حساب الموظف أولاً."},{status:401})};
   const {auth,db}=clients();
   const {data,error}=await auth.auth.getUser(token);
@@ -22,7 +22,8 @@ async function context(request) {
     .eq("auth_user_id",data.user.id).maybeSingle();
   if(employeeError) throw employeeError;
   if(!employee||employee.employment_status!=="active") return {response:NextResponse.json({error:"هذا الحساب غير مرتبط بموظف نشط. تواصل مع الإدارة."},{status:403})};
-  const {auth_user_id,...safeEmployee}=employee;\n  return {db,employee:safeEmployee};
+  const {auth_user_id,...safeEmployee}=employee;
+  return {db,employee:safeEmployee};
 }
 function cairoParts(date) {
   return Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date).map(p=>[p.type,p.value]));
