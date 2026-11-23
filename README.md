@@ -56,7 +56,7 @@ Next.js 16 application for ARKAN Cafe & Restaurant.
    .\\face-service/.venv/Scripts/python.exe -m pip install -r face-service/requirements.txt
    .\\face-service/.venv/Scripts/python.exe face-service/download_models.py
    Set-Location face-service
-   ..\\face-service/.venv/Scripts/python.exe -m uvicorn app:app --host 127.0.0.1 --port 8765
+   .\\.venv\\Scripts\\python.exe -m uvicorn app:app --host 127.0.0.1 --port 8765
    ```
    Keep this terminal running while using face attendance.
 
