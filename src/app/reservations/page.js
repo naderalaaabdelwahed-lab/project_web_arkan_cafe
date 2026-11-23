@@ -24,10 +24,6 @@ export default function ReservationsPage() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
   async function loadSettings() {
     setLoadingSettings(true);
 
@@ -47,6 +43,10 @@ export default function ReservationsPage() {
 
     setLoadingSettings(false);
   }
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   function handleChange(e) {
     const { name, value } = e.target;
