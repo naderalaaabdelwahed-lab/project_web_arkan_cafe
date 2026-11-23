@@ -40,7 +40,7 @@ export default function HrEmployeesPage() {
   function edit(employee) {
     setEditing(employee.id);
     setForm(Object.fromEntries(Object.keys(empty).map(k=>[k,employee[k] ?? (k==="daily_work_hours"?"8":"")])));
-    setPhoto(null); setPin(""); setError(""); setMessage("");
+    setPhoto(null); setError(""); setMessage("");
   }
   function reset() { setEditing(null); setForm(empty); setPhoto(null); }
   async function submit(e) {
