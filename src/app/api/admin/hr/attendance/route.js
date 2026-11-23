@@ -58,7 +58,7 @@ export async function POST(request){
  try{
   const a=await admin(request);if(a.response)return a.response;
   const b=await request.json(),employee_id=String(b.employee_id||""),shift_date=String(b.shift_date||"");
-  if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^(\\d{4})-(\\d{2})-(\\d{2})$/.test(shift_date))
+  if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^(\d{4})-(\d{2})-(\d{2})$/.test(shift_date))
    return NextResponse.json({error:"اختار الموظف والتاريخ."},{status:400});
   const status=b.attendance_status==="paid_leave"?"paid_leave":"absent";
   const {data,error}=await a.db.rpc("hr_review_attendance",{
