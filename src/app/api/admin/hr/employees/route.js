@@ -17,6 +17,7 @@ async function authorize(request) {
   const auth = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
   const { data, error } = await auth.auth.getUser(token);
   if (error || !data?.user) return { response: NextResponse.json({ error: "جلسة الدخول غير صالحة." }, { status: 401 }) };
+  if (data.user.app_metadata?.account_type === "hr_employee") return { response: NextResponse.json({ error: "حساب HR مخصص للحضور والانصراف فقط." }, { status: 403 }) };
   const db = adminClient();
   const { data: admin, error: adminError } = await db.from("admin_users").select("user_id").eq("user_id", data.user.id).maybeSingle();
   if (adminError || !admin) return { response: NextResponse.json({ error: "غير مسموح." }, { status: 403 }) };
