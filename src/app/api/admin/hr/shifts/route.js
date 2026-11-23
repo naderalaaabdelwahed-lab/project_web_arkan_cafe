@@ -76,16 +76,18 @@ export async function POST(request) {
     const endTime = String(body.end_time || "");
     const breakMinutes = Number(body.break_minutes ?? 0);
     const graceMinutes = Number(body.grace_minutes ?? 0);
+    const isFlexible = body.is_flexible === true;
+    const latestCheckIn = String(body.latest_check_in || "");
     if (name.length < 2 || name.length > 80 || !timePattern.test(startTime) || !timePattern.test(endTime) || startTime === endTime) {
       return NextResponse.json({ error: "راجع اسم الشيفت ووقت البداية والنهاية." }, { status: 400 });
     }
-    if (!Number.isInteger(breakMinutes) || breakMinutes < 0 || breakMinutes > 600 || !Number.isInteger(graceMinutes) || graceMinutes < 0 || graceMinutes > 240) {
+    if (!Number.isInteger(breakMinutes) || breakMinutes < 0 || breakMinutes > 600 || !Number.isInteger(graceMinutes) || graceMinutes < 0 || graceMinutes > 240 || (isFlexible && !timePattern.test(latestCheckIn))) {
       return NextResponse.json({ error: "مدة الراحة أو السماح غير صحيحة." }, { status: 400 });
     }
     const crossesMidnight = endTime < startTime;
     const { data, error } = await auth.db.from("hr_shifts").insert({
       name, start_time: startTime, end_time: endTime, crosses_midnight: crossesMidnight,
-      break_minutes: breakMinutes, grace_minutes: graceMinutes, is_active: true,
+      break_minutes: breakMinutes, grace_minutes: graceMinutes, is_flexible: isFlexible, latest_check_in: isFlexible ? latestCheckIn : null, is_active: true,
     }).select("*").single();
     if (error) throw error;
     return NextResponse.json({ shift: data }, { status: 201 });
@@ -109,8 +111,10 @@ export async function PATCH(request) {
       crosses_midnight: String(body.end_time || "") < String(body.start_time || ""),
       break_minutes: Number(body.break_minutes ?? 0),
       grace_minutes: Number(body.grace_minutes ?? 0),
+      is_flexible: body.is_flexible === true,
+      latest_check_in: body.is_flexible === true ? String(body.latest_check_in || "") : null,
     } : { is_active: body.is_active === true };
-    if (body.action === "update" && (values.name.length < 2 || values.name.length > 80 || !timePattern.test(values.start_time) || !timePattern.test(values.end_time) || values.start_time === values.end_time || !Number.isInteger(values.break_minutes) || values.break_minutes < 0 || values.break_minutes > 600 || !Number.isInteger(values.grace_minutes) || values.grace_minutes < 0 || values.grace_minutes > 240)) {
+    if (body.action === "update" && (values.name.length < 2 || values.name.length > 80 || !timePattern.test(values.start_time) || !timePattern.test(values.end_time) || values.start_time === values.end_time || !Number.isInteger(values.break_minutes) || values.break_minutes < 0 || values.break_minutes > 600 || !Number.isInteger(values.grace_minutes) || values.grace_minutes < 0 || values.grace_minutes > 240 || (values.is_flexible && !timePattern.test(values.latest_check_in)))) {
       return NextResponse.json({ error: "راجع بيانات الشيفت." }, { status: 400 });
     }
     const { data, error } = await auth.db.from("hr_shifts").update(values).eq("id", id).select("*").single();
