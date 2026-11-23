@@ -148,3 +148,7 @@ begin
   );
 end;
 $function$;
+
+
+revoke all on function public.hr_create_payroll_run(date,date,uuid) from public, anon, authenticated;
+grant execute on function public.hr_create_payroll_run(date,date,uuid) to service_role;
