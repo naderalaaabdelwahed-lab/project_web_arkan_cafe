@@ -43,6 +43,12 @@ const inventoryLinks = [
     icon: "📊",
     permission: "inventory.reports.view",
   },
+  {
+    href: "/admin/inventory/production",
+    label: "التصنيع والإنتاج",
+    icon: "🏭",
+    permission: "inventory.production.manage",
+  },
 ];
 
 export default function InventoryLayout({ children }) {
