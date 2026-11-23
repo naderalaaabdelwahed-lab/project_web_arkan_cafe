@@ -21,7 +21,7 @@ export default function HrHome(){
  },[]);
  useEffect(()=>{
   let alive=true;
-  supabase.auth.getSession().then(({data,error})=>{if(!alive)return;if(error){setError(error.message);setLoading(false);return;}setSession(data.session);if(data.session)load(data.session);else setLoading(false);});
+  supabase.auth.getSession().then(async({data,error})=>{if(!alive)return;if(error){setError(error.message);setLoading(false);return;}setSession(data.session);if(data.session){const admin=await supabase.rpc("is_admin");if(admin.data===true){router.replace("/hr/manage");return;}load(data.session);}else setLoading(false);});
   const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{if(!alive)return;setSession(next);if(next){setLoading(true);load(next);}else{setData(null);setLoading(false);}});
   return()=>{alive=false;subscription.unsubscribe();};
  },[load]);
