@@ -37,38 +37,38 @@ export async function GET(request){
  }catch(e){console.error("HR attendance GET",e);return NextResponse.json({error:e.message||"تعذر تحميل الحضور."},{status:500})}
 }
 export async function PATCH(request){
- try{const a=await admin(request);if(a.response)return a.response;const b=await request.json(),id=String(b.id||"");
+ try{
+  const a=await admin(request);if(a.response)return a.response;
+  const b=await request.json(),id=String(b.id||"");
   if(!/^[0-9a-f-]{36}$/i.test(id))return NextResponse.json({error:"سجل غير صحيح."},{status:400});
   const allowed=["present","absent","paid_leave","unpaid_leave","excused","holiday"];
   if(!allowed.includes(b.attendance_status))return NextResponse.json({error:"حالة الحضور غير صحيحة."},{status:400});
-  const {data:old,error:oldError}=await a.db.from("hr_attendance").select("employee_id,shift_date,attendance_status").eq("id",id).single();if(oldError)throw oldError;
-  const {data,error}=await a.db.from("hr_attendance").update({attendance_status:b.attendance_status,notes:String(b.notes||"").slice(0,1000),reviewed_by:a.user.id,reviewed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",id).select("*").single();
-  if(error)throw error;
-  if(old.attendance_status!==b.attendance_status&&(old.attendance_status==="paid_leave"||b.attendance_status==="paid_leave")){
-   const year=Number(old.shift_date.slice(0,4)),delta=b.attendance_status==="paid_leave"?1:-1;
-   const [{data:emp,error:empError},{data:balance,error:balanceError}]=await Promise.all([a.db.from("hr_employees").select("paid_leave_days").eq("id",old.employee_id).single(),a.db.from("hr_leave_balances").select("*").eq("employee_id",old.employee_id).eq("leave_year",year).maybeSingle()]);
-   if(empError)throw empError;if(balanceError)throw balanceError;
-   const allocated=Number(balance?.allocated_days??emp.paid_leave_days??0),used=Math.max(0,Number(balance?.used_days||0)+delta);
-   if(used>allocated){await a.db.from("hr_attendance").update({attendance_status:old.attendance_status}).eq("id",id);return NextResponse.json({error:"رصيد الإجازات المدفوعة غير كافٍ."},{status:409});}
-   const {error:leaveError}=await a.db.from("hr_leave_balances").upsert({employee_id:old.employee_id,leave_year:year,allocated_days:allocated,used_days:used,updated_at:new Date().toISOString()},{onConflict:"employee_id,leave_year"});
-   if(leaveError)throw leaveError;
+  const {data,error}=await a.db.rpc("hr_review_attendance",{
+   p_attendance_id:id,p_employee_id:null,p_shift_date:null,p_status:b.attendance_status,
+   p_notes:String(b.notes||"").slice(0,1000),p_reviewed_by:a.user.id
+  });
+  if(error){
+   const status=error.code==="23514"?409:400;
+   return NextResponse.json({error:error.message||"تعذر تحديث السجل."},{status});
   }
   return NextResponse.json({attendance:data});
- }catch(e){return NextResponse.json({error:e.message||"تعذر تحديث السجل."},{status:400})}
+ }catch(e){console.error("HR attendance PATCH",e);return NextResponse.json({error:e.message||"تعذر تحديث السجل."},{status:400})}
 }
 export async function POST(request){
- try{const a=await admin(request);if(a.response)return a.response;const b=await request.json(),employee_id=String(b.employee_id||""),shift_date=String(b.shift_date||"");
-  if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^\d{4}-\d{2}-\d{2}$/.test(shift_date))return NextResponse.json({error:"اختار الموظف والتاريخ."},{status:400});
-  const {data:old}=await a.db.from("hr_attendance").select("attendance_status").eq("employee_id",employee_id).eq("shift_date",shift_date).maybeSingle();
+ try{
+  const a=await admin(request);if(a.response)return a.response;
+  const b=await request.json(),employee_id=String(b.employee_id||""),shift_date=String(b.shift_date||"");
+  if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^(\\d{4})-(\\d{2})-(\\d{2})$/.test(shift_date))
+   return NextResponse.json({error:"اختار الموظف والتاريخ."},{status:400});
   const status=b.attendance_status==="paid_leave"?"paid_leave":"absent";
-  if(status==="paid_leave"&&old?.attendance_status!=="paid_leave"){
-   const [{data:emp,error:empError},{data:balance,error:balanceError}]=await Promise.all([a.db.from("hr_employees").select("paid_leave_days").eq("id",employee_id).single(),a.db.from("hr_leave_balances").select("*").eq("employee_id",employee_id).eq("leave_year",Number(shift_date.slice(0,4))).maybeSingle()]);
-   if(empError)throw empError;if(balanceError)throw balanceError;
-   const allocated=Number(balance?.allocated_days??emp.paid_leave_days??0),used=Number(balance?.used_days||0)+1;
-   if(used>allocated)return NextResponse.json({error:"رصيد الإجازات المدفوعة غير كافٍ."},{status:409});
-   const {error:leaveError}=await a.db.from("hr_leave_balances").upsert({employee_id,leave_year:Number(shift_date.slice(0,4)),allocated_days:allocated,used_days:used,updated_at:new Date().toISOString()},{onConflict:"employee_id,leave_year"});if(leaveError)throw leaveError;
+  const {data,error}=await a.db.rpc("hr_review_attendance",{
+   p_attendance_id:null,p_employee_id:employee_id,p_shift_date:shift_date,p_status:status,
+   p_notes:String(b.notes||"").slice(0,1000),p_reviewed_by:a.user.id
+  });
+  if(error){
+   const statusCode=error.code==="23514"?409:400;
+   return NextResponse.json({error:error.message||"تعذر حفظ الحالة."},{status:statusCode});
   }
-  const {data,error}=await a.db.from("hr_attendance").upsert({employee_id,shift_date,attendance_status:status,notes:String(b.notes||"").slice(0,1000),reviewed_by:a.user.id,reviewed_at:new Date().toISOString()},{onConflict:"employee_id,shift_date"}).select("*").single();
-  if(error)throw error;return NextResponse.json({attendance:data},{status:201});
- }catch(e){return NextResponse.json({error:e.message||"تعذر حفظ الحالة."},{status:400})}
+  return NextResponse.json({attendance:data},{status:201});
+ }catch(e){console.error("HR attendance POST",e);return NextResponse.json({error:e.message||"تعذر حفظ الحالة."},{status:400})}
 }
