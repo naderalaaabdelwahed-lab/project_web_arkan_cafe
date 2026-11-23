@@ -111,7 +111,8 @@ export default function HrEmployeesPage() {
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{[emp.job_title,emp.department].filter(Boolean).join(" — ")||"—"}</td>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.phone||"—"}</td>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{Number(emp.monthly_salary).toLocaleString("ar-EG")} ج.م</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>\n              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.username||"لم يتم إنشاء حساب"}</td>
+              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>
+              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.username||"لم يتم إنشاء حساب"}</td>
               <td style={{padding:12,borderBottom:"1px solid #344657",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>promptLogin(emp)} style={{marginLeft:8}}>{emp.username?"تغيير بيانات الدخول":"إنشاء حساب HR"}</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
             </tr>)}</tbody>
           </table></div>}
