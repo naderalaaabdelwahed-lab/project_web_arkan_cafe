@@ -81,6 +81,46 @@ export async function PATCH(request) {
     if (!/^[0-9a-f-]{36}$/i.test(id)) {
       return NextResponse.json({ error: "معرّف الموظف غير صحيح." }, { status: 400 });
     }
+    if (body.action === "create_login") {
+      const username = String(body.username || "").trim().toLowerCase();
+      const password = String(body.password || "");
+      if (!/^[a-z0-9._-]{3,30}$/.test(username)) {
+        return NextResponse.json({ error: "اسم المستخدم يجب أن يكون 3 إلى 30 حرفًا إنجليزيًا أو رقمًا." }, { status: 400 });
+      }
+      if (password.length < 8 || password.length > 72) {
+        return NextResponse.json({ error: "كلمة المرور يجب ألا تقل عن 8 أحرف." }, { status: 400 });
+      }
+      const { data: employee, error: employeeError } = await auth.db.from("hr_employees")
+        .select("id,full_name,auth_user_id,username").eq("id", id).maybeSingle();
+      if (employeeError) throw employeeError;
+      if (!employee) return NextResponse.json({ error: "الموظف غير موجود." }, { status: 404 });
+      const email = username + "@employees.arkan.local";
+      const { data: duplicate } = await auth.db.from("hr_employees").select("id").ilike("username", username).neq("id", id).maybeSingle();
+      if (duplicate) return NextResponse.json({ error: "اسم المستخدم مستخدم لموظف آخر." }, { status: 409 });
+      let authUserId = employee.auth_user_id;
+      let createdUser = false;
+      if (authUserId) {
+        const { error: updateAuthError } = await auth.db.auth.admin.updateUserById(authUserId, { password, email });
+        if (updateAuthError) throw updateAuthError;
+      } else {
+        const { data: created, error: createAuthError } = await auth.db.auth.admin.createUser({
+          email, password, email_confirm: true,
+          user_metadata: { account_type: "hr_employee", employee_id: id, display_name: employee.full_name },
+          app_metadata: { account_type: "hr_employee" }
+        });
+        if (createAuthError) throw createAuthError;
+        authUserId = created.user.id;
+        createdUser = true;
+      }
+      const { error: linkError } = await auth.db.from("hr_employees")
+        .update({ auth_user_id: authUserId, username, attendance_pin_hash: null, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (linkError) {
+        if (createdUser) await auth.db.auth.admin.deleteUser(authUserId);
+        throw linkError;
+      }
+      return NextResponse.json({ success: true, username, account_created: createdUser });
+    }
     if (body.action === "set_pin") {
       const pin = String(body.pin || "");
       if (!/^\d{4,8}$/.test(pin)) {
