@@ -76,6 +76,17 @@ export default function HrShiftsPage() {
     } catch (e) { setError(e.message); } finally { setSaving(false); }
   }
 
+  async function deleteShift(shift) {
+    if (!window.confirm(`متأكد إنك عايز تحذف شيفت "${shift.name}"؟ لا يمكن حذف شيفت مرتبط بتكليفات موظفين.`)) return;
+    setSaving(true); setError(""); setMessage("");
+    try {
+      await call("/api/admin/hr/shifts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: shift.id }) });
+      setMessage("تم حذف الشيفت.");
+      await load();
+    } catch (e) { setError(e.message); }
+    finally { setSaving(false); }
+  }
+
   async function toggle(shift) {
     try {
       await call("/api/admin/hr/shifts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: shift.id, is_active: !shift.is_active }) });
@@ -86,7 +97,7 @@ export default function HrShiftsPage() {
   const shiftName = (id) => shifts.find((s) => s.id === id)?.name || "شيفت غير موجود";
   const employeeName = (id) => employees.find((e) => e.id === id)?.full_name || "موظف غير موجود";
   const time = (value) => String(value || "").slice(0, 5);
-  const formatTime = (value) => { const raw = time(value); if (!/^\\d{2}:\\d{2}$/.test(raw)) return "—"; const [h, m] = raw.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; };
+  const formatTime = (value) => { const raw = time(value); if (!/^\d{2}:\d{2}$/.test(raw)) return "—"; const [h, m] = raw.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; };
   const durationOf = (s) => { const a=Number(String(s.start_time).slice(0,2))*60+Number(String(s.start_time).slice(3,5)); const b=Number(String(s.end_time).slice(0,2))*60+Number(String(s.end_time).slice(3,5)); const n=Math.max(0,b-a+(s.crosses_midnight?1440:0)-Number(s.break_minutes||0)); return `${Math.floor(n/60)}س ${n%60}د`; };
 
   return <main dir="rtl" style={{ minHeight: "100vh", background: "#101820", color: "#f8fafc", padding: "28px 18px" }}>
@@ -125,7 +136,7 @@ export default function HrShiftsPage() {
 
       <section style={panel}>
         <h2 style={{ margin: "0 0 16px", fontSize: 20 }}>الشيفتات ({shifts.length})</h2>
-        {loading ? <p>جارٍ التحميل...</p> : shifts.length === 0 ? <p style={{ color: "#aebdca" }}>لم يتم إنشاء شيفتات بعد.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 650 }}><thead><tr>{["الاسم","من","إلى","المدة","الراحة","نوع الشيفت","الحالة",""].map(x => <th key={x} style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #425466", color: "#d6a44d" }}>{x}</th>)}</tr></thead><tbody>{shifts.map(s => <tr key={s.id}><td style={cell}>{s.name}</td><td style={cell}>{formatTime(s.start_time)}</td><td style={cell}>{formatTime(s.end_time)}{s.crosses_midnight ? " (اليوم التالي)" : ""}</td><td style={cell}>{durationOf(s)}</td><td style={cell}>{s.break_minutes} د</td><td style={cell}>{s.is_flexible ? `مرن حتى ${formatTime(s.latest_check_in)}` : "ثابت"}</td><td style={cell}>{s.is_active ? "نشط" : "موقوف"}</td><td style={cell}><button onClick={() => editShift(s)} style={{marginLeft:6}}>تعديل</button><button onClick={() => toggle(s)}>{s.is_active ? "إيقاف" : "تفعيل"}</button></td></tr>)}</tbody></table></div>}
+        {loading ? <p>جارٍ التحميل...</p> : shifts.length === 0 ? <p style={{ color: "#aebdca" }}>لم يتم إنشاء شيفتات بعد.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 650 }}><thead><tr>{["الاسم","من","إلى","المدة","الراحة","نوع الشيفت","الحالة",""].map(x => <th key={x} style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #425466", color: "#d6a44d" }}>{x}</th>)}</tr></thead><tbody>{shifts.map(s => <tr key={s.id}><td style={cell}>{s.name}</td><td style={cell}>{formatTime(s.start_time)}</td><td style={cell}>{formatTime(s.end_time)}{s.crosses_midnight ? " (اليوم التالي)" : ""}</td><td style={cell}>{durationOf(s)}</td><td style={cell}>{s.break_minutes} د</td><td style={cell}>{s.is_flexible ? `مرن حتى ${formatTime(s.latest_check_in)}` : "ثابت"}</td><td style={cell}>{s.is_active ? "نشط" : "موقوف"}</td><td style={cell}><button onClick={() => editShift(s)} style={{marginLeft:6}}>تعديل</button><button onClick={() => toggle(s)}>{s.is_active ? "إيقاف" : "تفعيل"}</button><button onClick={() => deleteShift(s)} disabled={saving} style={{ marginRight: 6, color: "#b42318" }}>حذف</button></td></tr>)}</tbody></table></div>}
       </section>
 
       <section style={panel}>
