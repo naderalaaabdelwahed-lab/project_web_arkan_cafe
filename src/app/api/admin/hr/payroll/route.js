@@ -19,7 +19,57 @@ export async function GET(request){
    a.db.from("hr_payroll_adjustments").select("id,employee_id,adjustment_date,amount,adjustment_type,reason").order("adjustment_date",{ascending:false}).limit(100)
   ]);
   if(error)throw error;if(ee)throw ee;if(ae)throw ae;
-  return NextResponse.json({runs:runs||[],employees:employees||[],adjustments:adjustments||[]});
+
+  let preview=[];
+  if(month){
+   const start=month+"-01",end=new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).toISOString().slice(0,10);
+   const [{data:allEmployees,error:allError},{data:attendance,error:attendanceError},{data:pendingAdjustments,error:pendingError}]=await Promise.all([
+    a.db.from("hr_employees").select("id,full_name,employment_status,hire_date,termination_date,monthly_salary,paid_leave_days,daily_work_hours"),
+    a.db.from("hr_attendance").select("employee_id,shift_date,attendance_status,check_in_at,overtime_minutes,shortage_minutes").gte("shift_date",start).lte("shift_date",end),
+    a.db.from("hr_payroll_adjustments").select("employee_id,amount,adjustment_type").is("payroll_run_id",null).gte("adjustment_date",start).lte("adjustment_date",end)
+   ]);
+   if(allError)throw allError;if(attendanceError)throw attendanceError;if(pendingError)throw pendingError;
+   const days=(Date.parse(end+"T00:00:00Z")-Date.parse(start+"T00:00:00Z"))/86400000+1;
+   const round2=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
+   for(const employee of allEmployees||[]){
+    if(employee.hire_date>end||(employee.termination_date&&employee.termination_date<start))continue;
+    const empRows=(attendance||[]).filter(row=>row.employee_id===employee.id);
+    if(employee.employment_status!=="active"&&!employee.termination_date&&!empRows.length)continue;
+    const eligibleStart=employee.hire_date>start?employee.hire_date:start;
+    const lastAttendance=empRows.reduce((max,row)=>row.shift_date>max?row.shift_date:max,"");
+    const eligibleEnd=employee.termination_date?(employee.termination_date<end?employee.termination_date:end)
+      :employee.employment_status==="inactive"?(lastAttendance||""):end;
+    if(!eligibleEnd||eligibleEnd<eligibleStart)continue;
+    const eligibleDays=(Date.parse(eligibleEnd+"T00:00:00Z")-Date.parse(eligibleStart+"T00:00:00Z"))/86400000+1;
+    const eligibleRows=empRows.filter(row=>row.shift_date>=eligibleStart&&row.shift_date<=eligibleEnd);
+    const attended=eligibleRows.filter(row=>row.attendance_status==="present"&&row.check_in_at).length;
+    const overtime=eligibleRows.reduce((sum,row)=>sum+Number(row.overtime_minutes||0),0);
+    const shortage=eligibleRows.reduce((sum,row)=>sum+Number(row.shortage_minutes||0),0);
+    const paidLeave=Math.min(Number(employee.paid_leave_days??4)*eligibleDays/Math.max(days,1),Math.max(0,eligibleDays-attended));
+    const base=round2(Number(employee.monthly_salary||0)*Math.min(30,attended+paidLeave)/30);
+    const hourRate=Number(employee.monthly_salary||0)/(30*Math.max(1,Number(employee.daily_work_hours||8)));
+    const overtimeAmount=round2(overtime/60*hourRate),shortageAmount=round2(shortage/60*hourRate);
+    const empAdjustments=(pendingAdjustments||[]).filter(item=>item.employee_id===employee.id);
+    const deductions=round2(empAdjustments.filter(item=>item.adjustment_type==="deduction").reduce((sum,item)=>sum+Number(item.amount||0),0));
+    const incentives=round2(empAdjustments.filter(item=>item.adjustment_type==="addition").reduce((sum,item)=>sum+Number(item.amount||0),0));
+    const net=Math.max(0,round2(base+overtimeAmount-shortageAmount-deductions+incentives));
+    preview.push({
+     employee_id:employee.id,employee_name_snapshot:employee.full_name,monthly_salary:base,
+     overtime_amount:overtimeAmount,lateness_deduction:shortageAmount,other_deductions:deductions,
+     additions:incentives,paid_leave_days:round2(paidLeave),net_salary:net,
+     details:{
+      contract_monthly_salary:Number(employee.monthly_salary||0),period_days:days,eligible_days:eligibleDays,
+      eligible_start:eligibleStart,eligible_end:eligibleEnd,hire_date:employee.hire_date,
+      termination_date:employee.termination_date,attended_days:attended,paid_leave_days:round2(paidLeave),
+      paid_days_total:round2(attended+paidLeave),daily_work_hours:Number(employee.daily_work_hours||8),
+      hour_rate:round2(hourRate),overtime_minutes:overtime,shortage_minutes:shortage,
+      overtime_amount:overtimeAmount,shortage_amount:shortageAmount,deductions,incentives,
+      base_salary_due:base,net_salary:net
+     }
+    });
+   }
+  }
+  return NextResponse.json({runs:runs||[],employees:employees||[],adjustments:adjustments||[],preview});
  }catch(e){return NextResponse.json({error:e.message||"تعذر تحميل الرواتب."},{status:500})}
 }
 export async function POST(request){
