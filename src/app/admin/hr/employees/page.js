@@ -58,13 +58,16 @@ export default function HrEmployeesPage() {
     } catch(e) { setError(e.message); }
     finally { setSaving(false); }
   }
-  async function promptPin(employee) {
-    const value = window.prompt("حدد رقم حضور سري من 4 إلى 8 أرقام للموظف " + employee.full_name);
-    if (value === null) return;
+  async function promptLogin(employee) {
+    const username = window.prompt("اسم المستخدم الذي سيدخل به " + employee.full_name, employee.username || "");
+    if (username === null) return;
+    const password = window.prompt("كلمة مرور للموظف (8 أحرف على الأقل). لن يتم عرضها مرة أخرى:");
+    if (password === null) return;
     try {
-      await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:"set_pin",pin:value})});
-      setMessage("تم تعيين رقم الحضور السري للموظف " + employee.full_name);
+      await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:"create_login",username,password})});
+      setMessage("تم إعداد حساب دخول HR للموظف " + employee.full_name + ". سلّمه اسم المستخدم وكلمة المرور.");
       setError("");
+      await load();
     } catch(e) { setError(e.message); }
   }
   async function toggleStatus(employee) {
@@ -75,7 +78,7 @@ export default function HrEmployeesPage() {
 
   return <main dir="rtl" style={{minHeight:"100vh",background:"#101820",color:"#f8fafc",padding:"28px 18px"}}>
     <div style={{maxWidth:1200,margin:"0 auto",display:"grid",gap:22}}>
-      <header><h1 style={{fontSize:28,margin:"0 0 8px"}}>شؤون الموظفين</h1><p style={{color:"#aebdca",margin:0}}>ملفات الموظفين والرواتب الأساسية — بدون إنشاء حسابات دخول لهم.</p></header>
+      <header><h1 style={{fontSize:28,margin:"0 0 8px"}}>شؤون الموظفين</h1><p style={{color:"#aebdca",margin:0}}>ملفات الموظفين وحسابات دخولهم إلى نظام HR المستقل.</p></header>
       {error && <div role="alert" style={{background:"#4a2024",padding:12,borderRadius:9}}>{error}</div>}
       {message && <div role="status" style={{background:"#183d30",padding:12,borderRadius:9}}>{message}</div>}
       <form onSubmit={submit} style={{background:"#1c2935",border:"1px solid #3b4d5c",borderRadius:14,padding:20,display:"grid",gap:16}}>
@@ -102,14 +105,14 @@ export default function HrEmployeesPage() {
         <h2 style={{margin:"0 0 16px",fontSize:20}}>قائمة الموظفين ({employees.length})</h2>
         {loading?<p>جارٍ تحميل الموظفين...</p>:employees.length===0?<p style={{color:"#aebdca"}}>لسه مفيش موظفين مضافين.</p>:
           <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:800}}>
-            <thead><tr>{["الموظف","الوظيفة / القسم","الهاتف","الراتب","الحالة","إجراءات"].map(x=><th key={x} style={{textAlign:"right",padding:12,borderBottom:"1px solid #425466",color:"#d6a44d"}}>{x}</th>)}</tr></thead>
+            <thead><tr>{["الموظف","الوظيفة / القسم","الهاتف","الراتب","الحالة","اسم المستخدم","إجراءات"].map(x=><th key={x} style={{textAlign:"right",padding:12,borderBottom:"1px solid #425466",color:"#d6a44d"}}>{x}</th>)}</tr></thead>
             <tbody>{employees.map(emp=><tr key={emp.id}>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}><div style={{display:"flex",alignItems:"center",gap:10}}>{emp.photo_url?<img src={emp.photo_url} alt="" style={{width:42,height:42,borderRadius:"50%",objectFit:"cover"}}/>:<span style={{width:42,height:42,borderRadius:"50%",background:"#344657",display:"grid",placeItems:"center"}}>👤</span>}<span>{emp.full_name}</span></div></td>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{[emp.job_title,emp.department].filter(Boolean).join(" — ")||"—"}</td>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.phone||"—"}</td>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{Number(emp.monthly_salary).toLocaleString("ar-EG")} ج.م</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>promptPin(emp)} style={{marginLeft:8}}>تعيين كود الحضور</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
+              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>\n              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.username||"لم يتم إنشاء حساب"}</td>
+              <td style={{padding:12,borderBottom:"1px solid #344657",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>promptLogin(emp)} style={{marginLeft:8}}>{emp.username?"تغيير بيانات الدخول":"إنشاء حساب HR"}</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
             </tr>)}</tbody>
           </table></div>}
       </section>
