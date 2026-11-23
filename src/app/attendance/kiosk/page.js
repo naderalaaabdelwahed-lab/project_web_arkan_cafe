@@ -20,7 +20,7 @@ export default function AttendanceKiosk(){
   try{
    const r=await fetch("/api/kiosk/attendance",{method:"POST",headers:{"Content-Type":"application/json","x-ark-kiosk-token":deviceToken},body:JSON.stringify({pin,action})});
    const data=await r.json();if(!r.ok)throw new Error(data.error||"تعذر تسجيل الحضور.");
-   const time=new Date(data.recorded_at).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"});
+   const time=new Date(data.recorded_at).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit",hour12:true,timeZone:"Africa/Cairo"});
    setNotice("تم تسجيل "+(action==="check_in"?"الحضور":"الانصراف")+" للموظف "+data.employee_name+" الساعة "+time+".");
    setPin("");
   }catch(e){setNotice(e.message)}finally{setBusy(false)}
