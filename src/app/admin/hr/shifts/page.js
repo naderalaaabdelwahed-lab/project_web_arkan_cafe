@@ -71,7 +71,7 @@ export default function HrShiftsPage() {
     const grace_minutes = window.prompt("مهلة السماح بالدقائق", String(shift.grace_minutes)); if (grace_minutes === null) return;
     setSaving(true);
     try {
-      await call("/api/admin/hr/shifts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: shift.id, action: "update", name, start_time, end_time, break_minutes: Number(break_minutes), grace_minutes: Number(grace_minutes), is_flexible: shift.is_flexible, latest_check_in: shift.latest_check_in }) });
+      await call("/api/admin/hr/shifts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: shift.id, action: "update", name, start_time, end_time, break_minutes: Number(break_minutes), grace_minutes: Number(grace_minutes), is_flexible: shift.is_flexible, latest_check_in: time(shift.latest_check_in) }) });
       setMessage("تم تعديل الشيفت."); await load();
     } catch (e) { setError(e.message); } finally { setSaving(false); }
   }
