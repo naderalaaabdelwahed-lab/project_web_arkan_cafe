@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { scryptSync, timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
-export const runtime = "nodejs";
 const attempts = new Map();
 
 function dbClient() {
