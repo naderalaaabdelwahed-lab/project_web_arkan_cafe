@@ -121,18 +121,6 @@ export async function PATCH(request) {
       }
       return NextResponse.json({ success: true, username, account_created: createdUser });
     }
-    if (body.action === "set_pin") {
-      const pin = String(body.pin || "");
-      if (!/^\d{4,8}$/.test(pin)) {
-        return NextResponse.json({ error: "الرقم السري يجب أن يكون من 4 إلى 8 أرقام." }, { status: 400 });
-      }
-      const salt = randomBytes(16).toString("hex");
-      const hash = scryptSync(pin, salt, 64).toString("hex");
-      const { error } = await auth.db.from("hr_employees")
-        .update({ attendance_pin_hash: salt + ":" + hash, updated_at: new Date().toISOString() }).eq("id", id);
-      if (error) throw error;
-      return NextResponse.json({ success: true });
-    }
     if (body.action === "deactivate" || body.action === "activate") {
       const { data, error } = await auth.db.from("hr_employees")
         .update({ employment_status: body.action === "activate" ? "active" : "inactive", updated_at: new Date().toISOString() })
