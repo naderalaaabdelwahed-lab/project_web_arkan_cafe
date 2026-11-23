@@ -12,6 +12,9 @@ export async function POST(request) {
   const digest=createHash("sha256").update(deviceToken).digest("hex");
   const {data:device,error:deviceError}=await db.from("hr_kiosk_devices").select("id").eq("token_hash",digest).eq("is_active",true).maybeSingle();
   if(deviceError||!device) return NextResponse.json({error:"جهاز الحضور غير مُفعّل."},{status:401});
+  const {count:recentFailures,error:rateError}=await db.from("hr_kiosk_attempts").select("id",{count:"exact",head:true}).eq("device_id",device.id).eq("succeeded",false).gte("attempted_at",new Date(Date.now()-5*60*1000).toISOString());
+  if(rateError) throw rateError;
+  if((recentFailures||0)>=8) return NextResponse.json({error:"تم إيقاف المحاولات مؤقتًا بسبب إدخال أرقام خاطئة متكررة. تواصل مع المدير."},{status:429});
   const body=await request.json(), pin=String(body.pin||""), action=String(body.action||"");
   if(!/^\d{4,8}$/.test(pin)||!["check_in","check_out"].includes(action)) return NextResponse.json({error:"راجع الرقم السري واختيار العملية."},{status:400});
   const {data:employees,error}=await db.from("hr_employees").select("id,full_name,attendance_pin_hash,daily_work_hours").eq("employment_status","active").not("attendance_pin_hash","is",null);
@@ -22,8 +25,8 @@ export async function POST(request) {
    const actual=scryptSync(pin,salt,64), expected=Buffer.from(stored,"hex");
    return expected.length===actual.length && timingSafeEqual(actual,expected);
   });
-  if(matches.length!==1) return NextResponse.json({error:"الرقم السري غير صحيح."},{status:401});
-  const employee=matches[0], now=new Date(), cairoDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+  if(matches.length!==1) { await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false}); return NextResponse.json({error:"الرقم السري غير صحيح."},{status:401}); }
+  await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:true});\n  const employee=matches[0], now=new Date(), cairoDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
   await db.from("hr_kiosk_devices").update({last_seen_at:now.toISOString()}).eq("id",device.id);
   if(action==="check_in"){
    const {data:open}=await db.from("hr_attendance").select("id").eq("employee_id",employee.id).is("check_out_at",null).not("check_in_at","is",null).maybeSingle();
