@@ -8,7 +8,7 @@ const field={padding:10,borderRadius:8,border:"1px solid #54452e",background:"#1
 const statusLabels={present:"حاضر",absent_pending:"غياب قيد المراجعة",absent:"غياب",paid_leave:"إجازة مدفوعة",unpaid_leave:"إجازة بدون راتب",excused:"غياب بعذر",holiday:"عطلة"};
 
 export default function AttendancePage(){
- const [rows,setRows]=useState([]),[employees,setEmployees]=useState([]),[registers,setRegisters]=useState([]),[leaveBalances,setLeaveBalances]=useState([]);
+ const [rows,setRows]=useState([]),[employees,setEmployees]=useState([]),[registers,setRegisters]=useState([]),[leaveBalances,setLeaveBalances]=useState([]),[payrollRun,setPayrollRun]=useState(null);
  const [employee,setEmployee]=useState(""),[month,setMonth]=useState(today.slice(0,7));
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[message,setMessage]=useState("");
 
@@ -21,8 +21,8 @@ export default function AttendancePage(){
  const load=useCallback(async()=>{
   setLoading(true);setError("");
   try{
-   const r=await call("/api/admin/hr/attendance?month="+encodeURIComponent(month));
-   setRows(r.attendance||[]);setEmployees(r.employees||[]);setRegisters(r.registers||[]);setLeaveBalances(r.leaveBalances||[]);
+   const [r,payroll]=await Promise.all([call("/api/admin/hr/attendance?month="+encodeURIComponent(month)),call("/api/admin/hr/payroll?month="+encodeURIComponent(month))]);
+   setRows(r.attendance||[]);setEmployees(r.employees||[]);setRegisters(r.registers||[]);setLeaveBalances(r.leaveBalances||[]);setPayrollRun(payroll.runs?.[0]||null);
    setEmployee(current=>current&&r.employees?.some(x=>x.id===current)?current:(r.employees?.find(x=>x.employment_status==="active")||r.employees?.[0])?.id||"");
   }catch(e){setError(e.message)}finally{setLoading(false)}
  },[month]);
@@ -43,6 +43,9 @@ export default function AttendancePage(){
   shortage:employeeRows.reduce((s,x)=>s+Number(x.shortage_minutes||0),0)
  }),[employeeRows]);
  const balance=leaveBalances.find(x=>x.employee_id===employee);
+ const payrollItem=payrollRun?.hr_payroll_items?.find(x=>x.employee_id===employee);
+ const payrollDetails=payrollItem?.details||{};
+ const money=v=>Number(v||0).toLocaleString("ar-EG",{minimumFractionDigits:2,maximumFractionDigits:2})+" ج.م";
  const fmt=v=>v?new Date(v).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit",timeZone:"Africa/Cairo"}):"—";
  const hours=v=>(Number(v||0)/60).toFixed(2)+" ساعة";
  const fmtDate=v=>new Date(v+"T00:00:00Z").toLocaleDateString("ar-EG",{weekday:"short",day:"2-digit",month:"2-digit",timeZone:"UTC"});
@@ -97,7 +100,7 @@ export default function AttendancePage(){
   {selected&&<>
    <section className="attendance-print" style={{...box,marginBottom:18}}>
     <header style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap",borderBottom:"1px solid #8b6d3c",paddingBottom:12,marginBottom:14}}>
-     <div><h1 style={{margin:"0 0 8px"}}>ARKAN — كشف الحضور والانصراف الشهري</h1><h2 style={{margin:"0 0 6px"}}>{selected.full_name}</h2><p style={{margin:0}}>الوظيفة: {selected.job_title||"—"} | القسم: {selected.department||"—"}</p></div>
+     <div><h1 style={{margin:"0 0 8px"}}>ARKAN — كشف الحضور والانصراف الشهري</h1><h2 style={{margin:"0 0 6px"}}>{selected.full_name}</h2><p style={{margin:0}}>الوظيفة: {selected.job_title||"—"} | القسم: {selected.department||"—"}</p><p style={{margin:"5px 0 0"}}>تاريخ التعيين: {selected.hire_date||"—"} | آخر يوم عمل: {selected.termination_date||"على رأس العمل"}</p></div>
      <div><strong>الشهر: {month}</strong><p>الفترة: {month}-01 إلى {month}- {new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate()}</p><p>رقم السجل: {register?.id||"—"}</p></div>
     </header>
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10,marginBottom:16}}>
@@ -106,6 +109,25 @@ export default function AttendancePage(){
      <div style={box}><strong>الإضافي</strong><div>{hours(summary.overtime)}</div></div>
      <div style={box}><strong>العجز</strong><div>{hours(summary.shortage)}</div></div>
     </div>
+    <section style={{marginBottom:18,padding:14,border:"1px solid #8b6d3c",borderRadius:10}}>
+     <h2 style={{margin:"0 0 12px"}}>كشف المستحقات والراتب</h2>
+     {payrollItem?<>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10}}>
+       <div style={box}><strong>الراتب الشهري</strong><div>{money(payrollDetails.contract_monthly_salary)}</div></div>
+       <div style={box}><strong>أيام الحضور</strong><div>{payrollDetails.attended_days??summary.attended} يوم</div></div>
+       <div style={box}><strong>الإجازات المدفوعة</strong><div>{Number(payrollDetails.paid_leave_days??payrollItem.paid_leave_days??0).toFixed(2)} يوم</div></div>
+       <div style={box}><strong>الأساسي المستحق</strong><div>{money(payrollItem.monthly_salary)}</div></div>
+       <div style={box}><strong>ساعات الإضافي</strong><div>{hours(payrollDetails.overtime_minutes)}</div></div>
+       <div style={box}><strong>ساعات العجز</strong><div>{hours(payrollDetails.shortage_minutes)}</div></div>
+       <div style={box}><strong>تسوية الساعات (+ / -)</strong><div>{money(payrollItem.overtime_amount)}</div></div>
+       <div style={box}><strong>الخصومات</strong><div>{money(payrollItem.other_deductions)}</div></div>
+       <div style={box}><strong>الحوافز والإضافات</strong><div>{money(payrollItem.additions)}</div></div>
+       <div style={{...box,gridColumn:"span 2"}}><strong>صافي الراتب المستحق</strong><div style={{fontSize:22,fontWeight:800}}>{money(payrollItem.net_salary)}</div></div>
+       <div style={box}><strong>فترة الاستحقاق</strong><div>{payrollDetails.eligible_start||month+"-01"} إلى {payrollDetails.eligible_end||month+"-"+new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate()}</div></div>
+      </div>
+      <p style={{margin:"12px 0 0"}}>حالة كشف الرواتب: {payrollRun.status==="finalized"?"معتمد":"مسودة — لم يتم الاعتماد بعد"}</p>
+     </>:<p style={{margin:0}}>لم يتم إنشاء كشف رواتب لهذا الشهر بعد. احسب الرواتب من صفحة الرواتب أولًا لعرض الأساسي والخصومات والحوافز وصافي المستحقات هنا.</p>}
+    </section>
     <div style={{overflowX:"auto"}}>
      <table style={{width:"100%",borderCollapse:"collapse",minWidth:850}}>
       <thead><tr>{["اليوم / التاريخ","الحضور","الانصراف","ساعات العمل","إضافي","عجز","الحالة","ملاحظات"].map(x=><th key={x} style={{textAlign:"right",padding:9,borderBottom:"1px solid #8b6d3c"}}>{x}</th>)}</tr></thead>
