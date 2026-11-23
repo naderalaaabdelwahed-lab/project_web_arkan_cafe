@@ -2,6 +2,30 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash, scryptSync, timingSafeEqual } from "node:crypto";
 
+
+function cairoParts(date) {
+ const parts = new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date);
+ return Object.fromEntries(parts.map(p=>[p.type,p.value]));
+}
+function cairoDate(date) { const p=cairoParts(date); return p.year+"-"+p.month+"-"+p.day; }
+function cairoWeekday(dateString) { return new Date(dateString+"T00:00:00Z").getUTCDay(); }
+function cairoLocalToUtc(dateString,timeString) {
+ const [y,m,d]=dateString.split("-").map(Number), [hh,mm]=timeString.slice(0,5).split(":").map(Number);
+ const target=Date.UTC(y,m-1,d,hh,mm,0);
+ let guess=target;
+ for(let i=0;i<3;i++){
+  const p=cairoParts(new Date(guess));
+  const represented=Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day),Number(p.hour),Number(p.minute),Number(p.second));
+  guess += target-represented;
+ }
+ return new Date(guess);
+}
+async function assignedShift(db, employeeId, dateString) {
+ const weekday=cairoWeekday(dateString);
+ const {data:rows,error}=await db.from("hr_employee_shift_assignments").select("id,shift_id,effective_from,effective_to,weekday,hr_shifts(*)").eq("employee_id",employeeId).lte("effective_from",dateString);
+ if(error) throw error;
+ return (rows||[]).find(a=> (!a.effective_to||a.effective_to>=dateString) && (a.weekday===null||a.weekday===weekday) && a.hr_shifts?.is_active) || null;
+}
 export async function POST(request) {
  try {
   const deviceToken=request.headers.get("x-ark-kiosk-token")||"";
@@ -27,14 +51,29 @@ export async function POST(request) {
   });
   if(matches.length!==1) { await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false}); return NextResponse.json({error:"الرقم السري غير صحيح."},{status:401}); }
   await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:true});
-  const employee=matches[0], now=new Date(), cairoDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+  const employee=matches[0], now=new Date(), todayCairo=cairoDate(now);
   await db.from("hr_kiosk_devices").update({last_seen_at:now.toISOString()}).eq("id",device.id);
   if(action==="check_in"){
    const {data:open}=await db.from("hr_attendance").select("id").eq("employee_id",employee.id).is("check_out_at",null).not("check_in_at","is",null).maybeSingle();
    if(open)return NextResponse.json({error:"أنت مسجل حضور بالفعل ولم تسجل الانصراف."},{status:409});
-   const {data:existing}=await db.from("hr_attendance").select("id,check_in_at,check_out_at").eq("employee_id",employee.id).eq("shift_date",cairoDate).maybeSingle();
+   const assignment=await assignedShift(db,employee.id,todayCairo);
+   let shiftDate=todayCairo, shift=assignment?.hr_shifts||null;
+   if(shift && shift.crosses_midnight){
+    const start=cairoLocalToUtc(shiftDate,shift.start_time), end=cairoLocalToUtc(shiftDate,shift.end_time).getTime()<=start.getTime()?new Date(cairoLocalToUtc(shiftDate,shift.end_time).getTime()+86400000):cairoLocalToUtc(shiftDate,shift.end_time);
+    if(now<start && now<=end && now>=new Date(start.getTime()-shift.grace_minutes*60000)){
+      const prev=new Date(Date.parse(shiftDate+"T00:00:00Z")-86400000).toISOString().slice(0,10);
+      const prevAssignment=await assignedShift(db,employee.id,prev);
+      if(prevAssignment?.hr_shifts?.crosses_midnight){shiftDate=prev;shift=prevAssignment.hr_shifts;}
+    }
+   }
+   const {data:existing}=await db.from("hr_attendance").select("id,check_in_at,check_out_at").eq("employee_id",employee.id).eq("shift_date",shiftDate).maybeSingle();
    if(existing?.check_in_at)return NextResponse.json({error:"تم تسجيل حضورك لهذا اليوم بالفعل."},{status:409});
-   const {error:insertError}=await db.from("hr_attendance").insert({employee_id:employee.id,shift_date:cairoDate,check_in_at:now.toISOString(),check_in_method:"pin",attendance_status:"present"});
+   let lateMinutes=0;
+   if(shift){
+    const start=cairoLocalToUtc(shiftDate,shift.start_time);
+    lateMinutes=Math.max(0,Math.floor((now-start)/60000)-Number(shift.grace_minutes||0));
+   }
+   const {error:insertError}=await db.from("hr_attendance").insert({employee_id:employee.id,shift_date:shiftDate,check_in_at:now.toISOString(),check_in_method:"pin",attendance_status:"present",late_minutes:lateMinutes});
    if(insertError)throw insertError;
    return NextResponse.json({success:true,employee_name:employee.full_name,action:"check_in",recorded_at:now.toISOString()});
   }
@@ -43,7 +82,19 @@ export async function POST(request) {
   const open=openRows?.[0];
   if(!open)return NextResponse.json({error:"لا يوجد تسجيل حضور مفتوح لك."},{status:409});
   const minutes=Math.max(0,Math.round((now-new Date(open.check_in_at))/60000));
-  const {error:updateError}=await db.from("hr_attendance").update({check_out_at:now.toISOString(),check_out_method:"pin",worked_minutes:minutes,updated_at:now.toISOString()}).eq("id",open.id);
+  const assignment=await assignedShift(db,employee.id,open.shift_date);
+  const shift=assignment?.hr_shifts;
+  let overtimeMinutes=0;
+  if(shift){
+   const start=cairoLocalToUtc(open.shift_date,shift.start_time);
+   let end=cairoLocalToUtc(open.shift_date,shift.end_time);
+   if(shift.crosses_midnight||end<=start) end=new Date(end.getTime()+86400000);
+   const planned=Math.max(0,Math.round((end-start)/60000)-Number(shift.break_minutes||0));
+   overtimeMinutes=Math.max(0,minutes-planned);
+  } else {
+   overtimeMinutes=Math.max(0,minutes-Math.round(Number(employee.daily_work_hours||8)*60));
+  }
+  const {error:updateError}=await db.from("hr_attendance").update({check_out_at:now.toISOString(),check_out_method:"pin",worked_minutes:minutes,overtime_minutes:overtimeMinutes,updated_at:now.toISOString()}).eq("id",open.id);
   if(updateError)throw updateError;
   return NextResponse.json({success:true,employee_name:employee.full_name,action:"check_out",recorded_at:now.toISOString(),worked_minutes:minutes});
  } catch(error) {
