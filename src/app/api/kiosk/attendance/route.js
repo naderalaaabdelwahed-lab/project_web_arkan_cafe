@@ -26,7 +26,8 @@ export async function POST(request) {
    return expected.length===actual.length && timingSafeEqual(actual,expected);
   });
   if(matches.length!==1) { await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false}); return NextResponse.json({error:"الرقم السري غير صحيح."},{status:401}); }
-  await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:true});\n  const employee=matches[0], now=new Date(), cairoDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+  await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:true});
+  const employee=matches[0], now=new Date(), cairoDate=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
   await db.from("hr_kiosk_devices").update({last_seen_at:now.toISOString()}).eq("id",device.id);
   if(action==="check_in"){
    const {data:open}=await db.from("hr_attendance").select("id").eq("employee_id",employee.id).is("check_out_at",null).not("check_in_at","is",null).maybeSingle();
