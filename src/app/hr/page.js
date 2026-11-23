@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
-import {useRouter} from "next/navigation";\nimport Link from "next/link";
+import {useRouter} from "next/navigation";
+import Link from "next/link";
 import {supabase} from "@/lib/supabase";
 
 const field={width:"100%",padding:13,borderRadius:10,border:"1px solid #405365",background:"#14212c",color:"#fff",boxSizing:"border-box"};
