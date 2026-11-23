@@ -292,7 +292,10 @@ export default function InventoryReportsPage() {
       <section className="report">
         <div className="report-heading">
           <div><h2>{reportTypes.find((report) => report.id === activeReport)?.label}</h2><p>{loading ? "جارٍ تحميل البيانات..." : `عدد السجلات: ${formatNumber(reportRows.length)}`}</p></div>
-          <span>{lastUpdated ? `آخر تحديث: ${lastUpdated.toLocaleTimeString("ar-EG")}` : ""}</span>
+          <div className="report-actions">
+            <span>{lastUpdated ? `آخر تحديث: ${lastUpdated.toLocaleTimeString("ar-EG")}` : ""}</span>
+            <button className="print-button" onClick={() => window.print()} disabled={loading || !!error || !reportRows.length}>🖨️ طباعة التقرير</button>
+          </div>
         </div>
         {loading ? <div className="empty">جارٍ تحميل بيانات التقارير من قاعدة البيانات...</div> : !error ? <Table columns={columns} rows={reportRows} /> : null}
         {activeReport === "consumption" && !loading && !error && <p className="summary">إجمالي قيمة الاستهلاك التقديرية للفترة: <strong>{formatMoney(consumptionValue)}</strong></p>}
@@ -315,14 +318,38 @@ export default function InventoryReportsPage() {
         .search{flex:2}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:17px}
         .stats article{padding:16px;display:flex;flex-direction:column;gap:9px}.stats span{font-size:12px;color:#aebbd0}.stats strong{font-size:20px}
         .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px;margin-bottom:17px}.tabs button.active{background:#244cc5;border-color:#244cc5}
-        .report{padding:18px}.report-heading{margin-bottom:16px}.report-heading h2{font-size:18px;margin:0 0 5px}
-        .report-heading span{font-size:11px;color:#94a3b8}.table-wrap{overflow-x:auto;border:1px solid #344054;border-radius:9px}
-        table{width:100%;border-collapse:collapse;min-width:650px;text-align:right}th,td{padding:12px;border-bottom:1px solid #293548;font-size:12px;white-space:nowrap}
-        th{background:#202b3c;color:#e2e8f0}td{color:#f1f5f9}tbody tr:last-child td{border-bottom:0}
+        .report{padding:22px}.report-heading{margin-bottom:20px;align-items:flex-start}.report-heading h2{font-size:20px;margin:0 0 7px;font-weight:900}
+        .report-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.report-heading span{font-size:12px;color:#94a3b8}
+        .print-button{background:#14532d;border-color:#166534;padding:10px 16px}
+        .table-wrap{overflow-x:auto;border:1px solid #3b4960;border-radius:10px}
+        table{width:100%;border-collapse:separate;border-spacing:0;min-width:1000px;table-layout:auto;text-align:right}
+        th,td{padding:15px 17px;border-bottom:1px solid #334155;font-size:13px;line-height:1.8;vertical-align:middle}
+        th{background:#202b3c;color:#f1f5f9;font-size:13px;font-weight:900;white-space:normal}
+        td{color:#f1f5f9;white-space:normal;min-width:90px}
+        td:first-child,th:first-child{white-space:nowrap}
+        tbody tr:nth-child(even){background:#172235}tbody tr:hover{background:#1e293b}
+        tbody tr:last-child td{border-bottom:0}
         .empty{padding:35px;text-align:center;color:#cbd5e1}.error{display:flex;flex-direction:column;gap:7px;background:#451a1a;border:1px solid #991b1b;border-radius:10px;padding:14px;margin-bottom:15px;color:#fecaca}
         .error span{overflow-wrap:anywhere;font-size:13px}.error small{color:#fca5a5}.summary{margin-top:15px;background:#172554;padding:13px;border-radius:9px}.summary strong{color:#fff}
-        @media(max-width:750px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.header{align-items:flex-start}.actions{width:100%}.actions button{flex:1}}
+        @media(max-width:750px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.header{align-items:flex-start}.actions{width:100%}.actions button{flex:1}.report{padding:14px}.report-actions{width:100%;justify-content:space-between}}
         @media(max-width:450px){.stats{grid-template-columns:1fr 1fr}.stats article{padding:11px}.stats strong{font-size:15px}.filters{align-items:stretch}label{min-width:100%}}
+        @media print{
+          @page{size:A4 landscape;margin:12mm}
+          :global(html),:global(body){background:#fff!important;color:#111!important}
+          :global(body *){visibility:hidden!important}
+          .inventory-reports,.inventory-reports .report,.inventory-reports .report *{visibility:visible!important}
+          .inventory-reports{position:absolute!important;inset:0!important;width:100%!important;padding:0!important;margin:0!important;color:#111!important;background:#fff!important}
+          .header,.filters,.stats,.tabs,.report-actions,.breadcrumb{display:none!important}
+          .report{position:static!important;width:100%!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:#fff!important;color:#111!important}
+          .report-heading{margin:0 0 14px!important;padding-bottom:10px!important;border-bottom:2px solid #222!important}
+          .report-heading h2,.report-heading p{color:#111!important}
+          .table-wrap{overflow:visible!important;border:1px solid #999!important;border-radius:0!important}
+          table{width:100%!important;min-width:0!important;border-collapse:collapse!important;font-size:10pt!important}
+          th,td{padding:8px 9px!important;font-size:9pt!important;line-height:1.5!important;color:#111!important;border:1px solid #bbb!important;white-space:normal!important;background:#fff!important}
+          th{font-weight:700!important;background:#eee!important}
+          tbody tr:nth-child(even){background:#f7f7f7!important}
+          .empty,.summary{color:#111!important;background:#fff!important;border:1px solid #bbb!important}
+        }
       `}</style>
     </main>
   );
