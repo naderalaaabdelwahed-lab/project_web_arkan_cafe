@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { randomBytes, scryptSync } from "node:crypto";
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
