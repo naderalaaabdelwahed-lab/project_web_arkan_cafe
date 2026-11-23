@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const empty = { full_name:"", phone:"", job_title:"", department:"", hire_date:new Date().toISOString().slice(0,10), monthly_salary:"", overtime_hour_rate:"", paid_leave_days:"", daily_work_hours:"8", notes:"" };
-const inputStyle = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1px solid #425466", background:"#17232e", color:"#f8fafc", boxSizing:"border-box" };
+const inputStyle = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1px solid #54452e", background:"#15120e", color:"#f4e9d8", boxSizing:"border-box" };
 const labelStyle = { display:"grid", gap:6, color:"#dbe4ec", fontSize:14 };
 
 export default function HrEmployeesPage() {
@@ -76,12 +76,12 @@ export default function HrEmployeesPage() {
     catch(e) { setError(e.message); }
   }
 
-  return <main dir="rtl" style={{minHeight:"100vh",background:"#101820",color:"#f8fafc",padding:"28px 18px"}}>
+  return <main dir="rtl" style={{minHeight:"100vh",background:"#100d0b",color:"#f4e9d8",padding:"28px 18px"}}>
     <div style={{maxWidth:1200,margin:"0 auto",display:"grid",gap:22}}>
-      <header><h1 style={{fontSize:28,margin:"0 0 8px"}}>شؤون الموظفين</h1><p style={{color:"#aebdca",margin:0}}>ملفات الموظفين وحسابات دخولهم إلى نظام HR المستقل.</p></header>
+      <header><h1 style={{fontSize:28,margin:"0 0 8px"}}>شؤون الموظفين</h1><p style={{color:"#ad9e88",margin:0}}>ملفات الموظفين وحسابات دخولهم إلى نظام HR المستقل.</p></header>
       {error && <div role="alert" style={{background:"#4a2024",padding:12,borderRadius:9}}>{error}</div>}
       {message && <div role="status" style={{background:"#183d30",padding:12,borderRadius:9}}>{message}</div>}
-      <form onSubmit={submit} style={{background:"#1c2935",border:"1px solid #3b4d5c",borderRadius:14,padding:20,display:"grid",gap:16}}>
+      <form onSubmit={submit} style={{background:"#211b14",border:"1px solid #443723",borderRadius:14,padding:20,display:"grid",gap:16}}>
         <h2 style={{margin:0,fontSize:20}}>{editing?"تعديل ملف موظف":"إضافة موظف جديد"}</h2>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:14}}>
           <label style={labelStyle}>الاسم بالكامل<input required maxLength={150} style={inputStyle} value={form.full_name} onChange={e=>setForm({...form,full_name:e.target.value})}/></label>
@@ -97,23 +97,23 @@ export default function HrEmployeesPage() {
           <label style={{...labelStyle,gridColumn:"1/-1"}}>ملاحظات<textarea rows={3} style={inputStyle} value={form.notes||""} onChange={e=>setForm({...form,notes:e.target.value})}/></label>
         </div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          <button disabled={saving} style={{background:"#d6a44d",color:"#101820",border:0,borderRadius:9,padding:"11px 22px",fontWeight:700,cursor:"pointer"}}>{saving?"جارٍ الحفظ...":editing?"حفظ التعديلات":"إضافة الموظف"}</button>
-          {editing && <button type="button" onClick={reset} style={{background:"#344657",color:"white",border:0,borderRadius:9,padding:"11px 20px"}}>إلغاء</button>}
+          <button disabled={saving} style={{background:"#c9a45c",color:"#100d0b",border:0,borderRadius:9,padding:"11px 22px",fontWeight:700,cursor:"pointer"}}>{saving?"جارٍ الحفظ...":editing?"حفظ التعديلات":"إضافة الموظف"}</button>
+          {editing && <button type="button" onClick={reset} style={{background:"#3a3022",color:"white",border:0,borderRadius:9,padding:"11px 20px"}}>إلغاء</button>}
         </div>
       </form>
-      <section style={{background:"#1c2935",border:"1px solid #3b4d5c",borderRadius:14,padding:20}}>
+      <section style={{background:"#211b14",border:"1px solid #443723",borderRadius:14,padding:20}}>
         <h2 style={{margin:"0 0 16px",fontSize:20}}>قائمة الموظفين ({employees.length})</h2>
-        {loading?<p>جارٍ تحميل الموظفين...</p>:employees.length===0?<p style={{color:"#aebdca"}}>لسه مفيش موظفين مضافين.</p>:
+        {loading?<p>جارٍ تحميل الموظفين...</p>:employees.length===0?<p style={{color:"#ad9e88"}}>لسه مفيش موظفين مضافين.</p>:
           <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:800}}>
-            <thead><tr>{["الموظف","الوظيفة / القسم","الهاتف","الراتب","الحالة","اسم المستخدم","إجراءات"].map(x=><th key={x} style={{textAlign:"right",padding:12,borderBottom:"1px solid #425466",color:"#d6a44d"}}>{x}</th>)}</tr></thead>
+            <thead><tr>{["الموظف","الوظيفة / القسم","الهاتف","الراتب","الحالة","اسم المستخدم","إجراءات"].map(x=><th key={x} style={{textAlign:"right",padding:12,borderBottom:"1px solid #54452e",color:"#c9a45c"}}>{x}</th>)}</tr></thead>
             <tbody>{employees.map(emp=><tr key={emp.id}>
-              <td style={{padding:12,borderBottom:"1px solid #344657"}}><div style={{display:"flex",alignItems:"center",gap:10}}>{emp.photo_url?<img src={emp.photo_url} alt="" style={{width:42,height:42,borderRadius:"50%",objectFit:"cover"}}/>:<span style={{width:42,height:42,borderRadius:"50%",background:"#344657",display:"grid",placeItems:"center"}}>👤</span>}<span>{emp.full_name}</span></div></td>
-              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{[emp.job_title,emp.department].filter(Boolean).join(" — ")||"—"}</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.phone||"—"}</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{Number(emp.monthly_salary).toLocaleString("ar-EG")} ج.م</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.username||"لم يتم إنشاء حساب"}</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>promptLogin(emp)} style={{marginLeft:8}}>{emp.username?"تغيير بيانات الدخول":"إنشاء حساب HR"}</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
+              <td style={{padding:12,borderBottom:"1px solid #3a3022"}}><div style={{display:"flex",alignItems:"center",gap:10}}>{emp.photo_url?<img src={emp.photo_url} alt="" style={{width:42,height:42,borderRadius:"50%",objectFit:"cover"}}/>:<span style={{width:42,height:42,borderRadius:"50%",background:"#3a3022",display:"grid",placeItems:"center"}}>👤</span>}<span>{emp.full_name}</span></div></td>
+              <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{[emp.job_title,emp.department].filter(Boolean).join(" — ")||"—"}</td>
+              <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{emp.phone||"—"}</td>
+              <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{Number(emp.monthly_salary).toLocaleString("ar-EG")} ج.م</td>
+              <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>
+              <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{emp.username||"لم يتم إنشاء حساب"}</td>
+              <td style={{padding:12,borderBottom:"1px solid #3a3022",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>promptLogin(emp)} style={{marginLeft:8}}>{emp.username?"تغيير بيانات الدخول":"إنشاء حساب HR"}</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
             </tr>)}</tbody>
           </table></div>}
       </section>
