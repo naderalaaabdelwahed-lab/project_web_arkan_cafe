@@ -1,6 +1,8 @@
 alter table public.hr_employees
   add column if not exists termination_date date;
 
+alter table public.hr_employees alter column paid_leave_days set default 4;
+
 do $$
 begin
   if not exists (
