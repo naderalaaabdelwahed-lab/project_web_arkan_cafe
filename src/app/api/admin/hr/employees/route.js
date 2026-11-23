@@ -47,7 +47,7 @@ function validateAttendanceCode(value, required = false) {
 function clean(body) {
   const full_name = String(body.full_name || "").trim();
   if (full_name.length < 2 || full_name.length > 150) throw new Error("اكتب اسم الموظف بشكل صحيح.");
-  if (body.termination_date && (!/^\\d{4}-\\d{2}-\\d{2}$/.test(body.termination_date) || body.termination_date < (body.hire_date || "0000-00-00"))) throw new Error("تاريخ انتهاء الخدمة يجب أن يكون بعد تاريخ التعيين.");
+  if (body.termination_date && (!/^\d{4}-\d{2}-\d{2}$/.test(body.termination_date) || body.termination_date < (body.hire_date || "0000-00-00"))) throw new Error("تاريخ انتهاء الخدمة يجب أن يكون بعد تاريخ التعيين.");
   const number = (v) => Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : 0;
   return {
     full_name,
