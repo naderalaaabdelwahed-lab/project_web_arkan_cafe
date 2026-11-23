@@ -7,7 +7,7 @@ export async function POST(request){
  try{const a=await admin(request);if(a.response)return a.response;const b=await request.json();
   if(b.action==="adjustment"){
    const employee_id=String(b.employee_id||""),adjustment_date=String(b.adjustment_date||""),amount=Number(b.amount),adjustment_type=String(b.adjustment_type||""),reason=String(b.reason||"").trim();
-   if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^\\d{4}-\\d{2}-\\d{2}$/.test(adjustment_date)||!Number.isFinite(amount)||amount<=0||!["addition","deduction"].includes(adjustment_type)||reason.length<2)return NextResponse.json({error:"راجع بيانات الإضافة أو الخصم."},{status:400});
+   if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^\d{4}-\d{2}-\d{2}$/.test(adjustment_date)||!Number.isFinite(amount)||amount<=0||!["addition","deduction"].includes(adjustment_type)||reason.length<2)return NextResponse.json({error:"راجع بيانات الإضافة أو الخصم."},{status:400});
    const {data,error}=await a.db.from("hr_payroll_adjustments").insert({employee_id,adjustment_date,amount,adjustment_type,reason,created_by:a.user.id}).select("*").single();if(error)throw error;return NextResponse.json({adjustment:data},{status:201});
   }
   const start=String(b.period_start||""),end=String(b.period_end||"");
