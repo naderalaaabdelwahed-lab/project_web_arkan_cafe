@@ -8,7 +8,7 @@ const field={padding:10,borderRadius:8,border:"1px solid #54452e",background:"#1
 const statusLabels={present:"حاضر",absent_pending:"غياب قيد المراجعة",absent:"غياب",paid_leave:"إجازة مدفوعة",unpaid_leave:"إجازة بدون راتب",excused:"غياب بعذر",holiday:"عطلة"};
 
 export default function AttendancePage(){
- const [rows,setRows]=useState([]),[employees,setEmployees]=useState([]),[registers,setRegisters]=useState([]),[leaveBalances,setLeaveBalances]=useState([]),[payrollRun,setPayrollRun]=useState(null);
+ const [rows,setRows]=useState([]),[employees,setEmployees]=useState([]),[registers,setRegisters]=useState([]),[leaveBalances,setLeaveBalances]=useState([]),[payrollRun,setPayrollRun]=useState(null),[payrollPreview,setPayrollPreview]=useState([]);
  const [employee,setEmployee]=useState(""),[month,setMonth]=useState(today.slice(0,7));
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[message,setMessage]=useState("");
 
@@ -22,7 +22,7 @@ export default function AttendancePage(){
   setLoading(true);setError("");
   try{
    const [r,payroll]=await Promise.all([call("/api/admin/hr/attendance?month="+encodeURIComponent(month)),call("/api/admin/hr/payroll?month="+encodeURIComponent(month))]);
-   setRows(r.attendance||[]);setEmployees(r.employees||[]);setRegisters(r.registers||[]);setLeaveBalances(r.leaveBalances||[]);setPayrollRun(payroll.runs?.[0]||null);
+   setRows(r.attendance||[]);setEmployees(r.employees||[]);setRegisters(r.registers||[]);setLeaveBalances(r.leaveBalances||[]);setPayrollRun(payroll.runs?.[0]||null);setPayrollPreview(payroll.preview||[]);
    setEmployee(current=>current&&r.employees?.some(x=>x.id===current)?current:(r.employees?.find(x=>x.employment_status==="active")||r.employees?.[0])?.id||"");
   }catch(e){setError(e.message)}finally{setLoading(false)}
  },[month]);
@@ -40,10 +40,12 @@ export default function AttendancePage(){
   attended:employeeRows.filter(x=>x.attendance_status==="present"&&x.check_in_at).length,
   worked:employeeRows.reduce((s,x)=>s+Number(x.worked_minutes||0),0),
   overtime:employeeRows.reduce((s,x)=>s+Number(x.overtime_minutes||0),0),
-  shortage:employeeRows.reduce((s,x)=>s+Number(x.shortage_minutes||0),0)
+  shortage:employeeRows.reduce((s,x)=>s+Number(x.shortage_minutes||0),0),
+  absent:employeeRows.filter(x=>["absent","absent_pending","excused","unpaid_leave"].includes(x.attendance_status)).length,
+  paidLeave:employeeRows.filter(x=>x.attendance_status==="paid_leave").length
  }),[employeeRows]);
  const balance=leaveBalances.find(x=>x.employee_id===employee);
- const payrollItem=payrollRun?.hr_payroll_items?.find(x=>x.employee_id===employee);
+ const payrollItem=payrollRun?.hr_payroll_items?.find(x=>x.employee_id===employee)||payrollPreview.find(x=>x.employee_id===employee);
  const payrollDetails=payrollItem?.details||{};
  const hourlyRate=Number(payrollDetails.hour_rate||0);
  const overtimeAmount=Number(payrollDetails.overtime_amount??(Number(payrollDetails.overtime_minutes||0)/60*hourlyRate));
@@ -107,11 +109,13 @@ export default function AttendancePage(){
      <div><h1 style={{margin:"0 0 8px"}}>ARKAN — كشف الحضور والانصراف الشهري</h1><h2 style={{margin:"0 0 6px"}}>{selected.full_name}</h2><p style={{margin:0}}>الوظيفة: {selected.job_title||"—"} | القسم: {selected.department||"—"}</p><p style={{margin:"5px 0 0"}}>تاريخ التعيين: {selected.hire_date||"—"} | آخر يوم عمل: {selected.termination_date||"على رأس العمل"}</p></div>
      <div><strong>الشهر: {month}</strong><p>الفترة: {month}-01 إلى {month}- {new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate()}</p><p>رقم السجل: {register?.id||"—"}</p></div>
     </header>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10,marginBottom:16}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10,marginBottom:16}}>
      <div style={box}><strong>أيام الحضور</strong><div>{summary.attended} يوم</div></div>
      <div style={box}><strong>إجمالي العمل</strong><div>{hours(summary.worked)}</div></div>
      <div style={box}><strong>الإضافي</strong><div>{hours(summary.overtime)}</div></div>
      <div style={box}><strong>العجز</strong><div>{hours(summary.shortage)}</div></div>
+     <div style={box}><strong>أيام الغياب</strong><div>{summary.absent} يوم</div></div>
+     <div style={box}><strong>الإجازات المدفوعة</strong><div>{summary.paidLeave} يوم</div></div>
     </div>
     <section style={{marginBottom:18,padding:14,border:"1px solid #8b6d3c",borderRadius:10}}>
      <h2 style={{margin:"0 0 12px"}}>كشف المستحقات والراتب</h2>
@@ -132,8 +136,8 @@ export default function AttendancePage(){
        <div style={{...box,gridColumn:"span 2"}}><strong>صافي الراتب بعد الإضافي والعجز والخصومات والحوافز</strong><div style={{fontSize:22,fontWeight:800}}>{money(payrollItem.net_salary)}</div></div>
        <div style={box}><strong>فترة الاستحقاق</strong><div>{payrollDetails.eligible_start||month+"-01"} إلى {payrollDetails.eligible_end||month+"-"+new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate()}</div></div>
       </div>
-      <p style={{margin:"12px 0 0"}}>حالة كشف الرواتب: {payrollRun.status==="finalized"?"معتمد":"مسودة — لم يتم الاعتماد بعد"}</p>
-     </>:<p style={{margin:0}}>لم يتم إنشاء كشف رواتب لهذا الشهر بعد. احسب الرواتب من صفحة الرواتب أولًا لعرض الأساسي والخصومات والحوافز وصافي المستحقات هنا.</p>}
+      <p style={{margin:"12px 0 0"}}>حالة كشف الرواتب: {payrollRun?(payrollRun.status==="finalized"?"معتمد":"مسودة — لم يتم الاعتماد بعد"):"حساب مباشر — لم يتم إنشاء كشف الرواتب بعد"}</p>
+     </>:<p style={{margin:0}}>تعذر حساب مستحقات الموظف لهذا الشهر. راجع بيانات الراتب وتسجيلات الحضور.</p>}
     </section>
     <div style={{overflowX:"auto"}}>
      <table style={{width:"100%",borderCollapse:"collapse",minWidth:850}}>
