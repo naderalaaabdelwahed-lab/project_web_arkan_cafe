@@ -58,18 +58,6 @@ export default function HrEmployeesPage() {
     } catch(e) { setError(e.message); }
     finally { setSaving(false); }
   }
-  async function promptLogin(employee) {
-    const username = window.prompt("اسم المستخدم الذي سيدخل به " + employee.full_name, employee.username || "");
-    if (username === null) return;
-    const password = window.prompt("كلمة مرور للموظف (8 أحرف على الأقل). لن يتم عرضها مرة أخرى:");
-    if (password === null) return;
-    try {
-      await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:"create_login",username,password})});
-      setMessage("تم إعداد حساب دخول HR للموظف " + employee.full_name + ". سلّمه اسم المستخدم وكلمة المرور.");
-      setError("");
-      await load();
-    } catch(e) { setError(e.message); }
-  }
   async function toggleStatus(employee) {
     if (!confirm(employee.employment_status==="active"?"إيقاف الموظف مع الاحتفاظ بسجلاته؟":"إعادة تفعيل الموظف؟")) return;
     try { await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:employee.employment_status==="active"?"deactivate":"activate"})}); await load(); }
@@ -114,7 +102,7 @@ export default function HrEmployeesPage() {
               <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{Number(emp.monthly_salary).toLocaleString("ar-EG")} ج.م</td>
               <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>
               <td style={{padding:12,borderBottom:"1px solid #3a3022"}}>{emp.has_attendance_code?"تم إعداد الكود":"غير مُعد"}</td>
-              <td style={{padding:12,borderBottom:"1px solid #3a3022",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>{edit(emp);window.scrollTo({top:0,behavior:"smooth"});}} style={{marginLeft:8}}>تعديل بيانات الموظف / الكود</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
+              <td style={{padding:12,borderBottom:"1px solid #3a3022",whiteSpace:"nowrap"}}><button onClick={()=>{edit(emp);window.scrollTo({top:0,behavior:"smooth"});}} style={{marginLeft:8}}>تعديل البيانات / الكود</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
             </tr>)}</tbody>
           </table></div>}
       </section>
