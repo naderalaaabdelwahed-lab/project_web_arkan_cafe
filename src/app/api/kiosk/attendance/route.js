@@ -45,7 +45,9 @@ export async function POST(request) {
   if((!useFace&&!/^\d{4,8}$/.test(pin))||!["check_in","check_out"].includes(action)) return NextResponse.json({error:"التقط صورة واضحة للوجه أو أدخل الرقم السري، وحدد العملية."},{status:400});
   let employee=null;
   if(useFace){
-   const probe=await extractFaceEmbedding(imageBase64);
+   let probe;
+   try { probe=await extractFaceEmbedding(imageBase64); }
+   catch(error) { return NextResponse.json({error:error.message||"تعذر تحليل الوجه."},{status:422}); }
    const {data:profiles,error:profileError}=await db.from("hr_employee_face_profiles")
     .select("employee_id,embedding_ciphertext,embedding_iv,embedding_auth_tag,model_version,hr_employees!inner(id,full_name,daily_work_hours,employment_status)")
     .eq("hr_employees.employment_status","active");
