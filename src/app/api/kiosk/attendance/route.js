@@ -58,13 +58,13 @@ export async function POST(request) {
    if(open)return NextResponse.json({error:"أنت مسجل حضور بالفعل ولم تسجل الانصراف."},{status:409});
    const assignment=await assignedShift(db,employee.id,todayCairo);
    let shiftDate=todayCairo, shift=assignment?.hr_shifts||null;
-   if(shift && shift.crosses_midnight){
-    const start=cairoLocalToUtc(shiftDate,shift.start_time), end=cairoLocalToUtc(shiftDate,shift.end_time).getTime()<=start.getTime()?new Date(cairoLocalToUtc(shiftDate,shift.end_time).getTime()+86400000):cairoLocalToUtc(shiftDate,shift.end_time);
-    if(now<start && now<=end && now>=new Date(start.getTime()-shift.grace_minutes*60000)){
-      const prev=new Date(Date.parse(shiftDate+"T00:00:00Z")-86400000).toISOString().slice(0,10);
-      const prevAssignment=await assignedShift(db,employee.id,prev);
-      if(prevAssignment?.hr_shifts?.crosses_midnight){shiftDate=prev;shift=prevAssignment.hr_shifts;}
-    }
+   const prev=new Date(Date.parse(todayCairo+"T00:00:00Z")-86400000).toISOString().slice(0,10);
+   const prevAssignment=await assignedShift(db,employee.id,prev), prevShift=prevAssignment?.hr_shifts;
+   if(prevShift?.crosses_midnight){
+    const prevStart=cairoLocalToUtc(prev,prevShift.start_time);
+    let prevEnd=cairoLocalToUtc(prev,prevShift.end_time);if(prevEnd<=prevStart)prevEnd=new Date(prevEnd.getTime()+86400000);
+    const graceStart=new Date(prevStart.getTime()-Number(prevShift.grace_minutes||0)*60000);
+    if(now>=graceStart&&now<=prevEnd){shiftDate=prev;shift=prevShift;}
    }
    const {data:existing}=await db.from("hr_attendance").select("id,check_in_at,check_out_at").eq("employee_id",employee.id).eq("shift_date",shiftDate).maybeSingle();
    if(existing?.check_in_at)return NextResponse.json({error:"تم تسجيل حضورك لهذا اليوم بالفعل."},{status:409});
