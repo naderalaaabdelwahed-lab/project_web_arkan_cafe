@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import FaceEnrollment from "./FaceEnrollment";
 
 const empty = { full_name:"", phone:"", job_title:"", department:"", hire_date:new Date().toISOString().slice(0,10), monthly_salary:"", overtime_hour_rate:"", paid_leave_days:"", daily_work_hours:"8", notes:"" };
 const inputStyle = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1px solid #425466", background:"#17232e", color:"#f8fafc", boxSizing:"border-box" };
@@ -110,7 +109,7 @@ export default function HrEmployeesPage() {
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.phone||"—"}</td>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{Number(emp.monthly_salary).toLocaleString("ar-EG")} ج.م</td>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>promptPin(emp)} style={{marginLeft:8}}>رقم الحضور</button><FaceEnrollment employee={emp} request={request} onDone={load}/><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
+              <td style={{padding:12,borderBottom:"1px solid #344657",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>promptPin(emp)} style={{marginLeft:8}}>تعيين كود الحضور</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
             </tr>)}</tbody>
           </table></div>}
       </section>
