@@ -66,6 +66,21 @@ export async function POST(request) {
       );
     }
 
+    // HR credentials are intentionally isolated from system employee accounts.
+    const authUser = userData.user;
+    const { data: hrLink, error: hrLinkError } = await adminClient
+      .from("hr_employees")
+      .select("id")
+      .eq("auth_user_id", authUser.id)
+      .maybeSingle();
+    if (hrLinkError) throw hrLinkError;
+    if (authUser.app_metadata?.account_type === "hr_employee" || hrLink) {
+      return NextResponse.json(
+        { error: "حساب HR مخصص للحضور والانصراف فقط. استخدم بوابة HR." },
+        { status: 403 }
+      );
+    }
+
     const { data, error } =
       await authClient.auth.signInWithPassword({
         email: userData.user.email,
