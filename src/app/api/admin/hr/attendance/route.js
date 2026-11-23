@@ -16,27 +16,6 @@ export async function GET(request){
   const a=await admin(request);if(a.response)return a.response;const db=a.db;
   const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   const from=dateAdd(today,-30);
-  const [{data:assignments,error:ae},{data:existing,error:ee}]=await Promise.all([
-   db.from("hr_employee_shift_assignments").select("employee_id,shift_id,effective_from,effective_to,weekday,hr_shifts(*)").lte("effective_from",today),
-   db.from("hr_attendance").select("id,employee_id,shift_date").gte("shift_date",from).lte("shift_date",today)
-  ]);if(ae)throw ae;if(ee)throw ee;
-  const seen=new Set((existing||[]).map(x=>x.employee_id+"|"+x.shift_date)),pending=[];
-  for(let offset=30;offset>=0;offset--){const date=dateAdd(today,-offset),weekday=new Date(date+"T00:00:00Z").getUTCDay();
-   for(const x of assignments||[]){const s=x.hr_shifts;if(!s?.is_active||x.effective_from>date||(x.effective_to&&x.effective_to<date)||(x.weekday!==null&&x.weekday!==weekday))continue;
-    let end;
-    if(s.is_flexible&&s.latest_check_in){
-     const latest=cairoToUtc(date,s.latest_check_in);
-     const duration=(cairoToUtc(date,s.end_time)-cairoToUtc(date,s.start_time))+(s.crosses_midnight?86400000:0);
-     end=new Date(latest.getTime()+duration);
-    } else {
-     end=cairoToUtc(date,s.end_time);
-     if(s.crosses_midnight)end.setTime(end.getTime()+86400000);
-    }
-    end.setTime(end.getTime()+Number(s.grace_minutes||0)*60000);
-    const key=x.employee_id+"|"+date;if(end<new Date()&&!seen.has(key)){pending.push({employee_id:x.employee_id,shift_date:date,attendance_status:"absent_pending"});seen.add(key)}
-   }
-  }
-  if(pending.length){const {error}=await db.from("hr_attendance").upsert(pending,{onConflict:"employee_id,shift_date",ignoreDuplicates:true});if(error)throw error}
   const [{data:rows,error:re},{data:employees,error:er},{data:balances,error:be}]=await Promise.all([
    db.from("hr_attendance").select("*,hr_employees(full_name,job_title,department,monthly_salary)").gte("shift_date",from).lte("shift_date",today).order("shift_date",{ascending:false}),
    db.from("hr_employees").select("id,full_name,paid_leave_days").eq("employment_status","active").order("full_name"),
@@ -75,29 +54,18 @@ export async function PATCH(request){
   if(changesOut)updates.check_out_method="manager";
   if(changesIn&&checkIn&&b.attendance_status===undefined)updates.attendance_status="present";
   if(changesIn||changesOut){
-   let worked=0,overtime=0,late=Number(current.late_minutes||0);
-   const weekday=new Date(current.shift_date+"T00:00:00Z").getUTCDay();
-   const {data:assignments,error:shiftError}=await a.db.from("hr_employee_shift_assignments").select("weekday,hr_shifts(*)").eq("employee_id",current.employee_id).lte("effective_from",current.shift_date).or("effective_to.is.null,effective_to.gte."+current.shift_date).order("effective_from",{ascending:false});
-   if(shiftError)throw shiftError;
-   const assignment=(assignments||[]).find(x=>(x.weekday===null||x.weekday===weekday)&&x.hr_shifts?.is_active);
-   const shift=assignment?.hr_shifts;
+   let worked=0,overtime=0,shortage=0;
    if(checkIn&&checkOut){
     const elapsed=Math.max(0,Math.round((new Date(checkOut)-new Date(checkIn))/60000));
-    worked=Math.max(0,elapsed-Number(shift?.break_minutes||0));
-    if(shift){
-     const start=cairoToUtc(current.shift_date,shift.start_time);
-     let end=cairoToUtc(current.shift_date,shift.end_time);
-     if(shift.crosses_midnight||end<=start)end=new Date(end.getTime()+86400000);
-     const planned=Math.max(0,Math.round((end-start)/60000)-Number(shift.break_minutes||0));
-     overtime=Math.max(0,worked-planned);
-     if(changesIn)late=Math.max(0,Math.floor((new Date(checkIn)-start)/60000)-Number(shift.grace_minutes||0));
-    } else {
-     const {data:emp}=await a.db.from("hr_employees").select("daily_work_hours").eq("id",current.employee_id).maybeSingle();
-     overtime=Math.max(0,worked-Math.round(Number(emp?.daily_work_hours||8)*60));
-    }
-   } else {worked=0;overtime=0;}
-   updates.worked_minutes=worked;updates.overtime_minutes=overtime;
-   if(changesIn)updates.late_minutes=late;
+    worked=elapsed;
+    const {data:emp,error:empError}=await a.db.from("hr_employees").select("daily_work_hours").eq("id",current.employee_id).maybeSingle();
+    if(empError)throw empError;
+    const planned=Math.round(Number(emp?.daily_work_hours||8)*60);
+    overtime=Math.max(0,worked-planned);
+    shortage=Math.max(0,planned-worked);
+   }
+   updates.worked_minutes=worked;updates.overtime_minutes=overtime;updates.shortage_minutes=shortage;
+   if(changesIn)updates.late_minutes=0;
   }
   if(b.notes!==undefined)updates.notes=String(b.notes||"").slice(0,1000)||null;
   else if(changesIn||changesOut)updates.notes=[current.notes,"تعديل وقت الحضور/الانصراف يدويًا بواسطة المدير"].filter(Boolean).join("\\n").slice(0,1000);
