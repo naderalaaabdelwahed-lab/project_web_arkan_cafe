@@ -46,14 +46,11 @@ export async function GET(request) {
     if (auth.response) return auth.response;
     const { data, error } = await auth.db.from("hr_employees").select("id,full_name,phone,photo_path,job_title,department,hire_date,employment_status,monthly_salary,overtime_hour_rate,paid_leave_days,daily_work_hours,notes,created_at").order("created_at", { ascending: false });
     if (error) throw error;
-    const { data: faceProfiles, error: faceError } = await auth.db.from("hr_employee_face_profiles").select("employee_id");
-    if (faceError) throw faceError;
-    const faceIds = new Set((faceProfiles || []).map((profile) => profile.employee_id));
     const employees = await Promise.all((data || []).map(async (employee) => {
       const photoUrl = employee.photo_path
         ? (await auth.db.storage.from("hr-employee-photos").createSignedUrl(employee.photo_path, 300)).data?.signedUrl || null
         : null;
-      return { ...employee, photo_url: photoUrl, has_face_profile: faceIds.has(employee.id) };
+      return { ...employee, photo_url: photoUrl };
     }));
     return NextResponse.json({ employees });
   } catch (error) {
