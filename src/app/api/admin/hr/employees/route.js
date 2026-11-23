@@ -47,6 +47,7 @@ function validateAttendanceCode(value, required = false) {
 function clean(body) {
   const full_name = String(body.full_name || "").trim();
   if (full_name.length < 2 || full_name.length > 150) throw new Error("اكتب اسم الموظف بشكل صحيح.");
+  if (body.termination_date && (!/^\\d{4}-\\d{2}-\\d{2}$/.test(body.termination_date) || body.termination_date < (body.hire_date || "0000-00-00"))) throw new Error("تاريخ انتهاء الخدمة يجب أن يكون بعد تاريخ التعيين.");
   const number = (v) => Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : 0;
   return {
     full_name,
@@ -54,6 +55,7 @@ function clean(body) {
     job_title: String(body.job_title || "").trim() || null,
     department: String(body.department || "").trim() || null,
     hire_date: body.hire_date || new Date().toISOString().slice(0, 10),
+    termination_date: body.termination_date || null,
     monthly_salary: number(body.monthly_salary),
     paid_leave_days: number(body.paid_leave_days),
     daily_work_hours: Math.min(24, Math.max(1, Number(body.daily_work_hours) || 8)),
@@ -65,7 +67,7 @@ export async function GET(request) {
   try {
     const auth = await authorize(request);
     if (auth.response) return auth.response;
-    const { data, error } = await auth.db.from("hr_employees").select("id,full_name,phone,photo_path,job_title,department,hire_date,employment_status,monthly_salary,paid_leave_days,daily_work_hours,notes,username,attendance_pin_hash,created_at").order("created_at", { ascending: false });
+    const { data, error } = await auth.db.from("hr_employees").select("id,full_name,phone,photo_path,job_title,department,hire_date,termination_date,employment_status,monthly_salary,paid_leave_days,daily_work_hours,notes,username,attendance_pin_hash,created_at").order("created_at", { ascending: false });
     if (error) throw error;
     const employees = await Promise.all((data || []).map(async (employee) => {
       const photoUrl = employee.photo_path
@@ -93,7 +95,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "كود الحضور مستخدم لموظف آخر. اختر كودًا مختلفًا." }, { status: 409 });
     }
     values.attendance_pin_hash = hashAttendanceCode(code);
-    const { data, error } = await auth.db.from("hr_employees").insert(values).select("id,full_name,phone,photo_path,job_title,department,hire_date,employment_status,monthly_salary,paid_leave_days,daily_work_hours,notes").single();
+    const { data, error } = await auth.db.from("hr_employees").insert(values).select("id,full_name,phone,photo_path,job_title,department,hire_date,termination_date,employment_status,monthly_salary,paid_leave_days,daily_work_hours,notes").single();
     if (error) throw error;
     return NextResponse.json({ employee: data }, { status: 201 });
   } catch (error) {
@@ -166,7 +168,7 @@ export async function PATCH(request) {
     }
     if (body.action === "deactivate" || body.action === "activate") {
       const { data, error } = await auth.db.from("hr_employees")
-        .update({ employment_status: body.action === "activate" ? "active" : "inactive", updated_at: new Date().toISOString() })
+        .update({ employment_status: body.action === "activate" ? "active" : "inactive", termination_date: body.action === "activate" ? null : (body.termination_date || new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date())), updated_at: new Date().toISOString() })
         .eq("id", id).select("id,employment_status").single();
       if (error) throw error;
       return NextResponse.json({ employee: data });
