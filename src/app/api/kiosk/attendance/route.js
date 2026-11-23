@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash, scryptSync, timingSafeEqual } from "node:crypto";
+import { cosineSimilarity, decryptFaceEmbedding, extractFaceEmbedding } from "@/lib/hr-face";
 
 
 function cairoParts(date) {
@@ -39,19 +40,43 @@ export async function POST(request) {
   const {count:recentFailures,error:rateError}=await db.from("hr_kiosk_attempts").select("id",{count:"exact",head:true}).eq("device_id",device.id).eq("succeeded",false).gte("attempted_at",new Date(Date.now()-5*60*1000).toISOString());
   if(rateError) throw rateError;
   if((recentFailures||0)>=8) return NextResponse.json({error:"تم إيقاف المحاولات مؤقتًا بسبب إدخال أرقام خاطئة متكررة. تواصل مع المدير."},{status:429});
-  const body=await request.json(), pin=String(body.pin||""), action=String(body.action||"");
-  if(!/^\d{4,8}$/.test(pin)||!["check_in","check_out"].includes(action)) return NextResponse.json({error:"راجع الرقم السري واختيار العملية."},{status:400});
-  const {data:employees,error}=await db.from("hr_employees").select("id,full_name,attendance_pin_hash,daily_work_hours").eq("employment_status","active").not("attendance_pin_hash","is",null);
-  if(error) throw error;
-  const matches=(employees||[]).filter(e=>{
-   const [salt,stored]=String(e.attendance_pin_hash||"").split(":");
-   if(!salt||!stored)return false;
-   const actual=scryptSync(pin,salt,64), expected=Buffer.from(stored,"hex");
-   return expected.length===actual.length && timingSafeEqual(actual,expected);
-  });
-  if(matches.length!==1) { await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false}); return NextResponse.json({error:"الرقم السري غير صحيح."},{status:401}); }
+  const body=await request.json(), pin=String(body.pin||""), action=String(body.action||""), imageBase64=body.image_base64;
+  const useFace=typeof imageBase64==="string" && imageBase64.length>100;
+  if((!useFace&&!/^\d{4,8}$/.test(pin))||!["check_in","check_out"].includes(action)) return NextResponse.json({error:"التقط صورة واضحة للوجه أو أدخل الرقم السري، وحدد العملية."},{status:400});
+  let employee=null;
+  if(useFace){
+   const probe=await extractFaceEmbedding(imageBase64);
+   const {data:profiles,error:profileError}=await db.from("hr_employee_face_profiles")
+    .select("employee_id,embedding_ciphertext,embedding_iv,embedding_auth_tag,model_version,hr_employees!inner(id,full_name,daily_work_hours,employment_status)")
+    .eq("hr_employees.employment_status","active");
+   if(profileError) throw profileError;
+   const ranked=(profiles||[]).map(profile=>({
+    employee:profile.hr_employees,
+    score:profile.model_version==="opencv-yunet-sface-2021dec"
+      ? cosineSimilarity(probe,decryptFaceEmbedding(profile)) : -1
+   })).sort((a,b)=>b.score-a.score);
+   const threshold=Number(process.env.HR_FACE_MATCH_THRESHOLD||0.45);
+   const margin=Number(process.env.HR_FACE_MATCH_MARGIN||0.06);
+   if(!ranked.length || ranked[0].score<threshold || (ranked[1] && ranked[0].score-ranked[1].score<margin)){
+    await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false});
+    return NextResponse.json({error:"لم نتمكن من تأكيد هويتك. قرّب وجهك من الكاميرا أو استخدم الرقم السري."},{status:401});
+   }
+   employee=ranked[0].employee;
+  } else {
+   const {data:employees,error}=await db.from("hr_employees").select("id,full_name,attendance_pin_hash,daily_work_hours").eq("employment_status","active").not("attendance_pin_hash","is",null);
+   if(error) throw error;
+   const matches=(employees||[]).filter(e=>{
+    const [salt,stored]=String(e.attendance_pin_hash||"").split(":");
+    if(!salt||!stored)return false;
+    const actual=scryptSync(pin,salt,64), expected=Buffer.from(stored,"hex");
+    return expected.length===actual.length && timingSafeEqual(actual,expected);
+   });
+   if(matches.length!==1) { await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false}); return NextResponse.json({error:"الرقم السري غير صحيح."},{status:401}); }
+   employee=matches[0];
+  }
   await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:true});
-  const employee=matches[0], now=new Date(), todayCairo=cairoDate(now);
+  const attendanceMethod=useFace?"face":"pin";
+  const now=new Date(), todayCairo=cairoDate(now);
   await db.from("hr_kiosk_devices").update({last_seen_at:now.toISOString()}).eq("id",device.id);
   if(action==="check_in"){
    const {data:open}=await db.from("hr_attendance").select("id").eq("employee_id",employee.id).is("check_out_at",null).not("check_in_at","is",null).maybeSingle();
@@ -77,7 +102,7 @@ export async function POST(request) {
     const start=cairoLocalToUtc(shiftDate,shift.start_time);
     lateMinutes=Math.max(0,Math.floor((now-start)/60000)-Number(shift.grace_minutes||0));
    }
-   const {error:insertError}=await db.from("hr_attendance").insert({employee_id:employee.id,shift_date:shiftDate,check_in_at:now.toISOString(),check_in_method:"pin",attendance_status:"present",late_minutes:lateMinutes});
+   const {error:insertError}=await db.from("hr_attendance").insert({employee_id:employee.id,shift_date:shiftDate,check_in_at:now.toISOString(),check_in_method:attendanceMethod,attendance_status:"present",late_minutes:lateMinutes});
    if(insertError)throw insertError;
    return NextResponse.json({success:true,employee_name:employee.full_name,action:"check_in",recorded_at:now.toISOString()});
   }
@@ -101,7 +126,7 @@ export async function POST(request) {
   } else {
    overtimeMinutes=Math.max(0,minutes-Math.round(Number(employee.daily_work_hours||8)*60));
   }
-  const {error:updateError}=await db.from("hr_attendance").update({check_out_at:now.toISOString(),check_out_method:"pin",worked_minutes:minutes,overtime_minutes:overtimeMinutes,updated_at:now.toISOString()}).eq("id",open.id);
+  const {error:updateError}=await db.from("hr_attendance").update({check_out_at:now.toISOString(),check_out_method:attendanceMethod,worked_minutes:minutes,overtime_minutes:overtimeMinutes,updated_at:now.toISOString()}).eq("id",open.id);
   if(updateError)throw updateError;
   return NextResponse.json({success:true,employee_name:employee.full_name,action:"check_out",recorded_at:now.toISOString(),worked_minutes:minutes});
  } catch(error) {
