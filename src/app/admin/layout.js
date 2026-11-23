@@ -112,6 +112,12 @@ export default function AdminLayout({ children }) {
           return;
         }
 
+        // HR employee accounts must never enter the system administration area.
+        if (session.user?.app_metadata?.account_type === "hr_employee") {
+          if (active) router.replace("/hr");
+          return;
+        }
+
         // التحقق من المدير
         const {
           data: adminResult,
