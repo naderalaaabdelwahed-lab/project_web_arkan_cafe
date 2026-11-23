@@ -48,7 +48,7 @@ export async function PATCH(request){
    const [{data:emp,error:empError},{data:balance,error:balanceError}]=await Promise.all([a.db.from("hr_employees").select("paid_leave_days").eq("id",old.employee_id).single(),a.db.from("hr_leave_balances").select("*").eq("employee_id",old.employee_id).eq("leave_year",year).maybeSingle()]);
    if(empError)throw empError;if(balanceError)throw balanceError;
    const allocated=Number(balance?.allocated_days??emp.paid_leave_days??0),used=Math.max(0,Number(balance?.used_days||0)+delta);
-   if(used>allocated)return NextResponse.json({error:"رصيد الإجازات المدفوعة غير كافٍ."},{status:409});
+   if(used>allocated){await a.db.from("hr_attendance").update({attendance_status:old.attendance_status}).eq("id",id);return NextResponse.json({error:"رصيد الإجازات المدفوعة غير كافٍ."},{status:409});}
    const {error:leaveError}=await a.db.from("hr_leave_balances").upsert({employee_id:old.employee_id,leave_year:year,allocated_days:allocated,used_days:used,updated_at:new Date().toISOString()},{onConflict:"employee_id,leave_year"});
    if(leaveError)throw leaveError;
   }
