@@ -198,7 +198,7 @@ export default function InventoryReportsPage() {
       rows = wasteRows.map((row) => [row.created_at, itemName(row.inventory_item_id), Math.abs(number(row.quantity)), unitName(itemMap.get(Number(row.inventory_item_id))), Math.abs(number(row.quantity)) * number(row.unit_cost), row.notes || ""]);
     }
     const csv = [headers, ...rows].map((row) => row.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob(["\\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
