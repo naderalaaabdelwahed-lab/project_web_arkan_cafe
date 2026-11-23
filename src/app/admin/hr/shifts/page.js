@@ -61,6 +61,19 @@ export default function HrShiftsPage() {
     finally { setSaving(false); }
   }
 
+  async function editShift(shift) {
+    const name = window.prompt("اسم الشيفت", shift.name); if (name === null) return;
+    const start_time = window.prompt("وقت البداية (HH:MM)", time(shift.start_time)); if (start_time === null) return;
+    const end_time = window.prompt("وقت النهاية (HH:MM)", time(shift.end_time)); if (end_time === null) return;
+    const break_minutes = window.prompt("مدة الراحة بالدقائق", String(shift.break_minutes)); if (break_minutes === null) return;
+    const grace_minutes = window.prompt("مهلة السماح بالدقائق", String(shift.grace_minutes)); if (grace_minutes === null) return;
+    setSaving(true);
+    try {
+      await call("/api/admin/hr/shifts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: shift.id, action: "update", name, start_time, end_time, break_minutes: Number(break_minutes), grace_minutes: Number(grace_minutes) }) });
+      setMessage("تم تعديل الشيفت."); await load();
+    } catch (e) { setError(e.message); } finally { setSaving(false); }
+  }
+
   async function toggle(shift) {
     try {
       await call("/api/admin/hr/shifts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: shift.id, is_active: !shift.is_active }) });
@@ -106,7 +119,7 @@ export default function HrShiftsPage() {
 
       <section style={panel}>
         <h2 style={{ margin: "0 0 16px", fontSize: 20 }}>الشيفتات ({shifts.length})</h2>
-        {loading ? <p>جارٍ التحميل...</p> : shifts.length === 0 ? <p style={{ color: "#aebdca" }}>لم يتم إنشاء شيفتات بعد.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 650 }}><thead><tr>{["الاسم","من","إلى","الراحة","السماح","الحالة",""].map(x => <th key={x} style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #425466", color: "#d6a44d" }}>{x}</th>)}</tr></thead><tbody>{shifts.map(s => <tr key={s.id}><td style={cell}>{s.name}</td><td style={cell}>{time(s.start_time)}</td><td style={cell}>{time(s.end_time)}{s.crosses_midnight ? " (اليوم التالي)" : ""}</td><td style={cell}>{s.break_minutes} د</td><td style={cell}>{s.grace_minutes} د</td><td style={cell}>{s.is_active ? "نشط" : "موقوف"}</td><td style={cell}><button onClick={() => toggle(s)}>{s.is_active ? "إيقاف" : "تفعيل"}</button></td></tr>)}</tbody></table></div>}
+        {loading ? <p>جارٍ التحميل...</p> : shifts.length === 0 ? <p style={{ color: "#aebdca" }}>لم يتم إنشاء شيفتات بعد.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 650 }}><thead><tr>{["الاسم","من","إلى","الراحة","السماح","الحالة",""].map(x => <th key={x} style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #425466", color: "#d6a44d" }}>{x}</th>)}</tr></thead><tbody>{shifts.map(s => <tr key={s.id}><td style={cell}>{s.name}</td><td style={cell}>{time(s.start_time)}</td><td style={cell}>{time(s.end_time)}{s.crosses_midnight ? " (اليوم التالي)" : ""}</td><td style={cell}>{s.break_minutes} د</td><td style={cell}>{s.grace_minutes} د</td><td style={cell}>{s.is_active ? "نشط" : "موقوف"}</td><td style={cell}><button onClick={() => editShift(s)} style={{marginLeft:6}}>تعديل</button><button onClick={() => toggle(s)}>{s.is_active ? "إيقاف" : "تفعيل"}</button></td></tr>)}</tbody></table></div>}
       </section>
 
       <section style={panel}>
