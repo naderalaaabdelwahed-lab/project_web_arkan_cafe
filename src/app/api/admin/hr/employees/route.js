@@ -95,12 +95,12 @@ export async function PATCH(request) {
       if (employeeError) throw employeeError;
       if (!employee) return NextResponse.json({ error: "الموظف غير موجود." }, { status: 404 });
       const email = username + "@employees.arkan.local";
-      const { data: duplicate } = await auth.db.from("hr_employees").select("id").ilike("username", username).neq("id", id).maybeSingle();
+      const { data: duplicate } = await auth.db.from("hr_employees").select("id").eq("username", username).neq("id", id).maybeSingle();
       if (duplicate) return NextResponse.json({ error: "اسم المستخدم مستخدم لموظف آخر." }, { status: 409 });
       let authUserId = employee.auth_user_id;
       let createdUser = false;
       if (authUserId) {
-        const { error: updateAuthError } = await auth.db.auth.admin.updateUserById(authUserId, { password, email });
+        const { error: updateAuthError } = await auth.db.auth.admin.updateUserById(authUserId, { password, email, email_confirm: true });
         if (updateAuthError) throw updateAuthError;
       } else {
         const { data: created, error: createAuthError } = await auth.db.auth.admin.createUser({
