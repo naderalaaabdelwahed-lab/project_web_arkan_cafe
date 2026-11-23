@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const cairoToday = new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-const empty = { full_name:"", phone:"", job_title:"", department:"", hire_date:cairoToday, termination_date:"", monthly_salary:"", paid_leave_days:"", daily_work_hours:"8", attendance_code:"", notes:"" };
+const empty = { full_name:"", phone:"", job_title:"", department:"", hire_date:cairoToday, termination_date:"", monthly_salary:"", paid_leave_days:"4", daily_work_hours:"8", attendance_code:"", notes:"" };
 const inputStyle = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1px solid #54452e", background:"#15120e", color:"#f4e9d8", boxSizing:"border-box" };
 const labelStyle = { display:"grid", gap:6, color:"#dbe4ec", fontSize:14 };
 
