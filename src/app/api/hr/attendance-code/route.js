@@ -105,7 +105,7 @@ export async function POST(request) {
       }
       const values = {
         employee_id: employee.id, shift_date: today, check_in_at: now.toISOString(),
-        check_in_method: "pin", attendance_status: "present", late_minutes, updated_at: now.toISOString()
+        check_in_method: "pin", attendance_status: "present", late_minutes: lateMinutes, updated_at: now.toISOString()
       };
       const saved = existing
         ? await db.from("hr_attendance").update(values).eq("id", existing.id)
