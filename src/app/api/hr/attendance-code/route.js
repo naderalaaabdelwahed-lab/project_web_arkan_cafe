@@ -30,30 +30,6 @@ function cairoDate(date) {
   const parts = cairoParts(date);
   return parts.year + "-" + parts.month + "-" + parts.day;
 }
-function weekday(dateString) { return new Date(dateString + "T00:00:00Z").getUTCDay(); }
-function localToUtc(dateString, timeString) {
-  const [year, month, day] = dateString.split("-").map(Number);
-  const [hour, minute] = String(timeString).slice(0, 5).split(":").map(Number);
-  const target = Date.UTC(year, month - 1, day, hour, minute, 0);
-  let guess = target;
-  for (let i = 0; i < 3; i++) {
-    const p = cairoParts(new Date(guess));
-    const represented = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
-    guess += target - represented;
-  }
-  return new Date(guess);
-}
-async function getShift(db, employeeId, date) {
-  const { data, error } = await db.from("hr_employee_shift_assignments")
-    .select("id,shift_id,effective_from,effective_to,weekday,hr_shifts(*)")
-    .eq("employee_id", employeeId).lte("effective_from", date);
-  if (error) throw error;
-  return (data || []).find(item =>
-    (!item.effective_to || item.effective_to >= date) &&
-    (item.weekday === null || item.weekday === weekday(date)) &&
-    item.hr_shifts?.is_active
-  ) || null;
-}
 function rateLimit(ip) {
   const now = Date.now();
   const current = attempts.get(ip) || { count: 0, resetAt: now + 10 * 60 * 1000 };
@@ -90,22 +66,13 @@ export async function POST(request) {
     const today = cairoDate(now);
 
     if (action === "check_in") {
-      const assignment = await getShift(db, employee.id, today);
-      const shift = assignment?.hr_shifts || null;
       const { data: existing, error } = await db.from("hr_attendance")
         .select("id,check_in_at").eq("employee_id", employee.id).eq("shift_date", today).maybeSingle();
       if (error) throw error;
       if (existing?.check_in_at) return NextResponse.json({ error: "تم تسجيل حضورك لهذا اليوم بالفعل." }, { status: 409 });
-      let lateMinutes = 0;
-      if (shift?.is_flexible && shift.latest_check_in) {
-        const cutoff = new Date(localToUtc(today, shift.latest_check_in).getTime() + Number(shift.grace_minutes || 0) * 60000);
-        if (now > cutoff) return NextResponse.json({ error: "انتهى وقت الحضور المسموح لهذا الشيفت." }, { status: 409 });
-      } else if (shift) {
-        lateMinutes = Math.max(0, Math.floor((now - localToUtc(today, shift.start_time)) / 60000) - Number(shift.grace_minutes || 0));
-      }
       const values = {
         employee_id: employee.id, shift_date: today, check_in_at: now.toISOString(),
-        check_in_method: "pin", attendance_status: "present", late_minutes: lateMinutes, updated_at: now.toISOString()
+        check_in_method: "pin", attendance_status: "present", late_minutes: 0, updated_at: now.toISOString()
       };
       const saved = existing
         ? await db.from("hr_attendance").update(values).eq("id", existing.id)
@@ -118,27 +85,20 @@ export async function POST(request) {
     }
 
     const { data: openRows, error: openError } = await db.from("hr_attendance")
-      .select("id,shift_date,check_in_at").eq("employee_id", employee.id)
+      .select("id,employee_id,shift_date,check_in_at").eq("employee_id", employee.id)
       .not("check_in_at", "is", null).is("check_out_at", null)
       .order("check_in_at", { ascending: false }).limit(1);
     if (openError) throw openError;
     const open = openRows?.[0];
     if (!open) return NextResponse.json({ error: "مفيش حضور مفتوح للموظف ده. سجل الحضور الأول." }, { status: 409 });
-    const assignment = await getShift(db, employee.id, open.shift_date);
-    const shift = assignment?.hr_shifts || null;
     const elapsed = Math.max(0, Math.round((now - new Date(open.check_in_at)) / 60000));
-    const breakMinutes = Number(shift?.break_minutes || 0);
-    const worked = Math.max(0, elapsed - breakMinutes);
-    let planned = Number(employee.daily_work_hours || 8) * 60;
-    if (shift) {
-      const start = localToUtc(open.shift_date, shift.start_time);
-      let end = localToUtc(open.shift_date, shift.end_time);
-      if (shift.crosses_midnight || end <= start) end = new Date(end.getTime() + 86400000);
-      planned = Math.max(0, Math.round((end - start) / 60000) - breakMinutes);
-    }
+    const worked = elapsed;
+    const planned = Math.round(Number(employee.daily_work_hours || 8) * 60);
+    const overtime = Math.max(0, worked - planned);
+    const shortage = Math.max(0, planned - worked);
     const { error: updateError } = await db.from("hr_attendance").update({
       check_out_at: now.toISOString(), check_out_method: "pin", worked_minutes: worked,
-      overtime_minutes: Math.max(0, worked - planned), updated_at: now.toISOString()
+      overtime_minutes: overtime, shortage_minutes: shortage, updated_at: now.toISOString()
     }).eq("id", open.id);
     if (updateError) throw updateError;
     return NextResponse.json({ success: true, employee_name: employee.full_name, action, recorded_at: now.toISOString(), shift_date: open.shift_date });
