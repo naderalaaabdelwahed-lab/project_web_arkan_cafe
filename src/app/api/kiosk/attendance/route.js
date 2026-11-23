@@ -57,8 +57,10 @@ export async function POST(request) {
     score:profile.model_version==="opencv-yunet-sface-2021dec"
       ? cosineSimilarity(probe,decryptFaceEmbedding(profile)) : -1
    })).sort((a,b)=>b.score-a.score);
-   const threshold=Number(process.env.HR_FACE_MATCH_THRESHOLD||0.45);
-   const margin=Number(process.env.HR_FACE_MATCH_MARGIN||0.06);
+   const thresholdValue=Number(process.env.HR_FACE_MATCH_THRESHOLD??0.45);
+   const marginValue=Number(process.env.HR_FACE_MATCH_MARGIN??0.06);
+   const threshold=Number.isFinite(thresholdValue)?Math.min(0.99,Math.max(0.2,thresholdValue)):0.45;
+   const margin=Number.isFinite(marginValue)?Math.min(0.5,Math.max(0,marginValue)):0.06;
    if(!ranked.length || ranked[0].score<threshold || (ranked[1] && ranked[0].score-ranked[1].score<margin)){
     await db.from("hr_kiosk_attempts").insert({device_id:device.id,succeeded:false});
     return NextResponse.json({error:"لم نتمكن من تأكيد هويتك. قرّب وجهك من الكاميرا أو استخدم الرقم السري."},{status:401});
