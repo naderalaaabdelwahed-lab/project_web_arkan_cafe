@@ -58,7 +58,16 @@ export default function HrEmployeesPage() {
     } catch(e) { setError(e.message); }
     finally { setSaving(false); }
   }
-  async function savePin(employee) {\n    if (!/^\\d{4,8}$/.test(pin)) { setError("الرقم السري يجب أن يكون من 4 إلى 8 أرقام."); return; }\n    try { await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:"set_pin",pin})}); setPin(""); setMessage("تم تعيين الرقم السري للحضور."); } catch(e) { setError(e.message); }\n  }\n  async function toggleStatus(employee) {
+  async function savePin(employee) {\n    if (!/^\\d{4,8}$/.test(pin)) { setError("الرقم السري يجب أن يكون من 4 إلى 8 أرقام."); return; }\n    try { await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:"set_pin",pin})}); setPin(""); setMessage("تم تعيين الرقم السري للحضور."); } catch(e) { setError(e.message); }\n  }\n  async function promptPin(employee) {
+    const value = window.prompt("حدد رقم حضور سري من 4 إلى 8 أرقام للموظف " + employee.full_name);
+    if (value === null) return;
+    try {
+      await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:"set_pin",pin:value})});
+      setMessage("تم تعيين رقم الحضور السري للموظف " + employee.full_name);
+      setError("");
+    } catch(e) { setError(e.message); }
+  }
+  async function toggleStatus(employee) {
     if (!confirm(employee.employment_status==="active"?"إيقاف الموظف مع الاحتفاظ بسجلاته؟":"إعادة تفعيل الموظف؟")) return;
     try { await request("/api/admin/hr/employees",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:employee.id,action:employee.employment_status==="active"?"deactivate":"activate"})}); await load(); }
     catch(e) { setError(e.message); }
@@ -100,7 +109,7 @@ export default function HrEmployeesPage() {
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.phone||"—"}</td>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{Number(emp.monthly_salary).toLocaleString("ar-EG")} ج.م</td>
               <td style={{padding:12,borderBottom:"1px solid #344657"}}>{emp.employment_status==="active"?"نشط":"موقوف"}</td>
-              <td style={{padding:12,borderBottom:"1px solid #344657",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
+              <td style={{padding:12,borderBottom:"1px solid #344657",whiteSpace:"nowrap"}}><button onClick={()=>edit(emp)} style={{marginLeft:8}}>تعديل</button><button onClick={()=>promptPin(emp)} style={{marginLeft:8}}>رقم الحضور</button><button onClick={()=>toggleStatus(emp)}>{emp.employment_status==="active"?"إيقاف":"تفعيل"}</button></td>
             </tr>)}</tbody>
           </table></div>}
       </section>
