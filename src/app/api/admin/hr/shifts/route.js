@@ -9,7 +9,7 @@ function serviceClient() {
 }
 
 async function authorize(request) {
-  const token = (request.headers.get("authorization") || "").replace(/^Bearer\\s+/i, "");
+  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   if (!token) return { response: NextResponse.json({ error: "سجل دخول المدير أولاً." }, { status: 401 }) };
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -23,8 +23,8 @@ async function authorize(request) {
   return { db };
 }
 
-const timePattern = /^([01]\\d|2[0-3]):[0-5]\\d$/;
-const datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request) {
   try {
