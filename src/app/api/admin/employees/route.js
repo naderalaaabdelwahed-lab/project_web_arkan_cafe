@@ -21,6 +21,12 @@ const allowedPermissions = [
   "daily_closing.view",
   "daily_closing.export",
   "daily_closing.close",
+  "inventory.view",
+  "inventory.items.manage",
+  "inventory.recipes.manage",
+  "inventory.purchases.manage",
+  "inventory.movements.manage",
+  "inventory.reports.view",
 ];
 
 function getAdminClient() {
