@@ -52,6 +52,11 @@ const links = [
     label: "♙ شؤون الموظفين",
     adminOnly: true,
   },
+  {
+    href: "/admin/hr/kiosk",
+    label: "▣ إعداد جهاز الحضور",
+    adminOnly: true,
+  },
 ];
 
 const inventoryRoutes = [
