@@ -42,7 +42,7 @@ export async function PATCH(request){
   const b=await request.json(),id=String(b.id||"");
   if(!/^[0-9a-f-]{36}$/i.test(id))return NextResponse.json({error:"سجل غير صحيح."},{status:400});
   const allowed=["present","absent","paid_leave","unpaid_leave","excused","holiday"];
-  const {data:current,error:readError}=await a.db.from("hr_attendance").select("*,hr_employee_shift_assignments:hr_employee_shift_assignments!left(shift_id,hr_shifts(*))").eq("id",id).maybeSingle();
+  const {data:current,error:readError}=await a.db.from("hr_attendance").select("*").eq("id",id).maybeSingle();
   if(readError)throw readError;
   if(!current)return NextResponse.json({error:"سجل الحضور غير موجود."},{status:404});
   const updates={updated_at:new Date().toISOString(),reviewed_by:a.user.id,reviewed_at:new Date().toISOString()};
