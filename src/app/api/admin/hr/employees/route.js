@@ -41,7 +41,7 @@ function verifyAttendanceCode(code, encoded) {
 function validateAttendanceCode(value, required = false) {
   const code = String(value || "").trim();
   if (!code && !required) return null;
-  if (!/^\\d{6}$/.test(code)) throw new Error("كود الحضور والانصراف يجب أن يتكون من 6 أرقام.");
+  if (!/^\d{6}$/.test(code)) throw new Error("كود الحضور والانصراف يجب أن يتكون من 6 أرقام.");
   return code;
 }
 function clean(body) {
