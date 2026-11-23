@@ -12,7 +12,7 @@ export default function HrShiftsPage() {
   const [shifts, setShifts] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [assignments, setAssignments] = useState([]);
-  const [form, setForm] = useState({ name: "", start_time: "15:00", end_time: "02:00", break_minutes: "0", grace_minutes: "10" });
+  const [form, setForm] = useState({ name: "", start_time: "07:00", end_time: "17:00", break_minutes: "0", grace_minutes: "10", is_flexible: false, latest_check_in: "12:00" });
   const [assignment, setAssignment] = useState({ employee_id: "", shift_id: "", effective_from: today, effective_to: "", weekday: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,6 +42,8 @@ export default function HrShiftsPage() {
   useEffect(() => { load(); }, [load]);
 
   const overnight = form.start_time && form.end_time && form.end_time < form.start_time;
+  const shiftMinutes = form.start_time && form.end_time ? ((Number(form.end_time.slice(0,2))*60+Number(form.end_time.slice(3,5)))-(Number(form.start_time.slice(0,2))*60+Number(form.start_time.slice(3,5)))+(overnight?1440:0)-Number(form.break_minutes||0)) : 0;
+  const durationLabel = shiftMinutes > 0 ? `${Math.floor(shiftMinutes/60)} ساعة${shiftMinutes%60 ? ` و${shiftMinutes%60} دقيقة` : ""}` : "—";
 
   async function createShift(e) {
     e.preventDefault(); setSaving(true); setError(""); setMessage("");
@@ -69,7 +71,7 @@ export default function HrShiftsPage() {
     const grace_minutes = window.prompt("مهلة السماح بالدقائق", String(shift.grace_minutes)); if (grace_minutes === null) return;
     setSaving(true);
     try {
-      await call("/api/admin/hr/shifts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: shift.id, action: "update", name, start_time, end_time, break_minutes: Number(break_minutes), grace_minutes: Number(grace_minutes) }) });
+      await call("/api/admin/hr/shifts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: shift.id, action: "update", name, start_time, end_time, break_minutes: Number(break_minutes), grace_minutes: Number(grace_minutes), is_flexible: shift.is_flexible, latest_check_in: shift.latest_check_in }) });
       setMessage("تم تعديل الشيفت."); await load();
     } catch (e) { setError(e.message); } finally { setSaving(false); }
   }
@@ -84,6 +86,7 @@ export default function HrShiftsPage() {
   const shiftName = (id) => shifts.find((s) => s.id === id)?.name || "شيفت غير موجود";
   const employeeName = (id) => employees.find((e) => e.id === id)?.full_name || "موظف غير موجود";
   const time = (value) => String(value || "").slice(0, 5);
+  const durationOf = (s) => { const a=Number(String(s.start_time).slice(0,2))*60+Number(String(s.start_time).slice(3,5)); const b=Number(String(s.end_time).slice(0,2))*60+Number(String(s.end_time).slice(3,5)); const n=Math.max(0,b-a+(s.crosses_midnight?1440:0)-Number(s.break_minutes||0)); return `${Math.floor(n/60)}س ${n%60}د`; };
 
   return <main dir="rtl" style={{ minHeight: "100vh", background: "#101820", color: "#f8fafc", padding: "28px 18px" }}>
     <div style={{ maxWidth: 1150, margin: "0 auto", display: "grid", gap: 22 }}>
@@ -98,9 +101,11 @@ export default function HrShiftsPage() {
           <label style={label}>وقت البداية<input required type="time" style={field} value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} /></label>
           <label style={label}>وقت النهاية<input required type="time" style={field} value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} /></label>
           <label style={label}>مدة الراحة بالدقائق<input type="number" min="0" max="600" step="1" style={field} value={form.break_minutes} onChange={e => setForm({ ...form, break_minutes: e.target.value })} /></label>
-          <label style={label}>مهلة السماح للتأخير بالدقائق<input type="number" min="0" max="240" step="1" style={field} value={form.grace_minutes} onChange={e => setForm({ ...form, grace_minutes: e.target.value })} /></label>
+          <label style={label}>مهلة السماح بالدقائق<input type="number" min="0" max="240" step="1" style={field} value={form.grace_minutes} onChange={e => setForm({ ...form, grace_minutes: e.target.value })} /></label>
+          <label style={{...label,display:"flex",alignItems:"center",gap:9}}><input type="checkbox" checked={form.is_flexible} onChange={e=>setForm({...form,is_flexible:e.target.checked})}/> شيفت مرن (الموظف يكمل عدد الساعات)</label>
+          {form.is_flexible && <label style={label}>آخر وقت مسموح للحضور<input required type="time" style={field} value={form.latest_check_in} onChange={e=>setForm({...form,latest_check_in:e.target.value})}/></label>}
         </div>
-        <div style={{ color: overnight ? "#f3c66d" : "#aebdca", fontSize: 14 }}>{overnight ? "شيفت ليلي: النظام هيعتبر النهاية في اليوم التالي تلقائيًا." : "شيفت في نفس اليوم."}</div>
+        <div style={{ color: overnight ? "#f3c66d" : "#aebdca", fontSize: 14 }}>{overnight ? "شيفت ليلي: النظام هيعتبر النهاية في اليوم التالي تلقائيًا." : "شيفت في نفس اليوم."} — مدة العمل المحسوبة: <b>{durationLabel}</b>{form.is_flexible ? ` — آخر حضور ${form.latest_check_in}` : ""}</div>
         <button disabled={saving} style={{ justifySelf: "start", background: "#d6a44d", color: "#101820", border: 0, borderRadius: 9, padding: "11px 22px", fontWeight: 700 }}>{saving ? "جارٍ الحفظ..." : "حفظ الشيفت"}</button>
       </form>
 
@@ -119,7 +124,7 @@ export default function HrShiftsPage() {
 
       <section style={panel}>
         <h2 style={{ margin: "0 0 16px", fontSize: 20 }}>الشيفتات ({shifts.length})</h2>
-        {loading ? <p>جارٍ التحميل...</p> : shifts.length === 0 ? <p style={{ color: "#aebdca" }}>لم يتم إنشاء شيفتات بعد.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 650 }}><thead><tr>{["الاسم","من","إلى","الراحة","السماح","الحالة",""].map(x => <th key={x} style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #425466", color: "#d6a44d" }}>{x}</th>)}</tr></thead><tbody>{shifts.map(s => <tr key={s.id}><td style={cell}>{s.name}</td><td style={cell}>{time(s.start_time)}</td><td style={cell}>{time(s.end_time)}{s.crosses_midnight ? " (اليوم التالي)" : ""}</td><td style={cell}>{s.break_minutes} د</td><td style={cell}>{s.grace_minutes} د</td><td style={cell}>{s.is_active ? "نشط" : "موقوف"}</td><td style={cell}><button onClick={() => editShift(s)} style={{marginLeft:6}}>تعديل</button><button onClick={() => toggle(s)}>{s.is_active ? "إيقاف" : "تفعيل"}</button></td></tr>)}</tbody></table></div>}
+        {loading ? <p>جارٍ التحميل...</p> : shifts.length === 0 ? <p style={{ color: "#aebdca" }}>لم يتم إنشاء شيفتات بعد.</p> : <div style={{ overflowX: "auto" }}><table style={{ width: "100%", borderCollapse: "collapse", minWidth: 650 }}><thead><tr>{["الاسم","من","إلى","المدة","الراحة","نوع الشيفت","الحالة",""].map(x => <th key={x} style={{ textAlign: "right", padding: 10, borderBottom: "1px solid #425466", color: "#d6a44d" }}>{x}</th>)}</tr></thead><tbody>{shifts.map(s => <tr key={s.id}><td style={cell}>{s.name}</td><td style={cell}>{time(s.start_time)}</td><td style={cell}>{time(s.end_time)}{s.crosses_midnight ? " (اليوم التالي)" : ""}</td><td style={cell}>{durationOf(s)}</td><td style={cell}>{s.break_minutes} د</td><td style={cell}>{s.is_flexible ? `مرن حتى ${time(s.latest_check_in)}` : "ثابت"}</td><td style={cell}>{s.is_active ? "نشط" : "موقوف"}</td><td style={cell}><button onClick={() => editShift(s)} style={{marginLeft:6}}>تعديل</button><button onClick={() => toggle(s)}>{s.is_active ? "إيقاف" : "تفعيل"}</button></td></tr>)}</tbody></table></div>}
       </section>
 
       <section style={panel}>
