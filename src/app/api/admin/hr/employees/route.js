@@ -100,13 +100,27 @@ export async function PATCH(request) {
       let authUserId = employee.auth_user_id;
       let createdUser = false;
       if (authUserId) {
-        const { error: updateAuthError } = await auth.db.auth.admin.updateUserById(authUserId, { password, email, email_confirm: true });
+        const [{ data: linkedUser, error: linkedUserError }, { data: adminLink, error: adminLinkError }, { data: systemEmployee, error: systemEmployeeError }] = await Promise.all([
+          auth.db.auth.admin.getUserById(authUserId),
+          auth.db.from("admin_users").select("user_id").eq("user_id", authUserId).maybeSingle(),
+          auth.db.from("employee_profiles").select("user_id").eq("user_id", authUserId).maybeSingle()
+        ]);
+        if (linkedUserError || !linkedUser?.user) throw new Error("حساب الدخول المرتبط بالموظف غير موجود.");
+        if (adminLinkError || systemEmployeeError) throw new Error("تعذر التحقق من فصل حسابات النظام وHR.");
+        if (adminLink || systemEmployee) throw new Error("رفض إنشاء حساب HR: هذا المستخدم مرتبط بحساب إدارة أو حساب صلاحيات النظام. أنشئ حساب HR مستقلًا.");
+        const metadata = linkedUser.user.app_metadata || {};
+        if (metadata.account_type && metadata.account_type !== "hr_employee") throw new Error("الحساب المرتبط ليس حساب HR مستقلًا.");
+        if (metadata.employee_id && metadata.employee_id !== id) throw new Error("حساب HR مرتبط بملف موظف آخر.");
+        const { error: updateAuthError } = await auth.db.auth.admin.updateUserById(authUserId, {
+          password, email, email_confirm: true,
+          app_metadata: { ...metadata, account_type: "hr_employee", employee_id: id }
+        });
         if (updateAuthError) throw updateAuthError;
       } else {
         const { data: created, error: createAuthError } = await auth.db.auth.admin.createUser({
           email, password, email_confirm: true,
           user_metadata: { account_type: "hr_employee", employee_id: id, display_name: employee.full_name },
-          app_metadata: { account_type: "hr_employee" }
+          app_metadata: { account_type: "hr_employee", employee_id: id }
         });
         if (createAuthError) throw createAuthError;
         authUserId = created.user.id;
