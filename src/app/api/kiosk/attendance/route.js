@@ -81,15 +81,18 @@ export async function POST(request) {
   if(openError)throw openError;
   const open=openRows?.[0];
   if(!open)return NextResponse.json({error:"لا يوجد تسجيل حضور مفتوح لك."},{status:409});
-  const minutes=Math.max(0,Math.round((now-new Date(open.check_in_at))/60000));
+  const elapsedMinutes=Math.max(0,Math.round((now-new Date(open.check_in_at))/60000));
   const assignment=await assignedShift(db,employee.id,open.shift_date);
   const shift=assignment?.hr_shifts;
+  // Break time is excluded from both actual and scheduled working minutes.
+  const breakMinutes=shift?Number(shift.break_minutes||0):0;
+  const minutes=Math.max(0,elapsedMinutes-breakMinutes);
   let overtimeMinutes=0;
   if(shift){
    const start=cairoLocalToUtc(open.shift_date,shift.start_time);
    let end=cairoLocalToUtc(open.shift_date,shift.end_time);
    if(shift.crosses_midnight||end<=start) end=new Date(end.getTime()+86400000);
-   const planned=Math.max(0,Math.round((end-start)/60000)-Number(shift.break_minutes||0));
+   const planned=Math.max(0,Math.round((end-start)/60000)-breakMinutes);
    overtimeMinutes=Math.max(0,minutes-planned);
   } else {
    overtimeMinutes=Math.max(0,minutes-Math.round(Number(employee.daily_work_hours||8)*60));
