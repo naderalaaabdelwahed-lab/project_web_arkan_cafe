@@ -30,3 +30,22 @@
 .hr-success{padding:13px 15px;border-radius:10px;background:#193a2c;border:1px solid #31684c;color:#b5f0ca}
 @media(max-width:850px){.hr-sidebar{width:220px;min-width:220px;padding:20px 12px}.hr-main{padding:22px 16px}}
 @media(max-width:650px){.hr-shell{display:block}.hr-sidebar{position:relative;width:100%;min-width:0;min-height:0;padding:14px;gap:10px;border-left:0;border-bottom:1px solid #3a3022}.hr-brand{padding:5px 8px 12px;font-size:21px}.hr-sidebar-caption{display:none}.hr-nav{display:flex;overflow-x:auto;padding-bottom:4px}.hr-nav a{white-space:nowrap;padding:10px 12px}.hr-sidebar-bottom{display:none}.hr-main{padding:20px 13px}.hr-panel{padding:16px}}
+
+/* Attendance terminal — aligned with the HR manager theme */
+.hr-attendance-terminal{max-width:900px}
+.hr-attendance-eyebrow{display:inline-block;color:#c9a45c;font-size:12px;font-weight:800;letter-spacing:2px;margin-bottom:8px}
+.hr-attendance-card{width:100%;max-width:620px;margin:0 auto;padding:28px;display:grid;gap:22px}
+.hr-attendance-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hr-attendance-actions button{min-height:104px;padding:16px 12px;border-radius:12px;border:1px solid #54452e;background:#15120e;color:#d9cebd;font:inherit;font-size:16px;font-weight:800;cursor:pointer;transition:.2s}
+.hr-attendance-actions button span{display:block;font-size:25px;margin-bottom:7px;color:#c9a45c}
+.hr-attendance-actions button:hover{border-color:#927342;background:#282117}
+.hr-attendance-actions button.selected{background:linear-gradient(135deg,#c9a45c,#a77f3e);border-color:#e0bd73;color:#17120b}
+.hr-attendance-actions button.selected span{color:#17120b}
+.hr-attendance-form{display:grid;gap:12px}
+.hr-attendance-form label{color:#e8ddca;font-weight:800;font-size:14px}
+.hr-attendance-form input{width:100%;box-sizing:border-box;text-align:center;font:800 28px 'Cairo',sans-serif;letter-spacing:12px;padding:14px 12px;border-radius:10px;border:1px solid #54452e;background:#100d0b;color:#f4e9d8}
+.hr-attendance-form input:focus{border-color:#c9a45c;outline:none;box-shadow:0 0 0 2px #c9a45c2e}
+.hr-attendance-form small{color:#a99b87;font-size:12px;line-height:1.8}
+.hr-attendance-submit{width:100%;font:800 16px 'Cairo',sans-serif}
+.hr-attendance-note{margin:0;text-align:center;color:#9b8b72;font-size:12px;line-height:1.9}
+@media(max-width:650px){.hr-attendance-card{padding:18px}.hr-attendance-actions button{min-height:90px;font-size:14px}.hr-attendance-form input{font-size:25px}}
