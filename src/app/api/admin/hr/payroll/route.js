@@ -26,8 +26,9 @@ export async function POST(request){
    const late=rows.reduce((n,x)=>n+Number(x.late_minutes||0),0),overtime=rows.reduce((n,x)=>n+Number(x.overtime_minutes||0),0);
    const latenessDeduction=late/60*hourRate,absenceDeduction=absent*dayRate,overtimeAmount=overtime/60*Number(emp.overtime_hour_rate||0);
    const otherDeductions=adj.filter(x=>x.adjustment_type==="deduction").reduce((n,x)=>n+Number(x.amount),0),additions=adj.filter(x=>x.adjustment_type==="addition").reduce((n,x)=>n+Number(x.amount),0);
-   const net=Math.max(0,Number(emp.monthly_salary||0)-latenessDeduction-absenceDeduction+overtimeAmount-otherDeductions+additions);
-   items.push({payroll_run_id:run.id,employee_id:emp.id,employee_name_snapshot:emp.full_name,monthly_salary:emp.monthly_salary,overtime_amount:overtimeAmount,lateness_deduction:latenessDeduction,other_deductions:otherDeductions+absenceDeduction,additions,paid_leave_days:paidLeave,net_salary:net,details:{period_days:days,absent_days:absent,paid_leave_days:paidLeave,late_minutes:late,overtime_minutes:overtime,absence_deduction:absenceDeduction,adjustments:adj}});
+   const baseSalary=Number(emp.monthly_salary||0)*Math.min(days,30)/30;
+   const net=Math.max(0,baseSalary-latenessDeduction-absenceDeduction+overtimeAmount-otherDeductions+additions);
+   items.push({payroll_run_id:run.id,employee_id:emp.id,employee_name_snapshot:emp.full_name,monthly_salary:baseSalary,overtime_amount:overtimeAmount,lateness_deduction:latenessDeduction,other_deductions:otherDeductions+absenceDeduction,additions,paid_leave_days:paidLeave,net_salary:net,details:{period_days:days,absent_days:absent,paid_leave_days:paidLeave,late_minutes:late,overtime_minutes:overtime,absence_deduction:absenceDeduction,adjustments:adj}});
   }
   const {error:ie}=await db.from("hr_payroll_items").insert(items);if(ie){await db.from("hr_payroll_runs").delete().eq("id",run.id);throw ie}
   return NextResponse.json({run,items},{status:201});
