@@ -46,13 +46,15 @@ Next.js 16 application for ARKAN Cafe & Restaurant.
 
 ## Human Resources (HR)
 
-- The HR area is available at `/hr`; employees sign in with a username and password created by an administrator in HR → Employees.
-- Employee passwords are managed by Supabase Auth. The application stores only the username and Auth user ID mapping, never a plaintext password.
-- Employees use the in-site HR portal to check in and check out. The server records timestamps in Cairo time and associates overnight check-outs with the original shift date.
-- HR managers open `/hr/manage` from the HR entry in the admin navigation. Employee files, shifts, attendance review, and payroll are grouped under `/hr`.
+- The employee HR portal is available at `/hr`; each employee receives a dedicated username and password created by an HR administrator.
+- Employees open `/hr/attendance` to check in, check out, and view only their own attendance history.
+- HR employee accounts are isolated from system administrator and system employee accounts. They cannot sign in to the admin application, access inventory permissions, or manage HR.
+- HR manager accounts use the existing administrator login and open `/hr/manage` from the admin navigation. Employee files, shifts, attendance review, and payroll are manager-only.
+- Employee passwords are managed by Supabase Auth. The application stores only the HR username and Auth user ID mapping, never a plaintext password.
+- The server records attendance timestamps in Cairo time and associates overnight check-outs with the original shift date.
 - The former standalone `/attendance/kiosk` page, kiosk API, device activation workflow, and PIN attendance flow have been removed from the active app.
 - Duplicate check-ins are rejected. Check-out is unavailable unless the employee has an open attendance record. Previous unclosed records remain available for manager correction.
-- Managers can assign flexible and overnight shifts, review absences, correct attendance timestamps, and manage payroll. Confirm the payroll policy assumptions with the restaurant before using payroll for actual payment.
+- Managers can assign flexible and overnight shifts, review absences, correct attendance timestamps, and manage payroll. Confirm payroll policy assumptions with the restaurant before using payroll for actual payment.
 
 ## Validation
 
