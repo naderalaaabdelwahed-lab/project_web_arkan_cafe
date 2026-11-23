@@ -28,6 +28,7 @@ export default function HrLayout({children}){
    const {data:isAdmin,error:adminError}=await supabase.rpc("is_admin");
    if(!active)return;
    if(!adminError&&isAdmin===true){setRole("admin");if(pathname==="/hr")router.replace("/hr/manage");return;}
+   if(session.user?.app_metadata?.account_type!=="hr_employee"){setRole("guest");router.replace("/admin");return;}
    setRole("employee");
    if(pathname!=="/hr"&&pathname!=="/hr/attendance"){router.replace("/hr");return;}
   }
