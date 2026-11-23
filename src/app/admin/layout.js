@@ -47,6 +47,11 @@ const links = [
     label: "♟ إدارة الموظفين",
     adminOnly: true,
   },
+  {
+    href: "/admin/hr/employees",
+    label: "♙ شؤون الموظفين",
+    adminOnly: true,
+  },
 ];
 
 const inventoryRoutes = [
