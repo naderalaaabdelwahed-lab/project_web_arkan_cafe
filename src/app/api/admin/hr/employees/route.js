@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { randomBytes, scryptSync } from "node:crypto";
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -77,7 +78,7 @@ export async function PATCH(request) {
     const body = await request.json();
     const id = String(body.id || "");
     if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "معرّف الموظف غير صحيح." }, { status: 400 });
-    if (body.action === "deactivate" || body.action === "activate") {
+    if (body.action === "set_pin") {\n      const pin = String(body.pin || "");\n      if (!/^\\d{4,8}$/.test(pin)) return NextResponse.json({ error: "الرقم السري يجب أن يكون من 4 إلى 8 أرقام." }, { status: 400 });\n      const salt = randomBytes(16).toString("hex");\n      const hash = scryptSync(pin, salt, 64).toString("hex");\n      const { error } = await auth.db.from("hr_employees").update({ attendance_pin_hash: salt + ":" + hash, updated_at: new Date().toISOString() }).eq("id", id);\n      if (error) throw error;\n      return NextResponse.json({ success: true });\n    }\n    if (body.action === "deactivate" || body.action === "activate") {
       const { data, error } = await auth.db.from("hr_employees").update({ employment_status: body.action === "activate" ? "active" : "inactive", updated_at: new Date().toISOString() }).eq("id", id).select("id,employment_status").single();
       if (error) throw error;
       return NextResponse.json({ employee: data });
