@@ -19,7 +19,6 @@ const employeeLinks=[
 export default function HrLayout({children}){
  const pathname=usePathname(),router=useRouter();
  const [role,setRole]=useState("checking");
- const [employeeName,setEmployeeName]=useState("");
  useEffect(()=>{
   let active=true;
   async function verify(){
@@ -37,14 +36,15 @@ export default function HrLayout({children}){
   return()=>{active=false;subscription.unsubscribe();};
  },[pathname,router]);
  if(role==="checking"&&pathname!=="/hr")return <main dir="rtl" style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"#100d0b",color:"#e4bd75"}}>جارٍ التحقق من حساب HR...</main>;
- if(role==="checking"||role==="guest"||pathname==="/hr")return children;
+ if(role==="checking"||role==="guest")return children;
  const links=role==="admin"?adminLinks:employeeLinks;
+ async function logout(){await supabase.auth.signOut();router.replace("/hr");router.refresh();}
  return <div className="hr-shell" dir="rtl">
   <aside className="hr-sidebar">
    <Link href={role==="admin"?"/hr/manage":"/hr"} className="hr-brand">ARKAN<span>.</span> HR</Link>
    <p className="hr-sidebar-caption">{role==="admin"?"إدارة الموارد البشرية":"بوابة الموظفين"}</p>
    <nav className="hr-nav">{links.map(([href,icon,label])=><Link key={href} href={href} className={pathname===href?"active":""}><span aria-hidden="true">{icon}</span>{label}</Link>)}</nav>
-   <div className="hr-sidebar-bottom">ARKAN HR SYSTEM<br/>{role==="admin"?"إدارة شؤون العاملين":"الحضور والانصراف فقط"}</div>
+   <div className="hr-sidebar-bottom">ARKAN HR SYSTEM<br/>{role==="admin"?"إدارة شؤون العاملين":"الحضور والانصراف فقط"}<button type="button" onClick={logout} style={{display:"block",width:"100%",marginTop:12,padding:"10px 12px",border:"1px solid #66512f",borderRadius:9,background:"#c9a45c18",color:"#e8d5b1",cursor:"pointer",font:"inherit"}}>تسجيل الخروج</button></div>
   </aside>
   <section className="hr-main">{children}</section>
  </div>;
