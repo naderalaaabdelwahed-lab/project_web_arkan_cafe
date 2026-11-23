@@ -75,8 +75,10 @@ export async function PATCH(request){
   if(changesIn&&checkIn&&b.attendance_status===undefined)updates.attendance_status="present";
   if(changesIn||changesOut){
    let worked=0,overtime=0,late=Number(current.late_minutes||0);
-   const {data:assignment,error:shiftError}=await a.db.from("hr_employee_shift_assignments").select("hr_shifts(*)").eq("employee_id",current.employee_id).lte("effective_from",current.shift_date).or("effective_to.is.null,effective_to.gte."+current.shift_date).order("effective_from",{ascending:false}).limit(1).maybeSingle();
+   const weekday=new Date(current.shift_date+"T00:00:00Z").getUTCDay();
+   const {data:assignments,error:shiftError}=await a.db.from("hr_employee_shift_assignments").select("weekday,hr_shifts(*)").eq("employee_id",current.employee_id).lte("effective_from",current.shift_date).or("effective_to.is.null,effective_to.gte."+current.shift_date).order("effective_from",{ascending:false});
    if(shiftError)throw shiftError;
+   const assignment=(assignments||[]).find(x=>(x.weekday===null||x.weekday===weekday)&&x.hr_shifts?.is_active);
    const shift=assignment?.hr_shifts;
    if(checkIn&&checkOut){
     const elapsed=Math.max(0,Math.round((new Date(checkOut)-new Date(checkIn))/60000));
