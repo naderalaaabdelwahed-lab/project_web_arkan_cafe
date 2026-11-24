@@ -54,6 +54,9 @@ export default function PosPage() {
   const [payment, setPayment] = useState("cash");
   const [cashReceived, setCashReceived] = useState("");
   const [paymentSummary, setPaymentSummary] = useState({});
+  const [selectedTableKey, setSelectedTableKey] = useState("");
+  const [showCashModal, setShowCashModal] = useState(false);
+  const [mergeTargetId, setMergeTargetId] = useState("");
 
   const load = useCallback(async () => {
     setError("");
@@ -130,6 +133,10 @@ export default function PosPage() {
     return matchesSearch && matchesType && matchesStatus && matchesFrom && matchesTo && matchesTable;
   });
   const activeTables = orders.filter((o) => o.order_type === "dine-in" && !["delivered","cancelled"].includes(o.status));
+  const selectedTableOrder = activeTables.find((o) => selectedTableKey === (o.table_area + ":" + o.table_number)) || null;
+  const floorTotal = activeTables.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+  const selectedDue = selectedTableOrder ? Math.max(0, Number(selectedTableOrder.total_amount || 0) - Number(paymentSummary[selectedTableOrder.id] || 0)) : 0;
+  const mergeTargets = activeTables.filter((o) => o.id !== selectedTableOrder?.id);
   const transferTargets = [
     ...Array.from({ length: Number(settings.indoor_tables) || 0 }, (_, i) => ({ area: "indoor", number: i + 1 })),
     ...Array.from({ length: Number(settings.outdoor_tables) || 0 }, (_, i) => ({ area: "outdoor", number: i + 1 })),
@@ -161,7 +168,14 @@ export default function PosPage() {
     setShowTransfer(false); setTransferTarget("");
     setShowItemTransfer(false); setTransferQuantities({});
   }
+  function selectTable(n, selectedArea) {
+    setSelectedTableKey(selectedArea + ":" + n);
+    setArea(selectedArea);
+    setTable(n);
+  }
+
   function openTable(n, selectedArea) {
+    setSelectedTableKey(selectedArea + ":" + n);
     const currentOrder = activeTables.find((o) => o.table_number === n && o.table_area === selectedArea);
     const booking = reservations.find((r) => r.table_number === n && (r.seating_area || "indoor") === selectedArea);
     reset();
@@ -313,16 +327,19 @@ export default function PosPage() {
     finally { setSaving(false); }
   }
 
-  async function recordCashPayment() {
+  async function recordCashPayment(orderId = editingOrderId) {
     if (!editingOrderId) return;
     const received = Number(cashReceived);
     if (!Number.isFinite(received) || received <= 0) return setError("اكتب المبلغ النقدي المستلم.");
     setSaving(true); setError(""); setMessage("");
     try {
-      const result = await supabase.rpc("pos_record_cash_payment", { p_order_id: editingOrderId, p_received: received });
+      const result = await supabase.rpc("pos_settle_and_close_cash", { p_order_id: orderId, p_received: received });
       if (result.error) throw result.error;
-      setMessage("تم تسجيل السداد. الباقي للعميل: " + fmt(result.data.change) + " ج.م — المتبقي على الأوردر: " + fmt(result.data.remaining) + " ج.م");
+      setMessage("تم سداد الأوردر وإغلاقه وتفريغ الطاولة. الباقي للعميل: " + fmt(result.data.change) + " ج.م");
       setCashReceived("");
+      setShowCashModal(false);
+      reset();
+      setScreen("tables");
       await load();
     } catch (e) { setError("تعذر تسجيل السداد: " + e.message); }
     finally { setSaving(false); }
@@ -367,6 +384,24 @@ export default function PosPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function mergeSelectedTable() {
+    if (!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
+    if (!mergeTargetId) return setError("اختار الطاولة المستقبِلة.");
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await supabase.rpc("pos_merge_table_orders", {
+        p_source_order_id: selectedTableOrder.id,
+        p_target_order_id: Number(mergeTargetId),
+      });
+      if (result.error) throw result.error;
+      setMessage("تم دمج الأوردر ARK-" + selectedTableOrder.id + " في الأوردر ARK-" + result.data.target_order_id + "، والطاولة المصدر أصبحت متاحة.");
+      setMergeTargetId("");
+      setSelectedTableKey("");
+      await load();
+    } catch (e) { setError("تعذر دمج الطاولتين: " + e.message); }
+    finally { setSaving(false); }
   }
 
   async function transferTable() {
@@ -466,43 +501,107 @@ export default function PosPage() {
           </div>
         </section>
       ) : mode === "dine-in" && screen === "tables" ? (
-        <section style={s.panel}>
-          <div style={s.head}>
-            <div><h2>اختار الطاولة</h2><small style={s.muted}>اضغط على طاولة مشغولة لفتح أوردرها، أو متاحة لبدء أوردر جديد</small></div>
-            <b>{Number(settings.indoor_tables || 0) + Number(settings.outdoor_tables || 0)} طاولة</b>
-          </div>
-          <div style={s.tableSection}>
-            <h3>الطاولات الداخلية ({Number(settings.indoor_tables || 0)})</h3>
-            <div style={s.fullTableGrid}>
-              {Array.from({length:Number(settings.indoor_tables)||0},(_,i)=>i+1).map(n => {
-                const occupiedOrder = activeTables.find(o => o.table_number === n && o.table_area === "indoor");
-                const occupied = Boolean(occupiedOrder);
-                const printed = Boolean(occupiedOrder?.receipt_printed_at);
-                const reserved = reservations.some(r => r.table_number === n && (r.seating_area || "indoor") === "indoor");
-                return <button key={"indoor-"+n} onClick={() => openTable(n, "indoor")} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(printed?s.printedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
-                  <b>{n}</b><small>{printed ? "تمت طباعة الفاتورة" : occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
-                </button>;
-              })}
-              {!Number(settings.indoor_tables) && <small style={s.muted}>لا توجد طاولات داخلية محددة.</small>}
+        <section style={s.floorDashboard}>
+          <aside style={s.floorSidebar}>
+            <div style={s.floorTotal}>
+              <small>إجمالي أوردرات الصالة المفتوحة</small><strong style={{fontSize:28}}>{fmt(floorTotal)} ج.م</strong>
+              <small>{activeTables.length} أوردر نشط</small>
+              <button style={s.secondary} onClick={load} disabled={loading}>↻ تحديث الإجمالي والبيانات</button>
             </div>
-          </div>
-          <div style={s.tableSection}>
-            <h3>الطاولات الخارجية ({Number(settings.outdoor_tables || 0)})</h3>
-            <div style={s.fullTableGrid}>
-              {Array.from({length:Number(settings.outdoor_tables)||0},(_,i)=>i+1).map(n => {
-                const occupiedOrder = activeTables.find(o => o.table_number === n && o.table_area === "outdoor");
-                const occupied = Boolean(occupiedOrder);
-                const printed = Boolean(occupiedOrder?.receipt_printed_at);
-                const reserved = reservations.some(r => r.table_number === n && r.seating_area === "outdoor");
-                return <button key={"outdoor-"+n} onClick={() => openTable(n, "outdoor")} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(printed?s.printedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
-                  <b>{n}</b><small>{printed ? "تمت طباعة الفاتورة" : occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
-                </button>;
-              })}
-              {!Number(settings.outdoor_tables) && <small style={s.muted}>لا توجد طاولات خارجية محددة.</small>}
+            <div style={s.floorTools}>
+              <h3>أدوات الطاولة المحددة</h3>
+              {selectedTableOrder ? <>
+                <b>{selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية"} — طاولة {selectedTableOrder.table_number}</b>
+                <small>الأوردر ARK-{selectedTableOrder.id}</small>
+                <small>الإجمالي: {fmt(selectedTableOrder.total_amount)} ج.م</small>
+                <small>المدفوع: {fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</small>
+                <small>المتبقي: {fmt(selectedDue)} ج.م</small>
+                <button style={s.submit} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>إضافة أصناف / فتح الأوردر</button>
+                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>حذف أو تعديل أصناف الطلب</button>
+                <button style={s.secondary} onClick={()=>{setCashReceived("");setShowCashModal(true);}}>السداد النقدي وإغلاق الأوردر</button>
+                <button style={s.secondary} onClick={()=>{setShowTransfer(true);setTransferTarget("");}}>نقل الطاولة بالكامل</button>
+                <div style={{display:"grid",gap:7}}>
+                  <label style={s.floorLabel}>دمج الطاولة في طاولة مشغولة</label>
+                  <select style={s.filterInput} value={mergeTargetId} onChange={e=>setMergeTargetId(e.target.value)}>
+                    <option value="">اختار الطاولة المستقبِلة</option>
+                    {mergeTargets.map(o=><option key={o.id} value={o.id}>{o.table_area==="indoor"?"داخلية":"خارجية"} — طاولة {o.table_number} (ARK-{o.id})</option>)}
+                  </select>
+                  <button style={s.secondary} disabled={saving||!mergeTargetId} onClick={mergeSelectedTable}>دمج الأوردر وإخلاء الطاولة المصدر</button>
+                </div>
+                <button style={s.secondary} onClick={startItemTransfer}>نقل أصناف من الطلب</button>
+                <small style={s.floorHint}>الدمج ينقل الأصناف والخصم وكل الدفعات، ويقفل أوردر المصدر. الأوردر المقفول لا يقبل أي تعديل.</small>
+              </> : <>
+                <p style={s.muted}>اضغط مرة على طاولة لتحديدها، واضغط مرتين لفتح الأوردر.</p>
+                <button style={s.secondary} disabled={!selectedTableKey} onClick={()=>{const [a,n]=selectedTableKey.split(":");openTable(Number(n),a);}}>فتح الطاولة المحددة</button>
+              </>}
             </div>
+          </aside>
+          <div style={s.floorTables}>
+            <div style={s.head}><div><h2>صالة المطعم</h2><small style={s.muted}>ضغطة واحدة للتحديد — ضغطتان لفتح الأوردر</small></div><b>{Number(settings.indoor_tables||0)+Number(settings.outdoor_tables||0)} طاولة</b></div>
+            {["indoor","outdoor"].map((a)=> <div key={a} style={s.tableSection}>
+              <h3>{a==="indoor"?"الطاولات الداخلية":"الطاولات الخارجية"} ({Number(a==="indoor"?settings.indoor_tables:settings.outdoor_tables)||0})</h3>
+              <div style={s.fullTableGrid}>
+                {Array.from({length:Number(a==="indoor"?settings.indoor_tables:settings.outdoor_tables)||0},(_,i)=>i+1).map(n=>{
+                  const o=activeTables.find(x=>x.table_number===n&&x.table_area===a);
+                  const reserved=reservations.some(r=>r.table_number===n&&(r.seating_area||"indoor")===a);
+                  const key=a+":"+n;
+                  return <button key={key} onClick={()=>selectTable(n,a)} onDoubleClick={()=>openTable(n,a)} style={{...s.tableTile,...(o?s.occupiedTile:{}),...(o?.receipt_printed_at?s.printedTile:{}),...(reserved&&!o?s.reservedTile:{}),...(selectedTableKey===key?s.tableSelected:{})}}>
+                    <b>{n}</b><small>{o?"مشغولة — "+fmt(o.total_amount)+" ج.م":reserved?"محجوزة":"متاحة"}</small>
+                  </button>;
+                })}
+              </div>
+            </div>)}
+            <div style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🔵 تمت طباعة الفاتورة</span><span>🟡 محجوزة</span><span>🟠 محددة</span></div>
           </div>
-          <div style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🔵 تمت طباعة الفاتورة</span><span>🟡 محجوزة</span></div>
+          <aside style={s.floorActions}>
+            <div style={s.floorCashCard}>
+              <h3>السداد النقدي</h3>
+              {selectedTableOrder?<><small>طاولة {selectedTableOrder.table_number} — ARK-{selectedTableOrder.id}</small>
+                <div>قيمة الفاتورة: <b>{fmt(selectedTableOrder.total_amount)} ج.م</b></div>
+                <div>المدفوع: <b>{fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</b></div>
+                <div>المتبقي: <b>{fmt(selectedDue)} ج.م</b></div>
+                <button style={s.submit} disabled={selectedDue<=0} onClick={()=>{setCashReceived("");setShowCashModal(true);}}>استلام نقدية وإغلاق الطاولة</button></>
+                :<p style={s.muted}>حدد طاولة مشغولة لعرض المبلغ المستحق.</p>}
+            </div>
+            <div style={s.floorOtherActions}><h3>عمليات أخرى</h3>
+              <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>selectedTableOrder&&printReceipt(selectedTableOrder)}>طباعة الفاتورة</button>
+              <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>selectedTableOrder&&openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>فتح تفاصيل الأوردر</button>
+              <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>{setShowTransfer(true);setTransferTarget("");}}>نقل الطاولة</button>
+              <button style={s.secondary} disabled={!selectedTableOrder} onClick={startItemTransfer}>نقل أصناف</button>
+            </div>
+          </aside>
+          <div style={s.floorDetails}><b>تفاصيل الطاولة المحددة</b>
+            {selectedTableOrder?<div style={s.floorDetailRow}>
+              <span>طاولة {selectedTableOrder.table_number} ({selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية"})</span>
+              <span>ARK-{selectedTableOrder.id}</span><span>الأصناف: {(selectedTableOrder.order_items||[]).length}</span>
+              <span>الإجمالي: {fmt(selectedTableOrder.total_amount)} ج.م</span><span>المدفوع: {fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</span>
+              <span>المتبقي: {fmt(selectedDue)} ج.م</span><span>{selectedTableOrder.status==="pending"?"قيد الانتظار":"قيد التنفيذ"}</span>
+            </div>:<small style={s.muted}>لم يتم تحديد طاولة مشغولة بعد.</small>}
+          </div>
         </section>
+        {showTransfer&&selectedTableOrder&&<div style={s.floorInlineModal}>
+          <b>نقل الطاولة بالكامل — ARK-{selectedTableOrder.id}</b>
+          <select style={s.filterInput} value={transferTarget} onChange={e=>setTransferTarget(e.target.value)}>
+            <option value="">اختار طاولة فارغة</option>
+            {availableTransferTargets.map(t=><option key={t.area+":"+t.number} value={t.area+":"+t.number}>{t.area==="indoor"?"داخلية":"خارجية"} — طاولة {t.number}</option>)}
+          </select>
+          <button style={s.submit} disabled={saving||!transferTarget} onClick={transferTable}>تأكيد النقل</button>
+          <button style={s.secondary} onClick={()=>setShowTransfer(false)}>إلغاء</button>
+        </div>}
+        {showCashModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowCashModal(false)}>
+          <div style={s.cashModal} onClick={e=>e.stopPropagation()}>
+            <h2>سداد الأوردر وإغلاق الطاولة</h2><small>ARK-{selectedTableOrder.id} — طاولة {selectedTableOrder.table_number}</small>
+            <div style={s.modalAmount}>المتبقي: {fmt(selectedDue)} ج.م</div>
+            <label style={s.floorLabel}>المبلغ المستلم من العميل</label>
+            <input autoFocus type="number" min={selectedDue+0.01} step="0.01" style={s.discountInput} value={cashReceived} onChange={e=>setCashReceived(e.target.value)} placeholder="اكتب المبلغ المستلم"/>
+            <div>الباقي للعميل: <b>{fmt(Math.max(0,Number(cashReceived||0)-selectedDue))} ج.م</b></div>
+            <small style={s.floorHint}>لازم المبلغ المستلم يكون أكبر من المتبقي على الفاتورة.</small>
+            <div style={{display:"flex",gap:8,marginTop:12}}>
+              <button style={s.submit} disabled={saving||!Number.isFinite(Number(cashReceived))||Number(cashReceived)<=selectedDue} onClick={()=>recordCashPayment(selectedTableOrder.id)}>{saving?"جاري السداد...":"سداد وإغلاق الأوردر"}</button>
+              <button style={s.secondary} disabled={saving} onClick={()=>setShowCashModal(false)}>إلغاء</button>
+            </div>
+          </div>
+        </div>}
       ) : (
         <div style={s.orderWorkspace}>
           <aside style={s.menuSidebar}>
@@ -621,6 +720,23 @@ const s = {
  panel:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:16,minWidth:0},head:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:9,marginBottom:12},search:{padding:10,border:"1px solid #ddd",borderRadius:8,width:"40%"},
  categories:{display:"flex",gap:7,overflowX:"auto",paddingBottom:12},category:{padding:"8px 12px",border:"1px solid #e5dfd6",borderRadius:20,background:"#fff",whiteSpace:"nowrap",cursor:"pointer"},
  products:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(125px,1fr))",gap:9},product:{display:"grid",gap:6,textAlign:"right",padding:9,border:"1px solid #eee8df",borderRadius:10,background:"#fff",cursor:"pointer"},image:{width:"100%",height:78,objectFit:"cover",borderRadius:7},imageBlank:{height:78,display:"grid",placeItems:"center",background:"#f6f1e9",borderRadius:7,fontSize:24,color:"#a7793d"},
+ floorDashboard:{display:"grid",gridTemplateColumns:"260px minmax(0,2fr) minmax(250px,1fr)",gap:12,alignItems:"start"},
+ floorSidebar:{display:"grid",gap:12,minWidth:0},
+ floorTotal:{display:"grid",gap:10,padding:16,background:"#29251f",color:"#fff",borderRadius:13},
+ floorTools:{display:"grid",gap:9,padding:14,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,minWidth:0},
+ floorTables:{padding:16,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,minWidth:0},
+ floorActions:{display:"grid",gap:12,minWidth:0},
+ floorCashCard:{display:"grid",gap:10,padding:15,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13},
+ floorOtherActions:{display:"grid",gap:8,padding:15,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13},
+ floorDetails:{gridColumn:"1 / -1",display:"grid",gap:8,padding:14,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13},
+ floorDetailRow:{display:"flex",gap:"8px 22px",flexWrap:"wrap",fontSize:13},
+ floorLabel:{fontSize:13,fontWeight:700},
+ floorHint:{fontSize:12,color:"#77684f",lineHeight:1.6},
+ tableSelected:{outline:"3px solid #d28c2c",boxShadow:"0 0 0 3px #fff2dc"},
+ floorInlineModal:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:14,marginTop:10,background:"#fffaf1",border:"1px solid #e5d3b8",borderRadius:10},
+ modalBackdrop:{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,.48)",display:"grid",placeItems:"center",padding:16},
+ cashModal:{width:"min(440px,100%)",display:"grid",gap:12,padding:22,background:"#fff",borderRadius:14,boxShadow:"0 18px 60px rgba(0,0,0,.25)"},
+ modalAmount:{fontSize:22,fontWeight:800,color:"#8b622e",padding:"10px 0"},
  tableSection:{marginTop:18},fullTableGrid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12},tableTile:{minHeight:112,display:"grid",placeContent:"center",gap:8,border:"1px solid #cde5d4",background:"#eaf7ee",color:"#246c45",borderRadius:12,cursor:"pointer",fontSize:18},printedTile:{background:"#e3f0ff",borderColor:"#8bb9e8",color:"#1e5b94"},occupiedTile:{background:"#fdeaea",borderColor:"#efc1c1",color:"#a12c2c"},reservedTile:{background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"},legend:{display:"flex",gap:18,marginTop:18,color:"#666",fontSize:13},clear:{border:0,background:"none",color:"#a12c2c",cursor:"pointer"},tableBox:{padding:10,background:"#faf8f5",borderRadius:9,marginBottom:10},switch:{display:"flex",gap:7,marginBottom:9},tableGrid:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6},table:{padding:8,display:"grid",gap:4,border:"1px solid #cde5d4",background:"#eaf7ee",color:"#246c45",borderRadius:7,cursor:"pointer"},chosen:{outline:"2px solid #b88946"},occupied:{background:"#fdeaea",borderColor:"#efc1c1",color:"#a12c2c"},reserved:{background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"},
  cart:{maxHeight:280,overflowY:"auto"},cartItem:{padding:"10px 0",borderBottom:"1px solid #eee"},qty:{display:"flex",alignItems:"center",gap:9},note:{width:"55%",padding:7,border:"1px solid #eee",borderRadius:6,fontSize:12},empty:{textAlign:"center",padding:18,color:"#888"},fields:{display:"grid",gap:7,marginTop:10},field:{padding:9,border:"1px solid #e4dfd7",borderRadius:7,width:"100%",boxSizing:"border-box",fontFamily:"inherit"},
  select:{flex:1,padding:10,border:"1px solid #cfcfcf",borderRadius:7,background:"#fff",color:"#242424",fontSize:14},discount:{width:90,padding:8,border:"1px solid #ddd",borderRadius:7},discountBox:{display:"grid",gap:8,marginTop:14,padding:12,border:"2px solid #b88946",borderRadius:10,background:"#fffaf1"},discountInput:{width:"100%",minWidth:0,boxSizing:"border-box",padding:10,border:"1px solid #cfcfcf",borderRadius:7,background:"#fff",color:"#242424",fontSize:14},totals:{display:"grid",gap:7,padding:"12px 0"},grand:{display:"flex",justifyContent:"space-between",fontSize:18,color:"#8b622e",paddingTop:7},pay:{display:"flex",gap:8,alignItems:"center",marginBottom:10},submit:{width:"100%",padding:13,border:0,borderRadius:8,background:"#b88946",color:"#fff",fontWeight:800,cursor:"pointer"},
