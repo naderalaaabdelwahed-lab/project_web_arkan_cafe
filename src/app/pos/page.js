@@ -165,6 +165,10 @@ export default function PosPage() {
   const floorTableCount = Number(settings.indoor_tables || 0) + Number(settings.outdoor_tables || 0);
   const floorAvailableCount = Math.max(0, floorTableCount - floorOccupiedCount - floorReservedCount);
   const selectedDue = selectedTableOrder ? Math.max(0, Number(selectedTableOrder.total_amount || 0) - Number(paymentSummary[selectedTableOrder.id] || 0)) : 0;
+  const selectedDiscountBase = selectedTableOrder ? Number(selectedTableOrder.total_amount || 0) + Number(selectedTableOrder.discount_amount || 0) : 0;
+  const selectedDiscountInput = Math.max(0, Number(discountValue) || 0);
+  const selectedDiscountPreview = Math.min(selectedDiscountBase, discountType === "percent" ? selectedDiscountBase * Math.min(100, selectedDiscountInput) / 100 : selectedDiscountInput);
+  const selectedTotalAfterDiscount = Math.max(0, selectedDiscountBase - selectedDiscountPreview);
   const cashReceivedNumber = cashReceived.trim() === "" ? NaN : Number(cashReceived);
   const cashShortfall = Number.isFinite(cashReceivedNumber) ? Math.max(0, selectedDue - cashReceivedNumber) : 0;
   const editingOrderDue = editingOrderId ? Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)) : 0;
@@ -943,6 +947,11 @@ export default function PosPage() {
             </select>
             <label style={{fontWeight:700}}>قيمة الخصم {discountType==="percent"?"(%)":"(ج.م)"}</label>
             <input autoFocus style={s.filterInput} type="number" min="0" max={discountType==="percent"?100:undefined} step="0.01" value={discountValue} onChange={e=>setDiscountValue(e.target.value)} aria-label="قيمة الخصم" />
+            <div style={{display:"grid",gap:8,padding:12,border:"1px solid #e5dfd5",borderRadius:10,background:"#faf8f4"}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:12}}><span>الإجمالي قبل الخصم</span><b>{fmt(selectedDiscountBase)} ج.م</b></div>
+              <div style={{display:"flex",justifyContent:"space-between",gap:12}}><span>قيمة الخصم</span><b style={{color:"#b04435"}}>- {fmt(selectedDiscountPreview)} ج.م</b></div>
+              <div style={{display:"flex",justifyContent:"space-between",gap:12,fontSize:18,borderTop:"1px solid #e5dfd5",paddingTop:8}}><strong>المطلوب بعد الخصم</strong><strong style={{color:"#246c45"}}>{fmt(selectedTotalAfterDiscount)} ج.م</strong></div>
+            </div>
             <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
               <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:140}} disabled={saving||Number(discountValue)<0||!discountValue.trim()} onClick={applySelectedTableDiscount}>{saving?"جاري تطبيق الخصم...":"OK — تأكيد الخصم"}</button>
               <button type="button" style={s.secondary} disabled={saving} onClick={()=>setShowDiscountPanel(false)}>إلغاء</button>
