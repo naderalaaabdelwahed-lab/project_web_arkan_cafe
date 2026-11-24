@@ -47,6 +47,7 @@ export default function PosPage() {
   const [transferTarget, setTransferTarget] = useState("");
   const [showItemTransfer, setShowItemTransfer] = useState(false);
   const [transferQuantities, setTransferQuantities] = useState({});
+  const [itemTransferStep, setItemTransferStep] = useState("items");
   const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -423,6 +424,7 @@ export default function PosPage() {
     const eligible = cart.filter((item) => item.existing && item.preparationStatus === "pending");
     setTransferQuantities(Object.fromEntries(eligible.map((item) => [String(item.orderItemId), "0"])));
     setTransferTarget("");
+    setItemTransferStep("items");
     setShowTransfer(false);
     setShowItemTransfer(true);
   }
@@ -446,6 +448,10 @@ export default function PosPage() {
       });
       if (result.error) throw result.error;
       const moved = result.data || {};
+      setShowItemTransfer(false);
+      setTransferQuantities({});
+      setTransferTarget("");
+      setItemTransferStep("items");
       setMessage(
         "تم نقل " + (moved.moved_items_count || selectedItems.length) +
         " صنف إلى الطاولة " + targetNumber + " — الأوردر ARK-" + moved.target_order_id + " بنجاح."
@@ -931,34 +937,53 @@ export default function PosPage() {
             </div>
             {editingOrderClosed && <p style={{padding:10,background:"#fff4d9",color:"#8b681b",borderRadius:8}}>هذا الأوردر مغلق/ملغي؛ يمكنك مراجعة تفاصيله وطباعته، لكن إضافة أصناف تتطلب إعادة فتح الأوردر بصلاحية المدير.</p>}
 
-            {showItemTransfer && editingOrderId && !editingOrderClosed && <div style={{ display: "grid", gap: 10, padding: 14, marginBottom: 12, border: "1px solid #d9c39b", borderRadius: 10, background: "#fffaf1" }}>
-              <div><b>نقل أصناف من الأوردر ARK-{editingOrderId}</b><small style={{ display: "block", color: "#75664f", marginTop: 4 }}>حدد الكمية من كل صنف، ثم اختار الطاولة المستقبِلة. الأصناف التي بدأ تجهيزها لا يمكن نقلها.</small></div>
-              <select className="pos-filter-control" style={s.filterInput} value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)}>
-                <option value="">اختار الطاولة المستقبِلة</option>
-                {transferTargets.map((target) => {
-                  const targetOrder = activeTables.find((o) => o.table_area === target.area && o.table_number === target.number);
-                  return <option key={target.area + ":" + target.number} value={target.area + ":" + target.number}>
-                    {target.area === "indoor" ? "داخلية" : "خارجية"} — طاولة {target.number}{targetOrder ? " — مشغولة (الأوردر ARK-" + targetOrder.id + ")" : " — متاحة (أوردر جديد)"}
-                  </option>;
-                })}
-              </select>
-              {!cart.some((item) => item.existing && item.preparationStatus === "pending") && <small style={{ color: "#a12c2c" }}>لا توجد أصناف معلّقة قابلة للنقل في هذا الأوردر. الأصناف التي تم تجهيزها لا يمكن نقلها.</small>}
-              <div style={{ display: "grid", gap: 7 }}>
-                {cart.filter((item) => item.existing && item.preparationStatus === "pending").map((item) => (
-                  <div key={item.cartKey} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 110px", gap: 10, alignItems: "center", padding: "8px 0", borderBottom: "1px solid #eadfce" }}>
-                    <div><b>{item.name}</b><small style={{ display: "block", color: "#75664f" }}>المتاح نقله: {item.quantity}</small></div>
-                    <input className="pos-filter-control" type="number" min="0" max={item.quantity} step="1" aria-label={"كمية نقل " + item.name} style={s.filterInput} value={transferQuantities[String(item.orderItemId)] ?? "0"} onChange={(e) => {
-                      const value = e.target.value === "" ? "" : String(Math.min(item.quantity, Math.max(0, Math.floor(Number(e.target.value) || 0))));
-                      setTransferQuantities((old) => ({ ...old, [String(item.orderItemId)]: value }));
-                    }} />
+            {showItemTransfer && editingOrderId && !editingOrderClosed && <div style={s.modalBackdrop} onClick={() => { if (!saving) { setShowItemTransfer(false); setTransferQuantities({}); setTransferTarget(""); setItemTransferStep("items"); } }}>
+              <div role="dialog" aria-modal="true" aria-labelledby="item-transfer-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden",display:"grid",gap:12}} onClick={e => e.stopPropagation()}>
+                <h2 id="item-transfer-title" style={{margin:0,textAlign:"center"}}>{itemTransferStep === "items" ? "اختار الأصناف والكميات المطلوب نقلها" : "اختار الطاولة المستقبِلة"}</h2>
+                {itemTransferStep === "items" ? <>
+                  <p style={{margin:0,textAlign:"center",color:"#75664f"}}>من أوردر ARK-{editingOrderId}. الأصناف التي بدأت في التجهيز لا يمكن نقلها.</p>
+                  {!cart.some((item) => item.existing && item.preparationStatus === "pending") && <small style={{color:"#a12c2c",textAlign:"center"}}>لا توجد أصناف معلّقة قابلة للنقل في هذا الأوردر.</small>}
+                  <div style={{display:"grid",gap:7,maxHeight:"52dvh",overflowY:"auto"}}>
+                    {cart.filter((item) => item.existing && item.preparationStatus === "pending").map((item) => (
+                      <div key={item.cartKey} style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) 110px",gap:10,alignItems:"center",padding:"8px 0",borderBottom:"1px solid #eadfce"}}>
+                        <div><b>{item.name}</b><small style={{display:"block",color:"#75664f"}}>المتاح نقله: {item.quantity}</small></div>
+                        <input className="pos-filter-control" type="number" min="0" max={item.quantity} step="1" aria-label={"كمية نقل "+item.name} style={s.filterInput} value={transferQuantities[String(item.orderItemId)] ?? "0"} onChange={e => {
+                          const value=e.target.value===""?"":String(Math.min(item.quantity,Math.max(0,Math.floor(Number(e.target.value)||0))));
+                          setTransferQuantities(old=>({...old,[String(item.orderItemId)]:value}));
+                        }} />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                  <div style={{display:"flex",justifyContent:"center",gap:9,flexWrap:"wrap"}}>
+                    <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150}} disabled={saving || !Object.values(transferQuantities).some(q=>Number(q)>0)} onClick={()=>setItemTransferStep("tables")}>عرض الطاولات</button>
+                    <button type="button" style={s.secondary} disabled={saving} onClick={()=>{setShowItemTransfer(false);setTransferQuantities({});setTransferTarget("");}}>إلغاء</button>
+                  </div>
+                </> : <>
+                  <p style={{margin:0,textAlign:"center",color:"#75664f"}}>اختار الطاولة التي ستستقبل الأصناف المحددة. الطاولة المشغولة متاحة للضم إليها، والمحجوزة غير متاحة.</p>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(105px,1fr))",gap:8,maxHeight:"52dvh",overflowY:"auto"}}>
+                    {allFloorTransferTargets.map(target=>{
+                      const key=target.area+":"+target.number;
+                      const order=activeTables.find(o=>o.table_area===target.area&&o.table_number===target.number);
+                      const reserved=reservations.some(r=>r.table_number===target.number&&(r.seating_area||"indoor")===target.area);
+                      const selected=transferTarget===key;
+                      const disabled=reserved||saving;
+                      const tileStyle=order
+                        ? selected ? {background:"#fff0d8",borderColor:"#b88946",color:"#805a2a",outline:"3px solid #d28c2c"} : {background:"#e3f0ff",borderColor:"#8bb9e8",color:"#1e5b94"}
+                        : selected ? {background:"#fff0d8",borderColor:"#b88946",color:"#805a2a",outline:"3px solid #d28c2c"} : {background:"#f2f2f2",borderColor:"#dedede",color:"#777"};
+                      return <button key={key} type="button" disabled={disabled} onClick={()=>setTransferTarget(key)} style={{minHeight:78,padding:8,border:"2px solid",borderRadius:10,display:"grid",placeContent:"center",gap:4,fontFamily:"inherit",fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.88:1,...(reserved?{background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"}:tileStyle)}}>
+                        <span>{target.area==="indoor"?"داخلية":"خارجية"}</span>
+                        <strong style={{fontSize:17}}>طاولة {target.number}</strong>
+                        <small>{reserved?"محجوزة":order?"مشغولة — ARK-"+order.id:selected?"تم الاختيار":"فارغة"}</small>
+                      </button>;
+                    })}
+                  </div>
+                  <div style={{display:"flex",justifyContent:"center",gap:9,flexWrap:"wrap"}}>
+                    <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150}} disabled={saving||!transferTarget} onClick={transferSelectedItems}>{saving?"جاري النقل...":"OK — تأكيد النقل"}</button>
+                    <button type="button" style={s.secondary} disabled={saving} onClick={()=>{setItemTransferStep("items");setTransferTarget("");}}>رجوع للأصناف</button>
+                    <button type="button" style={s.secondary} disabled={saving} onClick={()=>{setShowItemTransfer(false);setTransferQuantities({});setTransferTarget("");}}>إلغاء</button>
+                  </div>
+                </>}
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="submit" style={s.submit} disabled={saving || !transferTarget || !Object.values(transferQuantities).some((q) => Number(q) > 0)} onClick={transferSelectedItems}>{saving ? "جاري نقل الأصناف..." : "تأكيد نقل الأصناف"}</button>
-                <button style={s.secondary} disabled={saving} onClick={() => { setShowItemTransfer(false); setTransferQuantities({}); setTransferTarget(""); }}>إلغاء</button>
-              </div>
-              {!transferTargets.length && <small style={{ color: "#8b681b" }}>لا توجد طاولات أخرى متاحة للنقل حاليًا.</small>}
             </div>}
             {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
             <div className="cartTableWrap" data-pos-cart style={s.cartTableWrap}>
