@@ -224,7 +224,7 @@ export default function PosPage() {
                     <td style={s.ordersTd}>{dineIn ? o.table_number || "—" : "—"}</td>
                     <td style={s.ordersTd}>{dineIn ? <b style={{color:closed?"#267447":"#a66a19"}}>{closed ? "مغلقة" : "مفتوحة"}</b> : "—"}</td>
                     <td style={s.ordersTd}>{statusLabel}</td>
-                    <td style={s.ordersTd}>{fmt(o.discount_amount)} ج.م</td>
+                    <td style={s.ordersTd}>{fmt(Number(o.discount_amount ?? 0))} ج.م</td>
                     <td style={{...s.ordersTd,fontWeight:800,color:"#267447"}}>{fmt(o.total_amount)} ج.م</td>
                   </tr>;
                 })}
@@ -304,7 +304,7 @@ export default function PosPage() {
               <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} onChange={e=>setPhone(e.target.value)} />
               <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} onChange={e=>setNotes(e.target.value)} />
             </div>
-            <div style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>تقدر تضيف خصم على الصالة أو التيك أواي أو الدليفري</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select aria-label="نوع الخصم" style={s.select} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input aria-label="قيمة الخصم" style={s.discountInput} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>
+            <div style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input aria-label="قيمة الخصم" style={s.discountInput} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>
             <div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div>
             <div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div>
             <button style={s.submit} disabled={saving || !cart.length || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : "تأكيد الطلب وإرساله للتجهيز"}</button>
