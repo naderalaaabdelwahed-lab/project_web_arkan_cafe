@@ -3872,3 +3872,102 @@ input:focus, textarea:focus, select:focus { border-color: var(--arkan-accent) !i
   border-color: #91672F !important;
   color: #FFFFFF !important;
 }
+
+
+/* Public menu page palette alignment */
+.menu-page {
+  background:#F6F4F0 !important;
+  color:#29251F !important;
+}
+.menu-page .menu-main-heading h2,
+.menu-page .menu-category-heading h2,
+.menu-page .menu-card h3,
+.menu-page .menu-card h4 {
+  color:#29251F !important;
+}
+.menu-page .menu-main-heading p,
+.menu-page .menu-card p,
+.menu-page .menu-card small {
+  color:#62594F !important;
+}
+.menu-page .menu-category-nav button {
+  background:#FFFFFF;
+  color:#51483E;
+  border-color:#D8CFC1;
+}
+.menu-page .menu-category-nav button:hover,
+.menu-page .menu-category-nav button.active {
+  background:#91672F;
+  color:#FFFFFF;
+  border-color:#91672F;
+}
+.menu-page .menu-card,
+.menu-page .menu-product-card,
+.menu-page .menu-category {
+  background:transparent;
+}
+.menu-page .menu-card > div,
+.menu-page .menu-card-content,
+.menu-page .menu-card-info {
+  background:#FFFFFF;
+  color:#29251F;
+  border-color:#E8E0D4;
+}
+.menu-page .menu-heading-decoration,
+.menu-page .menu-category-heading .eyebrow,
+.menu-page .category-count {
+  color:#91672F;
+}
+.menu-page .category-count { border-color:#D8CFC1; }
+
+/* Public reservations page palette alignment */
+.reservation-section {
+  background:#F6F4F0 !important;
+  color:#29251F !important;
+}
+.reservation-heading h1,
+.reservation-info h2,
+.reservation-form h2,
+.reservation-detail strong {
+  color:#29251F !important;
+}
+.reservation-heading p,
+.reservation-info > p,
+.reservation-detail p,
+.reservation-form > p {
+  color:#62594F !important;
+}
+.reservation-form {
+  background:#FFFFFF !important;
+  border-color:#E8E0D4 !important;
+  color:#29251F !important;
+}
+.reservation-fields label {
+  color:#29251F !important;
+}
+.reservation-fields input,
+.reservation-fields select,
+.reservation-fields textarea {
+  background:#FFFFFF !important;
+  color:#29251F !important;
+  border-color:#D8CFC1 !important;
+}
+.reservation-fields input::placeholder,
+.reservation-fields textarea::placeholder {
+  color:#82796D !important;
+}
+.reservation-fields input:focus,
+.reservation-fields select:focus,
+.reservation-fields textarea:focus {
+  border-color:#91672F !important;
+}
+.reservation-submit {
+  background:#91672F !important;
+  color:#FFFFFF !important;
+  border-color:#91672F !important;
+}
+.reservation-success {
+  background:#E6F2E8;
+  border-color:#C9E2CE;
+  color:#27613B !important;
+}
