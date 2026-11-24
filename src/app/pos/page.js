@@ -73,9 +73,14 @@ export default function PosPage() {
       setSettings(st.data || { indoor_tables: 0, outdoor_tables: 0 });
       const today = new Date().toLocaleDateString("en-CA");
       setReservations((r.data || []).filter((x) => x.reservation_date === today));
-      const result = await supabase.from("orders").select("*,order_items(*)").order("created_at", { ascending: false }).limit(500);
-      if (result.error) throw result.error;
-      setOrders(result.data || []);
+      const allOrders = [];
+      for (let from = 0; ; from += 1000) {
+        const result = await supabase.from("orders").select("*,order_items(*)").order("created_at", { ascending: false }).range(from, from + 999);
+        if (result.error) throw result.error;
+        allOrders.push(...(result.data || []));
+        if (!result.data || result.data.length < 1000) break;
+      }
+      setOrders(allOrders);
     } catch (e) {
       setError("تعذر تحميل شاشة الكاشير: " + e.message);
     } finally {
@@ -96,7 +101,6 @@ export default function PosPage() {
   const discount = Math.min(subtotal, discountType === "percent" ? subtotal * Math.min(100, Math.max(0, Number(discountValue) || 0)) / 100 : Math.max(0, Number(discountValue) || 0));
   const total = Math.max(0, subtotal - discount);
   const productsShown = products.filter((p) => (category === "all" || String(p.category_id) === category) && p.name.toLowerCase().includes(search.toLowerCase()));
-  const ordersShown = orders.filter((o) => tab === "all" || o.order_type === tab);
   const allOrdersFiltered = orders.filter((o) => {
     const query = orderSearch.trim().toLowerCase();
     const created = o.created_at ? new Date(o.created_at) : null;
@@ -110,7 +114,6 @@ export default function PosPage() {
     return matchesSearch && matchesType && matchesStatus && matchesFrom && matchesTo && matchesTable;
   });
   const activeTables = orders.filter((o) => o.order_type === "dine-in" && !["delivered","cancelled"].includes(o.status));
-  const tableCount = Number(area === "indoor" ? settings.indoor_tables : settings.outdoor_tables) || 0;
 
   function add(p) {
     setCart((old) => {
