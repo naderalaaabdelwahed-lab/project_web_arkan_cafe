@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import "./pos-design.css";
 
@@ -36,6 +36,7 @@ export default function PosPage() {
   const [canCloseDay, setCanCloseDay] = useState(false);
   const [salesFrom, setSalesFrom] = useState(() => todayISO());
   const [salesTo, setSalesTo] = useState(() => todayISO());
+  const salesRangeTouched = useRef(false);
   const [showCloseDayModal, setShowCloseDayModal] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
   const [orderTypeFilter, setOrderTypeFilter] = useState("all");
@@ -119,8 +120,13 @@ export default function PosPage() {
       setCategories(c.data || []);
       setSettings(st.data || { indoor_tables: 0, outdoor_tables: 0 });
       const dayList = days.data || [];
-      setCurrentBusinessDayId(dayList.find((item) => item.status === "open")?.id ?? null);
+      const openBusinessDay = dayList.find((item) => item.status === "open");
+      setCurrentBusinessDayId(openBusinessDay?.id ?? null);
       setBusinessDays(dayList);
+      if (!salesRangeTouched.current && openBusinessDay?.business_date) {
+        setSalesFrom(openBusinessDay.business_date);
+        setSalesTo(openBusinessDay.business_date);
+      }
       const categoryNameById = Object.fromEntries((reportCategories.data || []).map((item) => [item.id, item.name]));
       setProductCategoryNames(Object.fromEntries((reportProducts.data || []).map((item) => [item.id, categoryNameById[item.category_id] || "غير محدد"])));
       const today = todayISO();
@@ -647,21 +653,23 @@ export default function PosPage() {
   }
 
   function setSalesPreset(preset) {
-    const now = new Date();
+    const base = currentBusinessDay?.business_date ? new Date(currentBusinessDay.business_date + "T12:00:00") : new Date();
+    salesRangeTouched.current = true;
     if (preset === "today") {
-      const value = toISODate(now); setSalesFrom(value); setSalesTo(value); return;
+      const value = currentBusinessDay?.business_date || toISODate(base);
+      setSalesFrom(value); setSalesTo(value); return;
     }
     if (preset === "yesterday") {
-      now.setDate(now.getDate() - 1);
-      const value = toISODate(now); setSalesFrom(value); setSalesTo(value); return;
+      base.setDate(base.getDate() - 1);
+      const value = toISODate(base); setSalesFrom(value); setSalesTo(value); return;
     }
     if (preset === "this-month") {
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      setSalesFrom(toISODate(first)); setSalesTo(toISODate(now)); return;
+      const first = new Date(base.getFullYear(), base.getMonth(), 1);
+      setSalesFrom(toISODate(first)); setSalesTo(currentBusinessDay?.business_date || toISODate(base)); return;
     }
     if (preset === "last-month") {
-      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const last = new Date(now.getFullYear(), now.getMonth(), 0);
+      const first = new Date(base.getFullYear(), base.getMonth() - 1, 1);
+      const last = new Date(base.getFullYear(), base.getMonth(), 0);
       setSalesFrom(toISODate(first)); setSalesTo(toISODate(last));
     }
   }
@@ -675,6 +683,8 @@ export default function PosPage() {
       if (closeError) throw closeError;
       setShowCloseDayModal(false);
       await load();
+      salesRangeTouched.current = false;
+      setSalesFrom(todayISO()); setSalesTo(todayISO());
       setMessage("تم إغلاق اليومية وحفظ التقرير بنجاح، وبدأت يومية جديدة.");
       setTab("sales"); setScreen("sales");
     } catch (e) {
@@ -828,8 +838,8 @@ export default function PosPage() {
               <button type="button" onClick={() => setSalesPreset("last-month")}>الشهر الماضي</button>
             </div>
             <div className="pos-sales-dates">
-              <label>من تاريخ<input type="date" value={salesFrom} onChange={e=>setSalesFrom(e.target.value)} /></label>
-              <label>إلى تاريخ<input type="date" value={salesTo} onChange={e=>setSalesTo(e.target.value)} /></label>
+              <label>من تاريخ<input type="date" value={salesFrom} onChange={e=>{salesRangeTouched.current=true;setSalesFrom(e.target.value);}} /></label>
+              <label>إلى تاريخ<input type="date" value={salesTo} onChange={e=>{salesRangeTouched.current=true;setSalesTo(e.target.value);}} /></label>
             </div>
             <small>الفترة: {salesFrom || "—"} إلى {salesTo || "—"}</small>
           </div>
