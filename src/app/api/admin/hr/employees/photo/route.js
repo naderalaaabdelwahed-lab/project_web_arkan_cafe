@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { createClient } from "@supabase/supabase-js";
 import { authorizeAdminPermission } from "@/lib/server/admin-permissions";
 
 export async function POST(request) {
