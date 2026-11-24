@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { authorizeAdminPermission } from "@/lib/server/admin-permissions";
 
 function adminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -8,21 +9,10 @@ function adminClient() {
   if (!url || !key) throw new Error("Supabase server configuration is missing.");
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
-async function authorize(request) {
-  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!token) return { response: NextResponse.json({ error: "سجل دخول المدير أولاً." }, { status: 401 }) };
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) throw new Error("Supabase auth configuration is missing.");
-  const auth = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { data, error } = await auth.auth.getUser(token);
-  if (error || !data?.user) return { response: NextResponse.json({ error: "جلسة الدخول غير صالحة." }, { status: 401 }) };
-  if (data.user.app_metadata?.account_type === "hr_employee") return { response: NextResponse.json({ error: "حساب HR مخصص للحضور والانصراف فقط." }, { status: 403 }) };
-  const db = adminClient();
-  const { data: admin, error: adminError } = await db.from("admin_users").select("user_id").eq("user_id", data.user.id).maybeSingle();
-  if (adminError || !admin) return { response: NextResponse.json({ error: "غير مسموح." }, { status: 403 }) };
-  return { db, user: data.user };
+async function authorize(request, permission) {
+  return authorizeAdminPermission(request, permission);
 }
+
 function hashAttendanceCode(code) {
   const salt = randomBytes(16).toString("hex");
   const hash = scryptSync(code, salt, 64).toString("hex");
@@ -64,7 +54,7 @@ function clean(body) {
 }
 export async function GET(request) {
   try {
-    const auth = await authorize(request);
+    const auth = await authorize(request, "hr.employees.view");
     if (auth.response) return auth.response;
     const { data, error } = await auth.db.from("hr_employees").select("id,full_name,phone,photo_path,job_title,department,hire_date,termination_date,employment_status,monthly_salary,daily_work_hours,notes,username,attendance_pin_hash,created_at,archived_at").is("archived_at", null).order("created_at", { ascending: false });
     if (error) throw error;
@@ -83,9 +73,9 @@ export async function GET(request) {
 }
 export async function POST(request) {
   try {
-    const auth = await authorize(request);
-    if (auth.response) return auth.response;
     const body = await request.json();
+    const auth = await authorize(request, "hr.employees.create");
+    if (auth.response) return auth.response;
     const values = clean(body);
     const code = validateAttendanceCode(body.attendance_code, true);
     const { data: existingEmployees, error: existingError } = await auth.db.from("hr_employees").select("id,attendance_pin_hash");
@@ -104,9 +94,14 @@ export async function POST(request) {
 }
 export async function PATCH(request) {
   try {
-    const auth = await authorize(request);
-    if (auth.response) return auth.response;
     const body = await request.json();
+    const requiredPermission = body.action === "create_login"
+      ? "hr.employees.accounts.manage"
+      : body.action === "archive"
+        ? "hr.employees.archive"
+        : "hr.employees.update";
+    const auth = await authorize(request, requiredPermission);
+    if (auth.response) return auth.response;
     const id = String(body.id || "");
     if (!/^[0-9a-f-]{36}$/i.test(id)) {
       return NextResponse.json({ error: "معرّف الموظف غير صحيح." }, { status: 400 });
