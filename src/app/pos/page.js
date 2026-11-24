@@ -58,6 +58,8 @@ export default function PosPage() {
   const [showCashModal, setShowCashModal] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState("");
   const [pendingFloorAction, setPendingFloorAction] = useState("");
+  const [itemNoteEditor, setItemNoteEditor] = useState(null);
+  const [itemNoteDraft, setItemNoteDraft] = useState("");
 
   const load = useCallback(async () => {
     setError("");
@@ -160,15 +162,31 @@ export default function PosPage() {
     !activeTables.some((o) => o.table_area === target.area && o.table_number === target.number)
   );
 
+  function openItemNote(cartKey) {
+    const item = cart.find((x) => x.cartKey === cartKey);
+    if (!item) return;
+    setItemNoteDraft(item.note || "");
+    setItemNoteEditor(cartKey);
+  }
+  function saveItemNote() {
+    if (!itemNoteEditor) return;
+    setCart((old) => old.map((item) => item.cartKey === itemNoteEditor ? { ...item, note: itemNoteDraft.trim() } : item));
+    setItemNoteEditor(null);
+    setItemNoteDraft("");
+  }
   function add(p) {
-    setCart((old) => {
-      const found = old.find((x) => x.product_id === p.id && !x.existing);
-      return found
-        ? old.map((x) => x.cartKey === found.cartKey ? { ...x, quantity: x.quantity + 1 } : x)
-        : [...old, { cartKey: "new-" + p.id, product_id: p.id, name: p.name, price: Number(p.price), quantity: 1, originalQuantity: 0, note: "" }];
-    });
+    const found = cart.find((x) => x.product_id === p.id && !x.existing);
+    if (found) {
+      const nextQuantity = found.quantity + 1;
+      setCart((old) => old.map((x) => x.cartKey === found.cartKey ? { ...x, quantity: nextQuantity } : x));
+      if (nextQuantity === 2) openItemNote(found.cartKey);
+      return;
+    }
+    setCart((old) => [...old, { cartKey: "new-" + p.id, product_id: p.id, name: p.name, price: Number(p.price), quantity: 1, originalQuantity: 0, note: "" }]);
   }
   function qty(cartKey, delta) {
+    const item = cart.find((x) => x.cartKey === cartKey);
+    if (item && delta > 0 && item.quantity + delta === 2) openItemNote(cartKey);
     setCart((old) => old.map((x) => x.cartKey === cartKey
       ? { ...x, quantity: Math.max(x.originalQuantity || 0, x.quantity + delta) }
       : x).filter((x) => x.quantity > 0));
@@ -180,6 +198,7 @@ export default function PosPage() {
     setShowTransfer(false); setTransferTarget("");
     setShowItemTransfer(false); setTransferQuantities({});
     setPendingFloorAction("");
+    setItemNoteEditor(null); setItemNoteDraft("");
   }
   function selectTable(n, selectedArea) {
     setSelectedTableKey(selectedArea + ":" + n);
@@ -752,8 +771,9 @@ export default function PosPage() {
                     </div></td>
                     <td style={s.cartTd}>{fmt(x.price)} ج.م</td>
                     <td style={{...s.cartTd,fontWeight:800,color:"#267447"}}>{fmt(x.price*x.quantity)} ج.م</td>
-                    <td style={s.cartTd}><div style={{display:"flex",alignItems:"center",gap:6,minWidth:150}}>
-                      <input className="note" style={s.note} placeholder="ملاحظة" value={x.note} disabled={x.existing || editingOrderClosed} onChange={e=>setCart(old=>old.map(i=>i.cartKey===x.cartKey?{...i,note:e.target.value}:i))}/>
+                    <td style={s.cartTd}><div style={{display:"flex",alignItems:"center",gap:6,minWidth:150,flexWrap:"wrap"}}>
+                      {x.note ? <span title={x.note} style={{display:"inline-block",maxWidth:145,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:"#75664f",fontSize:12}}>📝 {x.note}</span> : <small style={{color:"#999"}}>بدون ملاحظة</small>}
+                      {!x.existing && !editingOrderClosed && <button type="button" style={s.secondary} disabled={saving} onClick={()=>openItemNote(x.cartKey)}>{x.note ? "تعديل الكومنت" : "إضافة كومنت"}</button>}
                       {x.existing&&x.preparationStatus==="pending"&&editingOrderId&&!editingOrderClosed&&<div style={{display:"flex",gap:5,whiteSpace:"nowrap"}}>{x.quantity>1&&<button type="button" style={s.secondary} disabled={saving} onClick={()=>removePendingItem(x.orderItemId,1)}>− حذف 1</button>}<button type="button" style={s.clear} disabled={saving} onClick={()=>removePendingItem(x.orderItemId)}>حذف الكل</button></div>}
                     </div></td>
                   </tr>)}
@@ -775,6 +795,17 @@ export default function PosPage() {
           </section>
         </div>
       )}
+      {itemNoteEditor && screen === "order" && <div style={s.modalBackdrop} onClick={() => { setItemNoteEditor(null); setItemNoteDraft(""); }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="item-note-title" style={s.itemNoteModal} onClick={e => e.stopPropagation()}>
+          <h2 id="item-note-title" style={{margin:0}}>كومنت الصنف</h2>
+          <p style={{margin:0,color:"#75664f",fontSize:13}}>اكتب أي تفاصيل أو طلبات خاصة بالصنف، ثم اضغط حفظ.</p>
+          <textarea autoFocus rows={4} style={{...s.field,minHeight:110,resize:"vertical"}} placeholder="مثال: بدون بصل، زيادة جبنة..." value={itemNoteDraft} onChange={e=>setItemNoteDraft(e.target.value)} />
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+            <button type="button" style={s.secondary} onClick={() => { setItemNoteEditor(null); setItemNoteDraft(""); }}>إلغاء</button>
+            <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:110}} onClick={saveItemNote}>حفظ</button>
+          </div>
+        </div>
+      </div>}
 
     </main>
   );
@@ -818,6 +849,7 @@ const s = {
  tableSelected:{outline:"3px solid #d28c2c",boxShadow:"0 0 0 3px #fff2dc"},
  floorInlineModal:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:14,marginTop:10,background:"#fffaf1",border:"1px solid #e5d3b8",borderRadius:10},
  modalBackdrop:{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,.48)",display:"grid",placeItems:"center",padding:16},
+ itemNoteModal:{width:"min(520px,96vw)",display:"grid",gap:14,padding:24,background:"#fff",borderRadius:16,boxShadow:"0 24px 80px rgba(0,0,0,.3)"},
  cashModal:{width:"min(820px,96vw)",maxHeight:"calc(100dvh - 32px)",overflowY:"auto",display:"grid",gap:22,padding:"clamp(26px,4vw,48px)",background:"#fff",borderRadius:22,boxShadow:"0 24px 80px rgba(0,0,0,.3)"},
  modalAmount:{fontSize:"clamp(34px,4vw,44px)",fontWeight:900,color:"#8b622e",padding:"20px 0",borderBottom:"1px solid #eee5d8"},
  cashInput:{width:"100%",minWidth:0,boxSizing:"border-box",padding:"22px 18px",border:"2px solid #c9a36d",borderRadius:14,background:"#fff",color:"#242424",fontSize:32,fontWeight:900,fontFamily:"inherit"},
