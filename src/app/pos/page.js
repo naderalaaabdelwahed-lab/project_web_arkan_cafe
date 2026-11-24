@@ -159,7 +159,7 @@ export default function PosPage() {
       {error && <p style={s.error}>{error}</p>}
       {message && <p style={s.success}>{message}</p>}
       <nav style={s.tabs}>{tabs.map((t) => <button key={t.id} style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id !== "all") { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
-      <div style={s.stats}>
+      <div style={{...s.stats,display:mode === "dine-in" && screen === "tables" ? "none" : s.stats.display}}>
         <div style={s.stat}><small>طلبات اليوم</small><b>{orders.length}</b></div>
         <div style={s.stat}><small>طلبات نشطة</small><b>{orders.filter(o => !["delivered","cancelled"].includes(o.status)).length}</b></div>
         <div style={s.stat}><small>مبيعات اليوم</small><b>{fmt(orders.filter(o => o.status !== "cancelled").reduce((a,o) => a + Number(o.total_amount || 0),0))} ج.م</b></div>
