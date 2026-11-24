@@ -28,16 +28,6 @@ const links = [
     permission: "menu.view",
   },
   {
-    href: "/admin/kitchen",
-    label: "🍳 شاشة المطبخ",
-    permission: "kitchen.view",
-  },
-  {
-    href: "/admin/bar",
-    label: "🥤 شاشة البار",
-    permission: "bar.view",
-  },
-  {
     href: "/admin/preparation-screens",
     label: "🖥️ إدارة شاشات التجهيز",
     permission: "menu.update",
