@@ -18,6 +18,7 @@ export default function PosPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [tab, setTab] = useState("dine-in");
+  const [screen, setScreen] = useState("tables");
   const [mode, setMode] = useState("dine-in");
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -139,6 +140,7 @@ export default function PosPage() {
       if (result.error) throw result.error;
       setMessage("تم إنشاء الطلب رقم ARK-" + result.data + " وإرساله للتجهيز.");
       reset();
+      if (mode === "dine-in") setScreen("tables");
       await load();
     } catch (e) {
       setError("فشل إنشاء الطلب: " + e.message);
@@ -156,47 +158,91 @@ export default function PosPage() {
       </header>
       {error && <p style={s.error}>{error}</p>}
       {message && <p style={s.success}>{message}</p>}
-      <nav style={s.tabs}>{tabs.map((t) => <button key={t.id} style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id !== "all") setMode(t.id); }}>{t.label}</button>)}</nav>
+      <nav style={s.tabs}>{tabs.map((t) => <button key={t.id} style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id !== "all") { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       <div style={s.stats}>
         <div style={s.stat}><small>طلبات اليوم</small><b>{orders.length}</b></div>
         <div style={s.stat}><small>طلبات نشطة</small><b>{orders.filter(o => !["delivered","cancelled"].includes(o.status)).length}</b></div>
         <div style={s.stat}><small>مبيعات اليوم</small><b>{fmt(orders.filter(o => o.status !== "cancelled").reduce((a,o) => a + Number(o.total_amount || 0),0))} ج.م</b></div>
         <div style={s.stat}><small>عدد الطاولات</small><b>{Number(settings.indoor_tables || 0) + Number(settings.outdoor_tables || 0)}</b></div>
       </div>
-      <div style={s.workspace}>
+      {mode === "dine-in" && screen === "tables" ? (
         <section style={s.panel}>
-          <div style={s.head}><div><h2>المنيو</h2><small style={s.muted}>اضغط على الصنف لإضافته</small></div><input style={s.search} placeholder="بحث..." value={search} onChange={e => setSearch(e.target.value)} /></div>
-          <div style={s.categories}><button style={s.category} onClick={() => setCategory("all")}>الكل</button>{categories.map(c => <button key={c.id} style={s.category} onClick={() => setCategory(String(c.id))}>{c.name}</button>)}</div>
-          <div style={s.products}>{productsShown.map(p => <button key={p.id} style={s.product} onClick={() => add(p)}>{p.image_url ? <img src={p.image_url} alt="" style={s.image} /> : <span style={s.imageBlank}>＋</span>}<b>{p.name}</b><small>{fmt(p.price)} ج.م</small></button>)}{!productsShown.length && <p>لا توجد أصناف.</p>}</div>
-        </section>
-        <aside style={s.panel}>
-          <div style={s.head}><div><h2>الطلب الحالي</h2><small style={s.muted}>{mode === "dine-in" ? "الصالة" : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div><button style={s.clear} onClick={reset}>مسح الطلب</button></div>
-          {mode === "dine-in" && <div style={s.tableBox}>
-            <div style={s.switch}>{["indoor","outdoor"].map((a) => <button key={a} style={s.secondary} onClick={() => {setArea(a);setTable(null);setReservationId(null);}}>{a === "indoor" ? "داخلي" : "خارجي"}</button>)}</div>
-            <div style={s.tableGrid}>{Array.from({length: tableCount},(_,i)=>i+1).map(n => {
-              const occupied = activeTables.some(o => o.table_number === n && o.table_area === area);
-              const reserved = reservations.some(r => r.table_number === n && (r.seating_area || "indoor") === area);
-              return <button key={n} disabled={occupied && table !== n} onClick={() => chooseTable(n)} style={{ ...s.table, ...(table === n ? s.chosen : {}), ...(occupied ? s.occupied : {}), ...(reserved ? s.reserved : {}) }}><b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small></button>;
-            })}</div>
-            <small style={s.muted}>الأخضر متاحة · الأحمر مشغولة · الأصفر محجوزة</small>
-            {reservationId && <small>تم ربط الحجز بالطاولة.</small>}
-          </div>}
-          <div style={s.cart}>{cart.map(x => <div key={x.id} style={s.cartItem}>
-            <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><b>{fmt(x.price*x.quantity)} ج.م</b></div>
-            <div style={s.head}><div style={s.qty}><button onClick={() => qty(x.id,-1)}>−</button><b>{x.quantity}</b><button onClick={() => qty(x.id,1)}>+</button></div><input style={s.note} placeholder="ملاحظة للصنف" value={x.note} onChange={e => setCart(old => old.map(i => i.id === x.id ? {...i,note:e.target.value} : i))} /></div>
-          </div>)}{!cart.length && <p style={s.empty}>السلة فارغة</p>}</div>
-          <div style={s.fields}>
-            <input style={s.field} placeholder="اسم العميل (اختياري)" value={customer} onChange={e=>setCustomer(e.target.value)} />
-            <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} onChange={e=>setPhone(e.target.value)} />
-            {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
-            <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} onChange={e=>setNotes(e.target.value)} />
+          <div style={s.head}>
+            <div><h2>اختار الطاولة</h2><small style={s.muted}>اختار طاولة لفتح المنيو وإنشاء الطلب</small></div>
+            <b>{Number(settings.indoor_tables || 0) + Number(settings.outdoor_tables || 0)} طاولة</b>
           </div>
-          <div style={s.head}><select style={s.select} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ</option><option value="percent">خصم نسبة %</option></select><input style={s.discount} type="number" min="0" value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div>
-          <div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div>
-          <div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div>
-          <button style={s.submit} disabled={saving || !cart.length} onClick={checkout}>{saving ? "جاري الحفظ..." : "تأكيد الطلب وإرساله للتجهيز"}</button>
-        </aside>
-      </div>
+          <div style={s.tableSection}>
+            <h3>الطاولات الداخلية ({Number(settings.indoor_tables || 0)})</h3>
+            <div style={s.fullTableGrid}>
+              {Array.from({length:Number(settings.indoor_tables)||0},(_,i)=>i+1).map(n => {
+                const occupied = activeTables.some(o => o.table_number === n && o.table_area === "indoor");
+                const reserved = reservations.some(r => r.table_number === n && (r.seating_area || "indoor") === "indoor");
+                return <button key={"indoor-"+n} onClick={() => { setArea("indoor"); chooseTable(n); setScreen("order"); }} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
+                  <b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
+                </button>;
+              })}
+              {!Number(settings.indoor_tables) && <small style={s.muted}>لا توجد طاولات داخلية محددة.</small>}
+            </div>
+          </div>
+          <div style={s.tableSection}>
+            <h3>الطاولات الخارجية ({Number(settings.outdoor_tables || 0)})</h3>
+            <div style={s.fullTableGrid}>
+              {Array.from({length:Number(settings.outdoor_tables)||0},(_,i)=>i+1).map(n => {
+                const occupied = activeTables.some(o => o.table_number === n && o.table_area === "outdoor");
+                const reserved = reservations.some(r => r.table_number === n && r.seating_area === "outdoor");
+                return <button key={"outdoor-"+n} onClick={() => { setArea("outdoor"); chooseTable(n); setScreen("order"); }} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
+                  <b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
+                </button>;
+              })}
+              {!Number(settings.outdoor_tables) && <small style={s.muted}>لا توجد طاولات خارجية محددة.</small>}
+            </div>
+          </div>
+          <div style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🟡 محجوزة</span></div>
+        </section>
+      ) : (
+        <div style={s.orderWorkspace}>
+          <aside style={s.menuSidebar}>
+            <div style={s.menuSidebarHead}>
+              <div><h2>المنيو</h2><small style={s.muted}>اضغط على الصنف لإضافته</small></div>
+              <input style={s.search} placeholder="بحث..." value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <div style={s.categories}>
+              <button style={s.category} onClick={() => setCategory("all")}>الكل</button>
+              {categories.map(c => <button key={c.id} style={s.category} onClick={() => setCategory(String(c.id))}>{c.name}</button>)}
+            </div>
+            <div style={s.products}>
+              {productsShown.map(p => <button key={p.id} style={s.product} onClick={() => add(p)}>
+                {p.image_url ? <img src={p.image_url} alt="" style={s.image} /> : <span style={s.imageBlank}>＋</span>}
+                <b>{p.name}</b><small>{fmt(p.price)} ج.م</small>
+              </button>)}
+              {!productsShown.length && <p>لا توجد أصناف.</p>}
+            </div>
+          </aside>
+          <section style={s.orderPanel}>
+            <div style={s.head}>
+              <div><h2>الطلب الحالي</h2><small style={s.muted}>{mode === "dine-in" ? (area === "indoor" ? "طاولة داخلية " : "طاولة خارجية ") + table : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div>
+              <div style={{display:"flex",gap:7}}>
+                {mode === "dine-in" && <button style={s.secondary} onClick={() => setScreen("tables")}>رجوع للطاولات</button>}
+                <button style={s.clear} onClick={reset}>مسح الطلب</button>
+              </div>
+            </div>
+            {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
+            <div style={s.cart}>{cart.map(x => <div key={x.id} style={s.cartItem}>
+              <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><b>{fmt(x.price*x.quantity)} ج.م</b></div>
+              <div style={s.head}><div style={s.qty}><button onClick={() => qty(x.id,-1)}>−</button><b>{x.quantity}</b><button onClick={() => qty(x.id,1)}>+</button></div><input style={s.note} placeholder="ملاحظة للصنف" value={x.note} onChange={e => setCart(old => old.map(i => i.id === x.id ? {...i,note:e.target.value} : i))} /></div>
+            </div>)}{!cart.length && <p style={s.empty}>السلة فارغة — اختار أصناف من المنيو.</p>}</div>
+            <div style={s.fields}>
+              <input style={s.field} placeholder="اسم العميل (اختياري)" value={customer} onChange={e=>setCustomer(e.target.value)} />
+              <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} onChange={e=>setPhone(e.target.value)} />
+              <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} onChange={e=>setNotes(e.target.value)} />
+            </div>
+            <div style={s.head}><select style={s.select} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ</option><option value="percent">خصم نسبة %</option></select><input style={s.discount} type="number" min="0" value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div>
+            <div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div>
+            <div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div>
+            <button style={s.submit} disabled={saving || !cart.length || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : "تأكيد الطلب وإرساله للتجهيز"}</button>
+          </section>
+        </div>
+      )}
       <section style={{ ...s.panel, marginTop: 18 }}>
         <div style={s.head}><div><h2>طلبات اليوم</h2><small style={s.muted}>طلبات يوم العمل المفتوح</small></div><b>{ordersShown.length} طلب</b></div>
         <div style={s.orders}>{ordersShown.map(o => <article key={o.id} style={s.order}>
