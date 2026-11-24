@@ -62,6 +62,9 @@ export default function PosPage() {
   const [mergeTargetId, setMergeTargetId] = useState("");
   const [pendingFloorAction, setPendingFloorAction] = useState("");
   const [showMergePanel, setShowMergePanel] = useState(false);
+  const [showRemoveItemModal, setShowRemoveItemModal] = useState(false);
+  const [removeItemId, setRemoveItemId] = useState("");
+  const [removeItemQuantity, setRemoveItemQuantity] = useState("1");
   const [showDiscountPanel, setShowDiscountPanel] = useState(false);
   const [itemNoteEditor, setItemNoteEditor] = useState(null);
   const [itemNoteDraft, setItemNoteDraft] = useState("");
@@ -493,6 +496,36 @@ export default function PosPage() {
     finally{setSaving(false);}
   }
 
+  async function removeSelectedFloorItem() {
+    if (!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
+    const item = (selectedTableOrder.order_items || []).find((entry) => String(entry.id) === String(removeItemId));
+    if (!item) return setError("اختار الصنف المطلوب حذفه.");
+    const quantity = Number(removeItemQuantity);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > Number(item.quantity)) return setError("الكمية المطلوب حذفها غير صحيحة.");
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await supabase.rpc("pos_remove_pending_order_item_quantity", {
+        p_order_item_id: item.id,
+        p_quantity_to_remove: quantity,
+      });
+      if (result.error) throw result.error;
+      setMessage(result.data.order_closed
+        ? "تم حذف آخر صنف وإغلاق الأوردر وإخلاء الطاولة."
+        : quantity === Number(item.quantity)
+          ? "تم حذف الصنف بالكامل وتحديث إجمالي الأوردر."
+          : "تم حذف " + quantity + " من " + (item.product_name || "الصنف") + "، والمتبقي " + result.data.quantity_remaining + " وتحديث الإجمالي.");
+      setShowRemoveItemModal(false);
+      setRemoveItemId("");
+      setRemoveItemQuantity("1");
+      if (result.data.order_closed) setSelectedTableKey("");
+      await load();
+    } catch (e) {
+      setError("تعذر حذف الصنف: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function emptySelectedTable() {
     if(!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
     if(!window.confirm("تنبيه: إفراغ الطاولة هنا يعني إلغاء الأوردر الحالي وحذف أصنافه وإرجاع مخزونها، وليس تسجيل دفعة. هل تريد المتابعة؟")) return;
@@ -783,7 +816,7 @@ export default function PosPage() {
                 <button type="button" disabled={!selectedTableOrder || saving} onClick={() => selectedTableOrder && openTable(selectedTableOrder.table_number, selectedTableOrder.table_area, "transfer-items")}>
                   <span className="pos-action-icon">📦</span><b>نقل صنف لطاولة أخرى</b>
                 </button>
-                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => selectedTableOrder && openTable(selectedTableOrder.table_number, selectedTableOrder.table_area, "remove-items")}>
+                <button type="button" disabled={!selectedTableOrder || !(selectedTableOrder.order_items || []).some(item => item.preparation_status === "pending") || saving} onClick={() => { setRemoveItemId(""); setRemoveItemQuantity("1"); setShowRemoveItemModal(true); setShowMergePanel(false); setShowTransfer(false); setShowDiscountPanel(false); }}>
                   <span className="pos-action-icon">🗑️</span><b>مسح صنف من الطاولة</b>
                 </button>
                 <button type="button" disabled={!selectedTableOrder || mergeTargets.length === 0 || saving} onClick={() => { setShowMergePanel(true); setShowTransfer(false); setShowDiscountPanel(false); setMergeTargetId(""); }}>
@@ -843,6 +876,34 @@ export default function PosPage() {
           </div>
         </section>
 
+        {showRemoveItemModal && selectedTableOrder && <div style={s.modalBackdrop} onClick={() => { if (!saving) { setShowRemoveItemModal(false); setRemoveItemId(""); setRemoveItemQuantity("1"); } }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="remove-floor-item-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+            <h2 id="remove-floor-item-title" style={{margin:0,textAlign:"center"}}>مسح صنف من أوردر الطاولة {selectedTableOrder.table_number}</h2>
+            <p style={{margin:0,textAlign:"center",color:"#75664f"}}>اختار الصنف والكمية المطلوب حذفها من الأوردر</p>
+            <div style={{display:"grid",gap:8,maxHeight:"48dvh",overflowY:"auto",padding:2}}>
+              {(selectedTableOrder.order_items || []).filter(item => item.preparation_status === "pending").map(item => {
+                const chosen = String(removeItemId) === String(item.id);
+                return <button key={item.id} type="button" disabled={saving} onClick={() => { setRemoveItemId(String(item.id)); setRemoveItemQuantity("1"); }} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:"12px 14px",border:"2px solid",borderColor:chosen?"#b88946":"#dedede",borderRadius:10,background:chosen?"#fff0d8":"#fff",color:"#473a2b",fontFamily:"inherit",fontWeight:800,cursor:"pointer",textAlign:"right"}}>
+                  <span>{item.product_name}</span><span>الكمية: {fmt(item.quantity)}</span>{chosen&&<strong>✓</strong>}
+                </button>;
+              })}
+              {!(selectedTableOrder.order_items || []).some(item => item.preparation_status === "pending") && <p style={{textAlign:"center"}}>لا توجد أصناف متاحة للحذف في هذا الأوردر.</p>}
+            </div>
+            {#if false}{/if}
+            {removeItemId && (() => {
+              const chosenItem = (selectedTableOrder.order_items || []).find(item => String(item.id) === String(removeItemId));
+              return chosenItem ? <div style={{display:"grid",gap:8}}>
+                <label style={{fontWeight:800}}>الكمية المطلوب حذفها</label>
+                <input type="number" min="1" max={chosenItem.quantity} step="1" value={removeItemQuantity} onChange={e=>setRemoveItemQuantity(e.target.value)} style={s.filterInput}/>
+                <small style={{color:"#75664f"}}>المتاح للحذف: {fmt(chosenItem.quantity)}</small>
+              </div> : null;
+            })()}
+            <div style={{display:"flex",justifyContent:"center",gap:9,flexWrap:"wrap"}}>
+              <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150}} disabled={saving||!removeItemId||!removeItemQuantity.trim()} onClick={removeSelectedFloorItem}>{saving?"جاري الحذف...":"OK — تأكيد الحذف"}</button>
+              <button type="button" style={s.secondary} disabled={saving} onClick={()=>{setShowRemoveItemModal(false);setRemoveItemId("");setRemoveItemQuantity("1");}}>إلغاء</button>
+            </div>
+          </div>
+        </div>}
         {showMergePanel&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>{if(!saving){setShowMergePanel(false);setMergeTargetId("");}}}>
           <div role="dialog" aria-modal="true" aria-labelledby="merge-table-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
             <h2 id="merge-table-title" style={{margin:0,textAlign:"center"}}>دمج أوردر الطاولة {selectedTableOrder.table_number}</h2>
