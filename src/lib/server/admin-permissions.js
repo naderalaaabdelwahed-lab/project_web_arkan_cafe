@@ -9,7 +9,7 @@ function serviceClient() {
 }
 
 export async function authorizeAdminPermission(request, requiredPermission) {
-  const token = (request.headers.get("authorization") || "").replace(/^Bearer\\s+/i, "");
+  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
   if (!token) return { response: NextResponse.json({ error: "سجل الدخول أولاً." }, { status: 401 }) };
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
