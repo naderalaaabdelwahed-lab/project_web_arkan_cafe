@@ -1061,3 +1061,14 @@
   --pos-gold-light:#F5EFE4;
 }
 .arkan-pos-page { background:var(--pos-bg)!important; color:var(--pos-ink)!important; }
+
+
+/* High-contrast POS typography */
+html body .arkan-pos-page * {
+  color: #29251F !important;
+}
+html body .arkan-pos-page input::placeholder,
+html body .arkan-pos-page textarea::placeholder {
+  color: #746958 !important;
+  opacity: 1;
+}
