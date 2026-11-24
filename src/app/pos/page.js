@@ -692,7 +692,6 @@ export default function PosPage() {
                 </button>;
               })}
             </div>
-            <div className="floor-legend" style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🔵 تمت طباعة الفاتورة</span><span>🟡 محجوزة</span><span>🟠 محددة</span></div>
           </div>
           <aside className="pos-floor-summary-sidebar" style={s.floorOrderSidebar}>
             <div className="floor-action-card pos-floor-total-card" style={s.floorTotal}>
@@ -702,6 +701,36 @@ export default function PosPage() {
             </div>
             <button className="pos-floor-refresh" type="button" style={s.secondary} onClick={load} disabled={loading}>↻ تحديث البيانات</button>
           </aside>
+          <div className="pos-floor-order-preview-grid" dir="rtl">
+            <div className="pos-floor-preview-empty" aria-hidden="true"></div>
+            <section className="pos-floor-order-preview">
+              {selectedTableKey ? (
+                <>
+                  <h3>{selectedTableOrder ? `أوردر الطاولة ${selectedTableOrder.table_number}` : "الطاولة متاحة — لا يوجد أوردر"}</h3>
+                  {selectedTableOrder ? (
+                    <div className="floor-preview-wrap">
+                      <table>
+                        <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+                        <tbody>
+                          {(selectedTableOrder.order_items || []).map((item) => (
+                            <tr key={item.id}>
+                              <td>{item.product_name}</td>
+                              <td>{fmt(item.quantity)}</td>
+                              <td>{fmt(item.unit_price)} ج.م</td>
+                              <td>{fmt(Number(item.quantity || 0) * Number(item.unit_price || 0))} ج.م</td>
+                            </tr>
+                          ))}
+                          {!(selectedTableOrder.order_items || []).length && <tr><td colSpan={4}>لا توجد أصناف في الأوردر</td></tr>}
+                        </tbody>
+                        <tfoot><tr><th colSpan={3}>الإجمالي</th><th>{fmt(selectedTableOrder.total_amount)} ج.م</th></tr></tfoot>
+                      </table>
+                    </div>
+                  ) : <p>الطاولة المحددة لا يوجد عليها طلب حالي.</p>}
+                </>
+              ) : <p>اضغط على أي طاولة لعرض الأوردر هنا.</p>}
+            </section>
+            <div className="pos-floor-preview-empty" aria-hidden="true"></div>
+          </div>
         </section>
         {showTransfer&&selectedTableOrder&&<div className="floorInlineModal" style={s.floorInlineModal}>
           <b>نقل الطاولة بالكامل — ARK-{selectedTableOrder.id}</b>
