@@ -739,10 +739,29 @@ export default function PosPage() {
               {!transferTargets.length && <small style={{ color: "#8b681b" }}>لا توجد طاولات أخرى متاحة للنقل حاليًا.</small>}
             </div>}
             {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
-            <div className="cart" data-pos-cart style={s.cart}>{cart.map(x => <div key={x.cartKey} className="cartItem" style={s.cartItem}>
-              <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><div style={{display:"flex",gap:8,alignItems:"center"}}><b>{fmt(x.price*x.quantity)} ج.م</b>{x.existing&&x.preparationStatus==="pending"&&editingOrderId&&!editingOrderClosed&&<div style={{display:"flex",gap:6,alignItems:"center"}}>{x.quantity>1&&<button type="button" style={s.secondary} disabled={saving} onClick={()=>removePendingItem(x.orderItemId,1)}>− حذف 1</button>}<button type="button" style={s.clear} disabled={saving} onClick={()=>removePendingItem(x.orderItemId)}>حذف الكل</button></div>}</div></div>
-              <div style={s.head}><div style={s.qty}><button disabled={x.existing || x.quantity <= 1} onClick={() => qty(x.cartKey,-1)}>−</button><b>{x.quantity}</b><button disabled={x.existing} onClick={() => qty(x.cartKey,1)}>+</button></div><input className="note" style={s.note} placeholder="ملاحظة للصنف" value={x.note} disabled={x.existing} onChange={e => setCart(old => old.map(i => i.cartKey === x.cartKey ? {...i,note:e.target.value} : i))} /></div>
-            </div>)}{!cart.length && <p style={s.empty}>السلة فارغة — اختار أصناف من المنيو.</p>}</div>
+            <div className="cartTableWrap" data-pos-cart style={s.cartTableWrap}>
+              <table className="cartTable" style={s.cartTable}>
+                <thead><tr><th style={s.cartTh}>الصنف</th><th style={s.cartTh}>الكمية</th><th style={s.cartTh}>سعر الوحدة</th><th style={s.cartTh}>الإجمالي</th><th style={s.cartTh}>ملاحظة / إجراء</th></tr></thead>
+                <tbody>
+                  {cart.map(x => <tr key={x.cartKey}>
+                    <td style={s.cartTd}><b>{x.name}</b></td>
+                    <td style={s.cartTd}><div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
+                      <button type="button" style={s.qtyButton} disabled={x.existing || x.quantity <= 1 || saving} onClick={()=>qty(x.cartKey,-1)}>−</button>
+                      <b>{fmt(x.quantity)}</b>
+                      <button type="button" style={s.qtyButton} disabled={x.existing || saving} onClick={()=>qty(x.cartKey,1)}>+</button>
+                    </div></td>
+                    <td style={s.cartTd}>{fmt(x.price)} ج.م</td>
+                    <td style={{...s.cartTd,fontWeight:800,color:"#267447"}}>{fmt(x.price*x.quantity)} ج.م</td>
+                    <td style={s.cartTd}><div style={{display:"flex",alignItems:"center",gap:6,minWidth:150}}>
+                      <input className="note" style={s.note} placeholder="ملاحظة" value={x.note} disabled={x.existing || editingOrderClosed} onChange={e=>setCart(old=>old.map(i=>i.cartKey===x.cartKey?{...i,note:e.target.value}:i))}/>
+                      {x.existing&&x.preparationStatus==="pending"&&editingOrderId&&!editingOrderClosed&&<div style={{display:"flex",gap:5,whiteSpace:"nowrap"}}>{x.quantity>1&&<button type="button" style={s.secondary} disabled={saving} onClick={()=>removePendingItem(x.orderItemId,1)}>− حذف 1</button>}<button type="button" style={s.clear} disabled={saving} onClick={()=>removePendingItem(x.orderItemId)}>حذف الكل</button></div>}
+                    </div></td>
+                  </tr>)}
+                  {!cart.length&&<tr><td style={s.cartEmpty} colSpan={5}>السلة فارغة — اختار أصناف من المنيو.</td></tr>}
+                </tbody>
+                {cart.length>0&&<tfoot><tr><td style={s.cartFoot} colSpan={3}>إجمالي الأصناف</td><td style={s.cartFoot}>{fmt(subtotal)} ج.م</td><td style={s.cartFoot}>{cart.length} صنف</td></tr></tfoot>}
+              </table>
+            </div>
             <div style={s.fields}>
               <input style={s.field} placeholder="اسم العميل (اختياري)" value={customer} disabled={Boolean(editingOrderId)} onChange={e=>setCustomer(e.target.value)} />
               <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} disabled={Boolean(editingOrderId)} onChange={e=>setPhone(e.target.value)} />
@@ -806,7 +825,7 @@ const s = {
  cashChange:{padding:"14px 16px",borderRadius:10,background:"#f3f8f3",fontSize:19,fontWeight:700},
  cashSubmit:{width:"100%",padding:"17px 18px",border:0,borderRadius:10,background:"#b88946",color:"#fff",fontSize:18,fontWeight:900,cursor:"pointer"},
  tableSection:{marginTop:18},fullTableGrid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12},tableTile:{minHeight:112,display:"grid",placeContent:"center",gap:8,border:"1px solid #cde5d4",background:"#eaf7ee",color:"#246c45",borderRadius:12,cursor:"pointer",fontSize:18},printedTile:{background:"#e3f0ff",borderColor:"#8bb9e8",color:"#1e5b94"},occupiedTile:{background:"#fdeaea",borderColor:"#efc1c1",color:"#a12c2c"},reservedTile:{background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"},legend:{display:"flex",gap:18,marginTop:18,color:"#666",fontSize:13},clear:{border:0,background:"none",color:"#a12c2c",cursor:"pointer"},tableBox:{padding:10,background:"#faf8f5",borderRadius:9,marginBottom:10},switch:{display:"flex",gap:7,marginBottom:9},tableGrid:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6},table:{padding:8,display:"grid",gap:4,border:"1px solid #cde5d4",background:"#eaf7ee",color:"#246c45",borderRadius:7,cursor:"pointer"},chosen:{outline:"2px solid #b88946"},occupied:{background:"#fdeaea",borderColor:"#efc1c1",color:"#a12c2c"},reserved:{background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"},
- cart:{maxHeight:280,overflowY:"auto"},cartItem:{padding:"10px 0",borderBottom:"1px solid #eee"},qty:{display:"flex",alignItems:"center",gap:9},note:{width:"55%",padding:7,border:"1px solid #eee",borderRadius:6,fontSize:12},empty:{textAlign:"center",padding:18,color:"#888"},fields:{display:"grid",gap:7,marginTop:10},field:{padding:9,border:"1px solid #e4dfd7",borderRadius:7,width:"100%",boxSizing:"border-box",fontFamily:"inherit"},
+ cartTableWrap:{width:"100%",maxHeight:340,overflow:"auto",border:"1px solid #e7dfd3",borderRadius:10,marginTop:10},cartTable:{width:"100%",minWidth:620,borderCollapse:"collapse",textAlign:"right",fontSize:13,background:"#fff"},cartTh:{position:"sticky",top:0,zIndex:1,padding:"12px 9px",background:"#29251f",color:"#fff",whiteSpace:"nowrap",borderBottom:"2px solid #b88946"},cartTd:{padding:"11px 9px",borderBottom:"1px solid #eee9e1",verticalAlign:"middle",whiteSpace:"nowrap"},cartEmpty:{padding:24,textAlign:"center",color:"#888"},cartFoot:{padding:"12px 9px",fontWeight:900,background:"#faf6ef",borderTop:"2px solid #b88946"},qtyButton:{width:28,height:28,border:"1px solid #d8c8b2",borderRadius:6,background:"#fffaf1",fontWeight:900,cursor:"pointer"},qty:{display:"flex",alignItems:"center",gap:9},note:{width:110,minWidth:80,padding:7,border:"1px solid #eee",borderRadius:6,fontSize:12},empty:{textAlign:"center",padding:18,color:"#888"},fields:{display:"grid",gap:7,marginTop:10},field:{padding:9,border:"1px solid #e4dfd7",borderRadius:7,width:"100%",boxSizing:"border-box",fontFamily:"inherit"},
  select:{flex:1,padding:10,border:"1px solid #cfcfcf",borderRadius:7,background:"#fff",color:"#242424",fontSize:14},discount:{width:90,padding:8,border:"1px solid #ddd",borderRadius:7},discountBox:{display:"grid",gap:8,marginTop:14,padding:12,border:"2px solid #b88946",borderRadius:10,background:"#fffaf1"},discountInput:{width:"100%",minWidth:0,boxSizing:"border-box",padding:10,border:"1px solid #cfcfcf",borderRadius:7,background:"#fff",color:"#242424",fontSize:14},totals:{display:"grid",gap:7,padding:"12px 0"},grand:{display:"flex",justifyContent:"space-between",fontSize:18,color:"#8b622e",paddingTop:7},pay:{display:"flex",gap:8,alignItems:"center",marginBottom:10},submit:{width:"100%",padding:13,border:0,borderRadius:8,background:"#b88946",color:"#fff",fontWeight:800,cursor:"pointer"},
  orders:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:9},order:{display:"grid",gap:6,padding:12,border:"1px solid #eee8df",borderRadius:9}
 };
