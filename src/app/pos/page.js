@@ -625,7 +625,7 @@ export default function PosPage() {
         <div role="dialog" aria-modal="true" aria-labelledby="transfer-table-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden"}} onClick={e => e.stopPropagation()}>
           <h2 id="transfer-table-title" style={{margin:0,textAlign:"center"}}>اختار الطاولة الجديدة</h2>
           <p style={{margin:0,textAlign:"center",color:"#75664f"}}>نقل الأوردر ARK-{selectedTableOrder?.id || editingOrderId}. الطاولات المشغولة أو المحجوزة غير متاحة للاختيار.</p>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(125px,1fr))",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(105px,1fr))",gap:8}}>
             {allFloorTransferTargets.map(target => {
               const key = target.area + ":" + target.number;
               const occupied = activeTables.find(order => order.table_area === target.area && order.table_number === target.number);
@@ -639,9 +639,9 @@ export default function PosPage() {
                   : selected
                     ? {background:"#fff0d8",borderColor:"#b88946",color:"#805a2a",outline:"3px solid #d28c2c"}
                     : {background:"#eaf7ee",borderColor:"#cde5d4",color:"#246c45"};
-              return <button key={key} type="button" disabled={disabled} onClick={() => setTransferTarget(key)} style={{minHeight:92,padding:10,border:"2px solid",borderRadius:11,display:"grid",placeContent:"center",gap:5,fontFamily:"inherit",fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity: disabled ? 0.88 : 1,...tileStyle}}>
+              return <button key={key} type="button" disabled={disabled} onClick={() => setTransferTarget(key)} style={{minHeight:78,padding:8,border:"2px solid",borderRadius:10,display:"grid",placeContent:"center",gap:4,fontFamily:"inherit",fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity: disabled ? 0.88 : 1,...tileStyle}}>
                 <span>{target.area==="indoor"?"داخلية":"خارجية"}</span>
-                <strong style={{fontSize:18}}>طاولة {target.number}</strong>
+                <strong style={{fontSize:17}}>طاولة {target.number}</strong>
                 <small>{occupied ? "مشغولة — ARK-"+occupied.id : reserved ? "محجوزة" : selected ? "تم الاختيار" : "متاحة"}</small>
               </button>;
             })}
@@ -838,7 +838,7 @@ export default function PosPage() {
           <div role="dialog" aria-modal="true" aria-labelledby="merge-table-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
             <h2 id="merge-table-title" style={{margin:0,textAlign:"center"}}>دمج أوردر الطاولة {selectedTableOrder.table_number}</h2>
             <p style={{margin:0,textAlign:"center",color:"#75664f"}}>اختار الطاولة المشغولة اللي هينتقل ليها الأوردر. الطاولات الفاضية أو المحجوزة غير متاحة.</p>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(125px,1fr))",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(105px,1fr))",gap:8}}>
               {allFloorTransferTargets.map(target=>{
                 const order=activeTables.find(o=>o.table_area===target.area&&o.table_number===target.number);
                 const reserved=reservations.some(r=>r.table_number===target.number&&(r.seating_area||"indoor")===target.area);
@@ -851,7 +851,7 @@ export default function PosPage() {
                   : reserved
                     ? {background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"}
                     : {background:"#f2f2f2",borderColor:"#dedede",color:"#777"};
-                return <button key={target.area+":"+target.number} type="button" disabled={disabled} onClick={()=>setMergeTargetId(String(order.id))} style={{minHeight:92,padding:10,border:"2px solid",borderRadius:11,display:"grid",placeContent:"center",gap:5,fontFamily:"inherit",fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.88:1,...tileStyle}}>
+                return <button key={target.area+":"+target.number} type="button" disabled={disabled} onClick={()=>setMergeTargetId(String(order.id))} style={{minHeight:78,padding:8,border:"2px solid",borderRadius:10,display:"grid",placeContent:"center",gap:4,fontFamily:"inherit",fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.88:1,...tileStyle}}>
                   <span>{target.area==="indoor"?"داخلية":"خارجية"}</span>
                   <strong style={{fontSize:17}}>طاولة {target.number}</strong>
                   <small>{order?"مشغولة — ARK-"+order.id:reserved?"محجوزة":"فارغة"}</small>
