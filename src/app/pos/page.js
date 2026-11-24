@@ -381,7 +381,8 @@ export default function PosPage() {
     setDiscountType("amount"); setDiscountValue(String(order.discount_amount || 0)); setCashReceived("");
     setEditingOrderId(order.id);
     setEditingOrderTotal(Number(order.total_amount || 0));
-    setEditingOrderClosed(["delivered", "cancelled"].includes(order.status));
+    const orderBusinessDay = businessDays.find((day) => String(day.id) === String(order.business_day_id));
+    setEditingOrderClosed(["delivered", "cancelled"].includes(order.status) || (orderBusinessDay && orderBusinessDay.status !== "open"));
     setMode(order.order_type || "takeaway");
     setTab("all");
     setScreen("order");
@@ -977,11 +978,12 @@ export default function PosPage() {
               <tbody>
                 {allOrdersFiltered.map(o => {
                   const dineIn = o.order_type === "dine-in";
-                  const closed = ["delivered","cancelled"].includes(o.status);
+                  const businessDayClosed = businessDays.some((day) => String(day.id) === String(o.business_day_id) && day.status !== "open");
+                  const closed = ["delivered","cancelled"].includes(o.status) || businessDayClosed;
                   const typeLabel = dineIn ? "صالة" : o.order_type === "takeaway" ? "تيك أواي" : "دليفري";
                   const statusLabel = ({pending:"جديد",confirmed:"مؤكد",preparing:"قيد التحضير",delivered:"تم التسليم",cancelled:"ملغي"})[o.status] || o.status || "غير محدد";
                   const created = o.created_at ? new Date(o.created_at) : null;
-                  return <tr key={o.id} onClick={() => openOrderFromAll(o)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOrderFromAll(o); } }} tabIndex={0} role="button" title="اضغط لفتح تفاصيل الأوردر وإضافة أصناف" style={{cursor:"pointer"}}>
+                  return <tr key={o.id} onClick={() => openOrderFromAll(o)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOrderFromAll(o); } }} tabIndex={0} role="button" title={closed ? "اضغط لعرض تفاصيل الأوردر" : "اضغط لفتح تفاصيل الأوردر وإضافة أصناف"} style={{cursor:"pointer"}}>
                     <td className="ordersTd" style={s.ordersTd}><b>#{o.id}</b></td>
                     <td className="ordersTd" style={s.ordersTd}>ARK-{o.id}</td>
                     <td className="ordersTd" style={s.ordersTd}>{created && !Number.isNaN(created.getTime()) ? created.toLocaleDateString("ar-EG") : "—"}</td>
@@ -992,7 +994,7 @@ export default function PosPage() {
                     <td className="ordersTd" style={s.ordersTd}>{statusLabel}</td>
                     <td className="ordersTd" style={s.ordersTd}>{fmt(Number(o.discount_amount ?? 0))} ج.م</td>
                     <td style={{...s.ordersTd,fontWeight:800,color:"#267447"}}>{fmt(o.total_amount)} ج.م</td>
-                    <td className="ordersTd" style={s.ordersTd}><button type="button" style={s.secondary} disabled={closed} title={closed ? "الأوردر مغلق ولا يمكن إضافة أصناف" : "إضافة صنف إلى الأوردر"} onClick={e => { e.stopPropagation(); openOrderFromAll(o); }}>{closed ? "الأوردر مغلق" : "إضافة صنف"}</button></td>
+                    <td className="ordersTd" style={s.ordersTd}><button type="button" style={s.secondary} disabled={closed} title={closed ? (businessDayClosed ? "اليومية مغلقة ولا يمكن تعديل الأوردر" : "الأوردر مغلق ولا يمكن إضافة أصناف") : "إضافة صنف إلى الأوردر"} onClick={e => { e.stopPropagation(); openOrderFromAll(o); }}>{closed ? (businessDayClosed ? "اليومية مغلقة" : "الأوردر مغلق") : "إضافة صنف"}</button></td>
                   </tr>;
                 })}
                 {!allOrdersFiltered.length && <tr><td style={s.ordersTd} colSpan={11}>لا توجد طلبات مطابقة للفلاتر.</td></tr>}
