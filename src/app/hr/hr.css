@@ -102,3 +102,29 @@
 .hr-main > main[dir="rtl"] thead,.hr-main > main[dir="rtl"] th { background:#F1E9DC!important; color:#51483E!important; border-color:#E8E0D4!important; }
 .hr-main > main[dir="rtl"] td,.hr-main > main[dir="rtl"] tbody tr,.hr-main > main[dir="rtl"] tbody tr:nth-child(even) { background:#FFFFFF!important; color:#29251F!important; border-color:#E8E0D4!important; }
 .hr-main > main[dir="rtl"] tbody tr:hover { background:#F6F4F0!important; }
+
+
+/* Legacy HR management screens — match the admin menu palette */
+.hr-shell { background:#F6F4F0 !important; color:#29251F !important; }
+.hr-main { background:#F6F4F0 !important; color:#29251F !important; }
+.hr-main > main[dir="rtl"] {
+  background:#F6F4F0 !important;
+  color:#29251F !important;
+}
+.hr-main > main[dir="rtl"] [style*="#100d0b"],
+.hr-main > main[dir="rtl"] [style*="#15120e"],
+.hr-main > main[dir="rtl"] [style*="#211b14"],
+.hr-main > main[dir="rtl"] [style*="#211b16"],
+.hr-main > main[dir="rtl"] [style*="#302416"],
+.hr-main > main[dir="rtl"] [style*="#1c1711"] {
+  background:#FFFFFF !important;
+  color:#29251F !important;
+  border-color:#E8E0D4 !important;
+}
+.hr-main > main[dir="rtl"] a { color:#79552E; }
+.hr-main > main[dir="rtl"] button {
+  background:#91672F !important;
+  color:#FFFFFF !important;
+  border-color:#91672F !important;
+}
+.hr-main > main[dir="rtl"] button:disabled { opacity:.55; }
