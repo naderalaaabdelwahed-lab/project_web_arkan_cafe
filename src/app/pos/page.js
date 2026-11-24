@@ -128,6 +128,9 @@ export default function PosPage() {
     !(target.area === area && target.number === table) &&
     !reservations.some((r) => r.table_number === target.number && (r.seating_area || "indoor") === target.area)
   );
+  const availableTransferTargets = transferTargets.filter((target) =>
+    !activeTables.some((o) => o.table_area === target.area && o.table_number === target.number)
+  );
 
   function add(p) {
     setCart((old) => {
@@ -429,13 +432,13 @@ export default function PosPage() {
             {showTransfer && editingOrderId && <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto", gap: 8, alignItems: "center", padding: 12, marginBottom: 12, border: "1px solid #e5d3b8", borderRadius: 9, background: "#fffaf1" }}>
               <select className="pos-filter-control" style={s.filterInput} value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)}>
                 <option value="">اختار الطاولة الجديدة</option>
-                {transferTargets.map((target) => <option key={target.area + ":" + target.number} value={target.area + ":" + target.number}>
-                  {target.area === "indoor" ? "داخلية" : "خارجية"} — طاولة {target.number}{activeTables.some((o) => o.table_area === target.area && o.table_number === target.number) ? " — مشغولة (ضم للأوردر الحالي)" : " — متاحة (إنشاء أوردر جديد)"}
+                {availableTransferTargets.map((target) => <option key={target.area + ":" + target.number} value={target.area + ":" + target.number}>
+                  {target.area === "indoor" ? "داخلية" : "خارجية"} — طاولة {target.number}
                 </option>)}
               </select>
               <button style={s.submit} disabled={saving || !transferTarget} onClick={transferTable}>{saving ? "جاري النقل..." : "تأكيد النقل"}</button>
               <button style={s.secondary} disabled={saving} onClick={() => { setShowTransfer(false); setTransferTarget(""); }}>إلغاء</button>
-              {!transferTargets.length && <small style={{ gridColumn: "1 / -1", color: "#8b681b" }}>لا توجد طاولات متاحة للنقل حاليًا.</small>}
+              {!availableTransferTargets.length && <small style={{ gridColumn: "1 / -1", color: "#8b681b" }}>لا توجد طاولات متاحة للنقل حاليًا.</small>}
             </div>}
             {showItemTransfer && editingOrderId && <div style={{ display: "grid", gap: 10, padding: 14, marginBottom: 12, border: "1px solid #d9c39b", borderRadius: 10, background: "#fffaf1" }}>
               <div><b>نقل أصناف من الأوردر ARK-{editingOrderId}</b><small style={{ display: "block", color: "#75664f", marginTop: 4 }}>حدد الكمية من كل صنف، ثم اختار الطاولة المستقبِلة. الأصناف التي بدأ تجهيزها لا يمكن نقلها.</small></div>
