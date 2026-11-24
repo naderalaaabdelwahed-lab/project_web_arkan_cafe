@@ -63,6 +63,22 @@ const permissionGroups = [
     ],
   },
   {
+    title: "شاشة POS",
+    items: [
+      ["pos.use", "الدخول إلى شاشة POS"],
+      ["pos.sales.view", "عرض تقارير ومبيعات POS"],
+      ["pos.discount.apply", "تطبيق خصم على الأوردر"],
+      ["pos.items.remove", "حذف صنف من الأوردر"],
+      ["pos.table.empty", "إفراغ الطاولة وإلغاء الأوردر"],
+      ["pos.table.transfer", "نقل الأوردر لطاولة أخرى"],
+      ["pos.items.transfer", "نقل صنف لطاولة أخرى"],
+      ["pos.table.merge", "دمج الطاولات"],
+      ["pos.payment.receive", "تسجيل سداد نقدي"],
+      ["pos.order.finish", "إنهاء الأوردر وإخلاء الطاولة"],
+      ["pos.receipt.print", "طباعة الفاتورة"],
+    ],
+  },
+  {
     title: "شؤون الموظفين",
     items: [
       ["hr.employees.view", "عرض ملفات الموظفين"],
