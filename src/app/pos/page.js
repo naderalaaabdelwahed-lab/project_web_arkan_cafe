@@ -230,7 +230,7 @@ export default function PosPage() {
       "<div class='line'></div><table><thead><tr><th>الصنف</th><th>ك</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>"+rows+"</tbody></table>",
       "<div class='line'></div><div class='totals'><div><span>الخصم</span><b>"+fmt(order.discount_amount)+" ج.م</b></div><div class='grand'><span>الإجمالي</span><b>"+fmt(order.total_amount)+" ج.م</b></div></div>",
       "<div class='line'></div><p class='foot'>شكراً لزيارتكم<br>نتمنى لكم يوماً سعيداً</p>",
-      "<script>window.onload=()=>{window.focus();window.print();};window.onafterprint=()=>window.close();<\\/script></body></html>"
+      "<script>window.onload=()=>{window.focus();window.print();};window.onafterprint=()=>window.close();</scr"+"ipt></body></html>"
     ].join("");
     const w = window.open("", "arkan-receipt", "width=420,height=700");
     if (!w) return setError("المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة للموقع ثم حاول مرة أخرى.");
@@ -478,8 +478,8 @@ export default function PosPage() {
               <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
                 {editingOrderId && <button style={s.secondary} onClick={() => printReceipt()}>طباعة الفاتورة</button>}
                 {tab === "all" && <button style={s.secondary} onClick={() => { reset(); setTab("all"); }}>رجوع لكل الأوردرات</button>}
-                {editingOrderId && <button style={s.secondary} onClick={() => { setShowTransfer((v) => !v); setShowItemTransfer(false); setTransferTarget(""); }}>نقل الطاولة بالكامل</button>}
-                {editingOrderId && <button style={s.secondary} onClick={startItemTransfer}>نقل أصناف لطاولة أخرى</button>}
+                {editingOrderId && mode === "dine-in" && <button style={s.secondary} onClick={() => { setShowTransfer((v) => !v); setShowItemTransfer(false); setTransferTarget(""); }}>نقل الطاولة بالكامل</button>}
+                {editingOrderId && mode === "dine-in" && <button style={s.secondary} onClick={startItemTransfer}>نقل أصناف لطاولة أخرى</button>}
                 {mode === "dine-in" && <button style={s.secondary} onClick={() => setScreen("tables")}>رجوع للطاولات</button>}
                 <button style={s.clear} onClick={() => { reset(); if (editingOrderId && mode === "dine-in") setScreen("tables"); }}>{editingOrderId ? "إلغاء التعديل" : "مسح الطلب"}</button>
               </div>
