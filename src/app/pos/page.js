@@ -59,6 +59,8 @@ export default function PosPage() {
   const [paymentSummary, setPaymentSummary] = useState({});
   const [selectedTableKey, setSelectedTableKey] = useState("");
   const [showCashModal, setShowCashModal] = useState(false);
+  const [showFinishOrderModal, setShowFinishOrderModal] = useState(false);
+  const [showEmptyTableModal, setShowEmptyTableModal] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState("");
   const [pendingFloorAction, setPendingFloorAction] = useState("");
   const [showMergePanel, setShowMergePanel] = useState(false);
@@ -532,7 +534,7 @@ export default function PosPage() {
 
   async function emptySelectedTable() {
     if(!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
-    if(!window.confirm("تنبيه: إفراغ الطاولة هنا يعني إلغاء الأوردر الحالي وحذف أصنافه وإرجاع مخزونها، وليس تسجيل دفعة. هل تريد المتابعة؟")) return;
+
     setSaving(true);setError("");setMessage("");
     try{
       const result=await supabase.rpc("pos_empty_table_order",{p_order_id:selectedTableOrder.id,p_reason:"تم إفراغ الطاولة من شاشة الصالة"});
@@ -866,10 +868,10 @@ export default function PosPage() {
                 <button type="button" disabled={!selectedTableOrder || saving} onClick={() => { setShowDiscountPanel(v => !v); setShowTransfer(false); setShowMergePanel(false); setDiscountType("amount"); setDiscountValue(String(selectedTableOrder?.discount_amount || 0)); }}>
                   <span className="pos-action-icon">🏷️</span><b>تطبيق خصم</b>
                 </button>
-                <button type="button" disabled={!selectedTableOrder || selectedDue <= 0 || saving} onClick={() => { if (window.confirm("تأكيد إنهاء الأوردر بسداد المبلغ المتبقي نقدًا (" + fmt(selectedDue) + " ج.م)؟ سيتم إغلاق الأوردر وإتاحة الطاولة تلقائيًا.")) recordCashPayment(selectedTableOrder.id, selectedDue); }}>
+                <button type="button" disabled={!selectedTableOrder || selectedDue <= 0 || saving} onClick={() => setShowFinishOrderModal(true)}>
                   <span className="pos-action-icon">✅</span><b>إنهاء الطلب</b>
                 </button>
-                <button type="button" className="is-danger" disabled={!selectedTableOrder || Number(paymentSummary[selectedTableOrder?.id] || 0) > 0 || saving} onClick={emptySelectedTable}>
+                <button type="button" className="is-danger" disabled={!selectedTableOrder || Number(paymentSummary[selectedTableOrder?.id] || 0) > 0 || saving} onClick={() => setShowEmptyTableModal(true)}>
                   <span className="pos-action-icon">🧹</span><b>إفراغ الطاولة</b>
                 </button>
                 <button type="button" disabled={!selectedTableOrder || saving} onClick={() => printReceipt(selectedTableOrder)}>
@@ -934,6 +936,31 @@ export default function PosPage() {
             <div style={{display:"flex",justifyContent:"center",gap:9,flexWrap:"wrap"}}>
               <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150}} disabled={saving||!mergeTargetId} onClick={mergeSelectedTable}>{saving?"جاري الدمج...":"OK — تأكيد الدمج"}</button>
               <button type="button" style={s.secondary} disabled={saving} onClick={()=>{setShowMergePanel(false);setMergeTargetId("");}}>إلغاء</button>
+            </div>
+          </div>
+        </div>}
+        {showFinishOrderModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowFinishOrderModal(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="finish-floor-order-title" style={s.itemNoteModal} onClick={e=>e.stopPropagation()}>
+            <h2 id="finish-floor-order-title" style={{margin:0,textAlign:"center"}}>تأكيد إنهاء الطلب</h2>
+            <p style={{margin:0,textAlign:"center",color:"#75664f"}}>ARK-{selectedTableOrder.id} — طاولة {selectedTableOrder.table_number}</p>
+            <div style={{textAlign:"center",padding:14,borderRadius:10,background:"#faf8f4",fontSize:20}}>
+              المبلغ المتبقي: <b style={{color:"#246c45"}}>{fmt(selectedDue)} ج.م</b>
+            </div>
+            <p style={{margin:0,textAlign:"center",lineHeight:1.7}}>سيتم سداد المبلغ المتبقي نقدًا وإغلاق الأوردر وإتاحة الطاولة تلقائيًا.</p>
+            <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+              <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150}} disabled={saving||selectedDue<=0} onClick={()=>{setShowFinishOrderModal(false);recordCashPayment(selectedTableOrder.id,selectedDue);}}>{saving?"جاري الإنهاء...":"OK — تأكيد الإنهاء"}</button>
+              <button type="button" style={s.secondary} disabled={saving} onClick={()=>setShowFinishOrderModal(false)}>إلغاء</button>
+            </div>
+          </div>
+        </div>}
+        {showEmptyTableModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowEmptyTableModal(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="empty-floor-table-title" style={s.itemNoteModal} onClick={e=>e.stopPropagation()}>
+            <h2 id="empty-floor-table-title" style={{margin:0,textAlign:"center"}}>تأكيد إفراغ الطاولة</h2>
+            <p style={{margin:0,textAlign:"center",color:"#75664f"}}>ARK-{selectedTableOrder.id} — طاولة {selectedTableOrder.table_number}</p>
+            <p style={{margin:0,textAlign:"center",lineHeight:1.8}}>إفراغ الطاولة هنا يعني إلغاء الأوردر الحالي وحذف أصنافه وإرجاع مخزونها، وليس تسجيل دفعة. هل تريد المتابعة؟</p>
+            <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+              <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150,background:"#b04435"}} disabled={saving} onClick={()=>{setShowEmptyTableModal(false);emptySelectedTable();}}>{saving?"جاري الإفراغ...":"OK — تأكيد الإفراغ"}</button>
+              <button type="button" style={s.secondary} disabled={saving} onClick={()=>setShowEmptyTableModal(false)}>إلغاء</button>
             </div>
           </div>
         </div>}
