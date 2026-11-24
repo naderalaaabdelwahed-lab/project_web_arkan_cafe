@@ -169,6 +169,7 @@ export default function PosPage() {
 
   return (
     <main dir="rtl" style={s.page}>
+      <style jsx global>{`.pos-filter-control{color:#000!important;-webkit-text-fill-color:#000!important;opacity:1!important;font-weight:600}.pos-filter-control::placeholder{color:#000!important;-webkit-text-fill-color:#000!important;opacity:1!important}.pos-filter-control option{color:#000!important;background:#fff!important}.pos-filter-control::-webkit-calendar-picker-indicator{opacity:1}`}</style>
       <header style={s.header}>
         <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
         <button style={s.secondary} onClick={load}>تحديث البيانات</button>
@@ -183,12 +184,12 @@ export default function PosPage() {
             <b>{allOrdersFiltered.length} / {orders.length} طلب</b>
           </div>
           <div style={s.orderFilters}>
-            <input style={s.filterInput} placeholder="بحث برقم الأوردر أو الفاتورة أو العميل أو الطاولة" value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} />
-            <select style={s.filterInput} value={orderTypeFilter} onChange={e=>setOrderTypeFilter(e.target.value)}><option value="all">كل الأنواع</option><option value="dine-in">الصالة</option><option value="takeaway">تيك أواي</option><option value="delivery">دليفري</option></select>
-            <select style={s.filterInput} value={orderStatusFilter} onChange={e=>setOrderStatusFilter(e.target.value)}><option value="all">كل الحالات</option><option value="pending">جديد</option><option value="confirmed">مؤكد</option><option value="preparing">قيد التحضير</option><option value="delivered">تم التسليم / مغلق</option><option value="cancelled">ملغي</option></select>
-            <input style={s.filterInput} type="date" aria-label="من تاريخ" value={orderDateFrom} onChange={e=>setOrderDateFrom(e.target.value)} />
-            <input style={s.filterInput} type="date" aria-label="إلى تاريخ" value={orderDateTo} onChange={e=>setOrderDateTo(e.target.value)} />
-            <input style={s.filterInput} type="number" min="1" placeholder="رقم الطاولة" value={orderTableFilter} onChange={e=>setOrderTableFilter(e.target.value)} />
+            <input className="pos-filter-control" style={s.filterInput} placeholder="بحث برقم الأوردر أو الفاتورة أو العميل أو الطاولة" value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} />
+            <select className="pos-filter-control" style={s.filterInput} value={orderTypeFilter} onChange={e=>setOrderTypeFilter(e.target.value)}><option value="all">كل الأنواع</option><option value="dine-in">الصالة</option><option value="takeaway">تيك أواي</option><option value="delivery">دليفري</option></select>
+            <select className="pos-filter-control" style={s.filterInput} value={orderStatusFilter} onChange={e=>setOrderStatusFilter(e.target.value)}><option value="all">كل الحالات</option><option value="pending">جديد</option><option value="confirmed">مؤكد</option><option value="preparing">قيد التحضير</option><option value="delivered">تم التسليم / مغلق</option><option value="cancelled">ملغي</option></select>
+            <input className="pos-filter-control" style={s.filterInput} type="date" aria-label="من تاريخ" value={orderDateFrom} onChange={e=>setOrderDateFrom(e.target.value)} />
+            <input className="pos-filter-control" style={s.filterInput} type="date" aria-label="إلى تاريخ" value={orderDateTo} onChange={e=>setOrderDateTo(e.target.value)} />
+            <input className="pos-filter-control" style={s.filterInput} type="number" min="1" placeholder="رقم الطاولة" value={orderTableFilter} onChange={e=>setOrderTableFilter(e.target.value)} />
             <button style={s.secondary} onClick={()=>{setOrderSearch("");setOrderTypeFilter("all");setOrderStatusFilter("all");setOrderDateFrom("");setOrderDateTo("");setOrderTableFilter("");}}>مسح الفلاتر</button>
           </div>
           <div style={s.ordersTableWrap}>
