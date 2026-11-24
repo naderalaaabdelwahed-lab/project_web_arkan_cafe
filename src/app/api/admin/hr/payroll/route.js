@@ -45,7 +45,7 @@ export async function GET(request){
       &&row.attendance_status==="present"&&row.check_in_at&&row.check_out_at);
     const attended=eligibleRows.length;
     const plannedMinutes=Math.round(Number(employee.daily_work_hours||8)*60);
-    const workedMinutes=eligibleRows.map(row=>Number(row.worked_minutes??Math.max(0,Math.round((new Date(row.check_out_at)-new Date(row.check_in_at))/60000))));
+    const workedMinutes=eligibleRows.map(row=>Math.max(0,Math.round((new Date(row.check_out_at)-new Date(row.check_in_at))/60000)));
     const overtime=workedMinutes.reduce((sum,worked)=>sum+Math.max(0,worked-plannedMinutes),0);
     const shortage=workedMinutes.reduce((sum,worked)=>sum+Math.max(0,plannedMinutes-worked),0);
     const netMinutes=overtime-shortage;
