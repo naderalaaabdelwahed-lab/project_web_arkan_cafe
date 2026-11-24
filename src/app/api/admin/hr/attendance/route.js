@@ -69,7 +69,7 @@ export async function PATCH(request){
   if(changesIn&&checkIn&&b.attendance_status===undefined)updates.attendance_status="present";
   if(changesIn||changesOut||b.attendance_status!==undefined){
    let worked=0,overtime=0,shortage=0;
-   if(updates.attendance_status==="present"&&checkIn&&checkOut){
+   if((updates.attendance_status??current.attendance_status)==="present"&&checkIn&&checkOut){
     const elapsed=Math.max(0,Math.round((new Date(checkOut)-new Date(checkIn))/60000));
     worked=elapsed;
     const {data:emp,error:empError}=await a.db.from("hr_employees").select("daily_work_hours").eq("id",current.employee_id).maybeSingle();
