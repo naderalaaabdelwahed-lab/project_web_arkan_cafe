@@ -2947,3 +2947,38 @@ input:-webkit-autofill:focus {
   -webkit-text-fill-color: #ffffff !important;
   caret-color: #c9a45c;
 }
+
+
+/* ARKAN POS: force readable text in every cashier input */
+body .arkan-pos-page input,
+body .arkan-pos-page textarea,
+body .arkan-pos-page select,
+body .arkan-pos-page input:focus,
+body .arkan-pos-page textarea:focus,
+body .arkan-pos-page select:focus {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  background-color: #ffffff !important;
+  caret-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+body .arkan-pos-page input::placeholder,
+body .arkan-pos-page textarea::placeholder {
+  color: #555555 !important;
+  -webkit-text-fill-color: #555555 !important;
+  opacity: 1 !important;
+}
+
+body .arkan-pos-page select option {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+body .arkan-pos-page input:-webkit-autofill,
+body .arkan-pos-page input:-webkit-autofill:hover,
+body .arkan-pos-page input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #000000 !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  caret-color: #000000 !important;
+}
