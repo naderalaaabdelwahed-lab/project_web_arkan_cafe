@@ -232,6 +232,7 @@ export default function PosPage() {
     const eligible = cart.filter((item) => item.existing && item.preparationStatus === "pending");
     setTransferQuantities(Object.fromEntries(eligible.map((item) => [String(item.orderItemId), "0"])));
     setTransferTarget("");
+    setShowTransfer(false);
     setShowItemTransfer(true);
   }
 
