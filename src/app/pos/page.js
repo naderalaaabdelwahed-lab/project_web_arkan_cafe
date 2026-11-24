@@ -49,6 +49,7 @@ export default function PosPage() {
   const [salesTo, setSalesTo] = useState(() => todayISO());
   const salesRangeTouched = useRef(false);
   const [showCloseDayModal, setShowCloseDayModal] = useState(false);
+  const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
   const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -742,6 +743,21 @@ export default function PosPage() {
     }
   }
 
+  async function switchPosUser() {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) throw signOutError;
+      window.location.replace("/pos/login");
+    } catch (e) {
+      setError("تعذر تبديل المستخدم: " + e.message);
+      setSaving(false);
+      setShowSwitchUserModal(false);
+    }
+  }
+
   if (loading) return <main dir="rtl" className="arkan-pos-page" style={s.page}>جاري تحميل ARKAN POS...</main>;
   if (!allowed) return <main dir="rtl" className="arkan-pos-page" style={s.page}><h2>شاشة الكاشير</h2><p>ليس لديك صلاحية pos.use. اطلب من المدير تفعيلها لحسابك.</p></main>;
 
@@ -817,8 +833,25 @@ export default function PosPage() {
         
       `}</style>
 
+      <div style={{...s.header,marginBottom:14}}>
+        <div>
+          <div style={s.eyebrow}>ARKAN CAFE</div>
+          <div style={{fontWeight:800,fontSize:18}}>نظام نقاط البيع</div>
+        </div>
+        <button type="button" style={s.secondary} disabled={saving} onClick={() => setShowSwitchUserModal(true)}>تبديل المستخدم</button>
+      </div>
       <nav className="tabs" style={s.tabs}>{tabs.filter((t) => t.id !== "sales" || posPermissions.salesView).map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "sales") { setScreen("sales"); } else if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       {error && <p style={s.error}>{error}</p>}
+      {showSwitchUserModal && <div style={s.modalBackdrop} onClick={() => !saving && setShowSwitchUserModal(false)}>
+        <div role="dialog" aria-modal="true" aria-labelledby="switch-user-title" style={{...s.itemNoteModal,width:"min(460px,94vw)"}} onClick={(e) => e.stopPropagation()}>
+          <h2 id="switch-user-title" style={{margin:0,textAlign:"center"}}>تبديل المستخدم</h2>
+          <p style={{textAlign:"center",lineHeight:1.8,margin:"12px 0 18px"}}>سيتم تسجيل خروج المستخدم الحالي والعودة إلى شاشة دخول POS. أي أصناف لم يتم حفظها في الأوردر الحالي لن يتم الاحتفاظ بها.</p>
+          <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+            <button type="button" style={s.submit} disabled={saving} onClick={switchPosUser}>{saving ? "جاري تسجيل الخروج..." : "تأكيد تبديل المستخدم"}</button>
+            <button type="button" style={s.secondary} disabled={saving} onClick={() => setShowSwitchUserModal(false)}>إلغاء</button>
+          </div>
+        </div>
+      </div>}
       {showTransfer && (selectedTableOrder || editingOrderId) && !editingOrderClosed && <div style={s.modalBackdrop} onClick={() => { if (!saving) { setShowTransfer(false); setTransferTarget(""); } }}>
         <div role="dialog" aria-modal="true" aria-labelledby="transfer-table-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden"}} onClick={e => e.stopPropagation()}>
           <h2 id="transfer-table-title" style={{margin:0,textAlign:"center"}}>اختار الطاولة الجديدة</h2>
