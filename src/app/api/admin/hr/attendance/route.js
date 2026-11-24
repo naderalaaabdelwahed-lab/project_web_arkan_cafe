@@ -21,12 +21,11 @@ export async function GET(request){
   if(month<1||month>12)return NextResponse.json({error:"اختار شهرًا صحيحًا."},{status:400});
   const from=requestedMonth+"-01";
   const to=new Date(Date.UTC(year,month,0)).toISOString().slice(0,10);
-  const [{data:employees,error:er},{data:rows,error:re},{data:balances,error:be}]=await Promise.all([
-   db.from("hr_employees").select("id,full_name,paid_leave_days,daily_work_hours,hire_date,employment_status,termination_date,monthly_salary,job_title,department").order("full_name"),
+  const [{data:employees,error:er},{data:rows,error:re}]=await Promise.all([
+   db.from("hr_employees").select("id,full_name,daily_work_hours,hire_date,employment_status,termination_date,monthly_salary,job_title,department").order("full_name"),
    db.from("hr_attendance").select("*,hr_employees(full_name,job_title,department,monthly_salary,daily_work_hours)").gte("shift_date",from).lte("shift_date",to).order("shift_date",{ascending:true}),
-   db.from("hr_leave_balances").select("employee_id,leave_year,allocated_days,used_days").eq("leave_year",year)
   ]);
-  if(re)throw re;if(er)throw er;if(be)throw be;
+  if(re)throw re;if(er)throw er;
   const registerEmployees=(employees||[]).filter(e=>e.hire_date<=to&&(!e.termination_date||e.termination_date>=from)&&(e.employment_status==="active"||(rows||[]).some(r=>r.employee_id===e.id)));
   if(registerEmployees.length){
    const registerRows=registerEmployees.map(e=>({employee_id:e.id,month_start:from,month_end:to}));
@@ -35,7 +34,7 @@ export async function GET(request){
   }
   const {data:registers,error:registerReadError}=await db.from("hr_attendance_monthly_registers").select("id,employee_id,month_start,month_end,created_at").eq("month_start",from);
   if(registerReadError)throw registerReadError;
-  return NextResponse.json({month:requestedMonth,monthStart:from,monthEnd:to,attendance:rows||[],employees:employees||[],leaveBalances:balances||[],registers:registers||[]});
+  return NextResponse.json({month:requestedMonth,monthStart:from,monthEnd:to,attendance:rows||[],employees:employees||[],registers:registers||[]});
  }catch(e){console.error("HR attendance GET",e);return NextResponse.json({error:e.message||"تعذر تحميل كشف الحضور الشهري."},{status:500})}
 }
 export async function PATCH(request){
@@ -43,7 +42,7 @@ export async function PATCH(request){
   const a=await admin(request);if(a.response)return a.response;
   const b=await request.json(),id=String(b.id||"");
   if(!/^[0-9a-f-]{36}$/i.test(id))return NextResponse.json({error:"سجل غير صحيح."},{status:400});
-  const allowed=["present","absent","paid_leave","unpaid_leave","excused","holiday"];
+  const allowed=["present","absent","unpaid_leave","excused","holiday"];
   const {data:current,error:readError}=await a.db.from("hr_attendance").select("*").eq("id",id).maybeSingle();
   if(readError)throw readError;
   if(!current)return NextResponse.json({error:"سجل الحضور غير موجود."},{status:404});
@@ -68,9 +67,9 @@ export async function PATCH(request){
   if(changesIn)updates.check_in_method="manager";
   if(changesOut)updates.check_out_method="manager";
   if(changesIn&&checkIn&&b.attendance_status===undefined)updates.attendance_status="present";
-  if(changesIn||changesOut){
+  if(changesIn||changesOut||b.attendance_status!==undefined){
    let worked=0,overtime=0,shortage=0;
-   if(checkIn&&checkOut){
+   if(updates.attendance_status==="present"&&checkIn&&checkOut){
     const elapsed=Math.max(0,Math.round((new Date(checkOut)-new Date(checkIn))/60000));
     worked=elapsed;
     const {data:emp,error:empError}=await a.db.from("hr_employees").select("daily_work_hours").eq("id",current.employee_id).maybeSingle();
@@ -80,7 +79,7 @@ export async function PATCH(request){
     shortage=Math.max(0,planned-worked);
    }
    updates.worked_minutes=worked;updates.overtime_minutes=overtime;updates.shortage_minutes=shortage;
-   if(changesIn)updates.late_minutes=0;
+   updates.late_minutes=0;
   }
   if(b.notes!==undefined)updates.notes=String(b.notes||"").slice(0,1000)||null;
   else if(changesIn||changesOut)updates.notes=[current.notes,"تعديل وقت الحضور/الانصراف يدويًا بواسطة المدير"].filter(Boolean).join("\\n").slice(0,1000);
@@ -95,7 +94,7 @@ export async function POST(request){
   const b=await request.json(),employee_id=String(b.employee_id||""),shift_date=String(b.shift_date||"");
   if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^(\d{4})-(\d{2})-(\d{2})$/.test(shift_date))
    return NextResponse.json({error:"اختار الموظف والتاريخ."},{status:400});
-  const status=b.attendance_status==="paid_leave"?"paid_leave":"absent";
+  const status="absent";
   const {data,error}=await a.db.rpc("hr_review_attendance",{
    p_attendance_id:null,p_employee_id:employee_id,p_shift_date:shift_date,p_status:status,
    p_notes:String(b.notes||"").slice(0,1000),p_reviewed_by:a.user.id
