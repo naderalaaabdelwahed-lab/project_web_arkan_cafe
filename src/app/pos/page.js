@@ -39,6 +39,8 @@ export default function PosPage() {
   const [reservationId, setReservationId] = useState(null);
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [editingOrderTotal, setEditingOrderTotal] = useState(null);
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferTarget, setTransferTarget] = useState("");
   const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -117,6 +119,14 @@ export default function PosPage() {
     return matchesSearch && matchesType && matchesStatus && matchesFrom && matchesTo && matchesTable;
   });
   const activeTables = orders.filter((o) => o.order_type === "dine-in" && !["delivered","cancelled"].includes(o.status));
+  const transferTargets = [
+    ...Array.from({ length: Number(settings.indoor_tables) || 0 }, (_, i) => ({ area: "indoor", number: i + 1 })),
+    ...Array.from({ length: Number(settings.outdoor_tables) || 0 }, (_, i) => ({ area: "outdoor", number: i + 1 })),
+  ].filter((target) =>
+    !(target.area === area && target.number === table) &&
+    !activeTables.some((o) => o.id !== editingOrderId && o.table_area === target.area && o.table_number === target.number) &&
+    !reservations.some((r) => r.table_number === target.number && (r.seating_area || "indoor") === target.area)
+  );
 
   function add(p) {
     setCart((old) => {
@@ -211,6 +221,31 @@ export default function PosPage() {
     } catch (e) {
       setError("فشل إنشاء الطلب: " + e.message);
     } finally { setSaving(false); }
+  }
+
+  async function transferTable() {
+    if (!editingOrderId) return;
+    if (!transferTarget) return setError("اختار الطاولة الجديدة.");
+    const [targetArea, targetNumber] = transferTarget.split(":");
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await supabase.rpc("move_pos_order_between_tables", {
+        p_order_id: editingOrderId,
+        p_target_table_number: Number(targetNumber),
+        p_target_table_area: targetArea,
+      });
+      if (result.error) throw result.error;
+      setMessage("تم نقل الأوردر ARK-" + editingOrderId + " إلى الطاولة " + targetNumber + " بنجاح.");
+      setShowTransfer(false);
+      setTransferTarget("");
+      reset();
+      setScreen("tables");
+      await load();
+    } catch (e) {
+      setError("فشل نقل الطاولة: " + e.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) return <main dir="rtl" className="arkan-pos-page" style={s.page}>جاري تحميل ARKAN POS...</main>;
@@ -339,10 +374,22 @@ export default function PosPage() {
             <div style={s.head}>
               <div><h2>{editingOrderId ? "تعديل الأوردر الحالي #" + editingOrderId : "الطلب الحالي"}</h2><small style={s.muted}>{mode === "dine-in" ? (area === "indoor" ? "طاولة داخلية " : "طاولة خارجية ") + table : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div>
               <div style={{display:"flex",gap:7}}>
+                {editingOrderId && <button style={s.secondary} onClick={() => { setShowTransfer((v) => !v); setTransferTarget(""); }}>نقل الطاولة</button>}
                 {mode === "dine-in" && <button style={s.secondary} onClick={() => setScreen("tables")}>رجوع للطاولات</button>}
                 <button style={s.clear} onClick={() => { reset(); if (editingOrderId && mode === "dine-in") setScreen("tables"); }}>{editingOrderId ? "إلغاء التعديل" : "مسح الطلب"}</button>
               </div>
             </div>
+            {showTransfer && editingOrderId && <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto", gap: 8, alignItems: "center", padding: 12, marginBottom: 12, border: "1px solid #e5d3b8", borderRadius: 9, background: "#fffaf1" }}>
+              <select className="pos-filter-control" style={s.filterInput} value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)}>
+                <option value="">اختار الطاولة الجديدة</option>
+                {transferTargets.map((target) => <option key={target.area + ":" + target.number} value={target.area + ":" + target.number}>
+                  {target.area === "indoor" ? "داخلية" : "خارجية"} — طاولة {target.number}
+                </option>)}
+              </select>
+              <button style={s.submit} disabled={saving || !transferTarget} onClick={transferTable}>{saving ? "جاري النقل..." : "تأكيد النقل"}</button>
+              <button style={s.secondary} disabled={saving} onClick={() => { setShowTransfer(false); setTransferTarget(""); }}>إلغاء</button>
+              {!transferTargets.length && <small style={{ gridColumn: "1 / -1", color: "#8b681b" }}>لا توجد طاولات متاحة للنقل حاليًا.</small>}
+            </div>}
             {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
             <div style={s.cart}>{cart.map(x => <div key={x.cartKey} style={s.cartItem}>
               <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><b>{fmt(x.price*x.quantity)} ج.م</b></div>
