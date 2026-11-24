@@ -112,52 +112,37 @@ export default function AttendancePage(){
   {selected&&<>
    <section className="attendance-print" style={{...box,marginBottom:18}}>
     <header style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap",borderBottom:"1px solid #8b6d3c",paddingBottom:12,marginBottom:14}}>
-     <div><h1 style={{margin:"0 0 8px"}}>ARKAN — كشف الحضور والانصراف الشهري</h1><h2 style={{margin:"0 0 6px"}}>{selected.full_name}</h2><p style={{margin:0}}>الوظيفة: {selected.job_title||"—"} | القسم: {selected.department||"—"}</p><p style={{margin:"5px 0 0"}}>تاريخ التعيين: {selected.hire_date||"—"} | آخر يوم عمل: {selected.termination_date||"على رأس العمل"}</p></div>
-     <div><strong>الشهر: {month}</strong><p>الفترة: {month}-01 إلى {month}- {new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate()}</p><p>رقم السجل: {register?.id||"—"}</p></div>
+     <div>
+      <h1 style={{margin:"0 0 8px"}}>ARKAN — تقرير الموظف</h1>
+      <h2 style={{margin:"0 0 6px"}}>{selected.full_name}</h2>
+      <p style={{margin:0}}>الوظيفة: {selected.job_title||"—"}</p>
+      <p style={{margin:"5px 0 0"}}>الراتب الأساسي: {money(selected.monthly_salary??payrollDetails.contract_monthly_salary??0)}</p>
+     </div>
+     <div><strong>الشهر: {month}</strong></div>
     </header>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10,marginBottom:16}}>
-     <div style={box}><strong>أيام الحضور</strong><div>{summary.attended} يوم</div></div>
-     <div style={box}><strong>إجمالي العمل</strong><div>{hours(summary.worked)}</div></div>
-     <div style={box}><strong>الإضافي</strong><div>{hours(summary.overtime)}</div></div>
-     <div style={box}><strong>العجز</strong><div>{hours(summary.shortage)}</div></div>
-     <div style={box}><strong>أيام الغياب</strong><div>{summary.absent} يوم</div></div>
-    </div>
     <section style={{marginBottom:18,padding:14,border:"1px solid #8b6d3c",borderRadius:10}}>
-     <h2 style={{margin:"0 0 12px"}}>كشف المستحقات والراتب</h2>
+     <h2 style={{margin:"0 0 12px"}}>الخصومات وفرق الوقت وصافي الراتب</h2>
      {payrollItem?<>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10}}>
-       <div style={box}><strong>الراتب الشهري</strong><div>{money(payrollDetails.contract_monthly_salary)}</div></div>
-       <div style={box}><strong>أيام الحضور</strong><div>{payrollDetails.attended_days??summary.attended} يوم</div></div>
-       <div style={box}><strong>الأساسي المستحق</strong><div>{money(payrollItem.monthly_salary)}</div></div>
-       <div style={box}><strong>ساعات الإضافي</strong><div>{hours(payrollDetails.overtime_minutes)}</div></div>
-       <div style={box}><strong>ساعات العجز</strong><div>{hours(payrollDetails.shortage_minutes)}</div></div>
-       <div style={box}><strong>قيمة الإضافي</strong><div>{money(overtimeAmount)}</div></div>
-       <div style={box}><strong>خصم العجز</strong><div>{money(shortageAmount)}</div></div>
-       <div style={box}><strong>الخصومات الأخرى</strong><div>{money(payrollItem.other_deductions)}</div></div>
-       <div style={box}><strong>إجمالي الخصومات مع العجز</strong><div>{money(totalDeductions)}</div></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10}}>
+       <div style={box}><strong>الخصومات</strong><div>{money(payrollItem.other_deductions)}</div></div>
+       <div style={box}><strong>الإضافي</strong><div>{hours(payrollDetails.overtime_minutes)} — {money(overtimeAmount)}</div></div>
+       <div style={box}><strong>العجز</strong><div>{hours(payrollDetails.shortage_minutes)} — {money(shortageAmount)}</div></div>
+       <div style={box}><strong>صافي فرق الوقت</strong><div>{money(overtimeAmount-shortageAmount)}</div></div>
        <div style={box}><strong>الحوافز والإضافات</strong><div>{money(payrollItem.additions)}</div></div>
-       <div style={box}><strong>سعر الساعة</strong><div>{money(hourlyRate)}</div></div>
-       <div style={box}><strong>أجر اليوم</strong><div>{money(Number(payrollDetails.contract_monthly_salary||0)/30)}</div></div>
-       <div style={box}><strong>الإجازة الأسبوعية المدفوعة</strong><div>{payrollDetails.weekly_paid_rest_days??0} يوم</div></div>
-       <div style={box}><strong>إجمالي أيام الاستحقاق</strong><div>{Number(payrollDetails.paid_days_total??0).toFixed(0)} يوم</div></div>
-       <div style={{...box,gridColumn:"span 2"}}><strong>صافي الراتب بعد الإضافي والعجز والخصومات والحوافز</strong><div style={{fontSize:22,fontWeight:800}}>{money(payrollItem.net_salary)}</div></div>
-       <div style={box}><strong>فترة الاستحقاق</strong><div>{payrollDetails.eligible_start||month+"-01"} إلى {payrollDetails.eligible_end||month+"-"+new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate()}</div></div>
+       <div style={{...box,gridColumn:"span 1"}}><strong>صافي الراتب</strong><div style={{fontSize:22,fontWeight:800}}>{money(payrollItem.net_salary)}</div></div>
       </div>
-      <p style={{margin:"12px 0 0"}}>حالة كشف الرواتب: {payrollRun?(payrollRun.status==="finalized"?"معتمد":"مسودة — لم يتم الاعتماد بعد"):"حساب مباشر — لم يتم إنشاء كشف الرواتب بعد"}</p>
-     </>:<p style={{margin:0}}>تعذر حساب مستحقات الموظف لهذا الشهر. راجع بيانات الراتب وتسجيلات الحضور.</p>}
+     </>:<p style={{margin:0}}>تعذر حساب صافي الراتب لهذا الشهر. راجع بيانات الراتب والحضور.</p>}
     </section>
     <div style={{overflowX:"auto"}}>
      <table style={{width:"100%",borderCollapse:"collapse",minWidth:850}}>
-      <thead><tr>{["اليوم / التاريخ","الحضور","الانصراف","ساعات العمل","إضافي","عجز","الحالة","ملاحظات"].map(x=><th key={x} style={{textAlign:"right",padding:9,borderBottom:"1px solid #8b6d3c"}}>{x}</th>)}</tr></thead>
+      <thead><tr>{["التاريخ","الحضور","الانصراف","ساعات العمل"].map(x=><th key={x} style={{textAlign:"right",padding:9,borderBottom:"1px solid #8b6d3c"}}>{x}</th>)}</tr></thead>
       <tbody>{days.map(date=>{
        const row=rowsByDate.get(date),beforeHire=date<selected.hire_date,future=date>today;
        return <tr key={date}>
         <td style={td}>{fmtDate(date)}</td>
-        <td style={td}>{fmt(row?.check_in_at)}</td><td style={td}>{fmt(row?.check_out_at)}</td>
+        <td style={td}>{fmt(row?.check_in_at)}</td>
+        <td style={td}>{fmt(row?.check_out_at)}</td>
         <td style={td}>{row?hours(row.worked_minutes):"—"}</td>
-        <td style={td}>{row?hours(row.overtime_minutes):"—"}</td><td style={td}>{row?hours(row.shortage_minutes):"—"}</td>
-        <td style={td}>{beforeHire?"قبل التعيين":future?"لم يحن بعد":row?(statusLabels[row.attendance_status]||row.attendance_status):"لا يوجد تسجيل"}</td>
-        <td style={td}>{row?.notes||"—"}</td>
        </tr>;
       })}</tbody>
      </table>
