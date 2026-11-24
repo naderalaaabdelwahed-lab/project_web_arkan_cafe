@@ -42,7 +42,6 @@ export default function PosPage() {
     tableTransfer: false,
     itemsTransfer: false,
     tableMerge: false,
-    paymentReceive: false,
     orderFinish: false,
     receiptPrint: false,
   });
@@ -104,7 +103,6 @@ export default function PosPage() {
         "pos.table.transfer",
         "pos.items.transfer",
         "pos.table.merge",
-        "pos.payment.receive",
         "pos.order.finish",
         "pos.receipt.print",
       ];
@@ -129,9 +127,8 @@ export default function PosPage() {
         tableTransfer: isAdmin || Boolean(posPermissionResults[4].data),
         itemsTransfer: isAdmin || Boolean(posPermissionResults[5].data),
         tableMerge: isAdmin || Boolean(posPermissionResults[6].data),
-        paymentReceive: isAdmin || Boolean(posPermissionResults[7].data),
-        orderFinish: isAdmin || Boolean(posPermissionResults[8].data),
-        receiptPrint: isAdmin || Boolean(posPermissionResults[9].data),
+        orderFinish: isAdmin || Boolean(posPermissionResults[7].data),
+        receiptPrint: isAdmin || Boolean(posPermissionResults[8].data),
       });
       setCanCloseDay(Boolean(isAdmin || closePermissionResult.data));
       setAllowed(canUse);
@@ -515,7 +512,7 @@ export default function PosPage() {
   }
 
   async function recordCashPayment(orderId = editingOrderId, receivedOverride = null) {
-    if (!posPermissions.paymentReceive) return setError("ليس لديك صلاحية تسجيل السداد.");
+    if (!posPermissions.orderFinish) return setError("ليس لديك صلاحية إنهاء الأوردر وتسجيل السداد.");
     if (!orderId) return;
     const received = receivedOverride === null ? Number(cashReceived) : Number(receivedOverride);
     if (!Number.isFinite(received) || received <= 0) return setError("اكتب المبلغ النقدي المستلم.");
@@ -1068,7 +1065,7 @@ export default function PosPage() {
             <section className="pos-floor-action-panel pos-floor-payment-actions" aria-label="عمليات الحساب والدفع">
               <h3>الحساب والدفع</h3>
               <div className="pos-floor-action-grid">
-                <button type="button" className="is-primary" disabled={!selectedTableOrder || !posPermissions.paymentReceive || selectedDue <= 0 || saving} onClick={() => { setCashReceived(""); setShowCashModal(true); }}>
+                <button type="button" className="is-primary" disabled={!selectedTableOrder || !posPermissions.orderFinish || selectedDue <= 0 || saving} onClick={() => { setCashReceived(""); setShowCashModal(true); }}>
                   <span className="pos-action-icon">💵</span><b>سداد نقدي</b>
                 </button>
                 <button type="button" disabled={!selectedTableOrder || !posPermissions.discountApply || saving} onClick={() => { setShowDiscountPanel(v => !v); setShowTransfer(false); setShowMergePanel(false); setDiscountType("amount"); setDiscountValue(String(selectedTableOrder?.discount_amount || 0)); }}>
