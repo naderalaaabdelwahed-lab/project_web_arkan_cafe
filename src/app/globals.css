@@ -3280,7 +3280,7 @@ body .arkan-pos-page input:-webkit-autofill:focus {
 .arkan-pos-page h1 { font-size: clamp(28px, 2.4vw, 36px); line-height: 1.3; }
 .arkan-pos-page h2 { font-size: clamp(22px, 1.8vw, 28px); line-height: 1.35; }
 .arkan-pos-page h3 { font-size: 19px; line-height: 1.4; }
-.arkan-pos-page small, .arkan-pos-page label { font-size: 14px; line-height: 1.6; }
+.arkan-pos-page small, .arkan-pos-page label { font-size: 14px !important; line-height: 1.6; }
 .arkan-pos-page button, .arkan-pos-page input, .arkan-pos-page select, .arkan-pos-page textarea { font: inherit; }
 .arkan-pos-page button { min-height: 44px; padding: 10px 15px; }
 .arkan-pos-page input, .arkan-pos-page select, .arkan-pos-page textarea { min-height: 44px; padding: 10px 12px; font-size: 16px !important; }
@@ -3293,7 +3293,7 @@ body .arkan-pos-page input:-webkit-autofill:focus {
 .arkan-pos-page .products { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important; gap: 12px !important; }
 .arkan-pos-page .product { padding: 12px !important; font-size: 16px; }
 .arkan-pos-page .product b { font-size: 16px; line-height: 1.45; }
-.arkan-pos-page .product small { font-size: 15px; font-weight: 700; }
+.arkan-pos-page .product small { font-size: 15px !important; font-weight: 700; }
 .arkan-pos-page .tableTile { min-height: 116px !important; font-size: 20px !important; }
 .arkan-pos-page .tableTile small { font-size: 14px !important; }
 .arkan-floor-dashboard { align-items: start !important; overflow: visible; }
