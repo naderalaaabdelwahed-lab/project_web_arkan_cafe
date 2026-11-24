@@ -471,43 +471,7 @@ export default function PosPage() {
 
   return (
     <main dir="rtl" className="arkan-pos-page" style={s.page}>
-      <style jsx global>{`
-.arkan-floor-dashboard{min-width:0;align-items:stretch}
-.arkan-pos-page input,.arkan-pos-page textarea,.arkan-pos-page select{color:#171717!important;-webkit-text-fill-color:#171717!important;background:#fff!important;caret-color:#171717!important;opacity:1!important}
-.arkan-pos-page input::placeholder,.arkan-pos-page textarea::placeholder{color:#666!important;-webkit-text-fill-color:#666!important;opacity:1!important}
-.arkan-pos-page select option{color:#171717;background:#fff}
-.arkan-pos-page input:-webkit-autofill,.arkan-pos-page input:-webkit-autofill:hover,.arkan-pos-page input:-webkit-autofill:focus{-webkit-text-fill-color:#171717!important;box-shadow:0 0 0 1000px #fff inset!important;caret-color:#171717!important}
-.arkan-pos-page .pos-filter-control{font-weight:600}
-.arkan-pos-page input::-webkit-calendar-picker-indicator{opacity:1}
-.arkan-floor-dashboard .floorDetails{grid-column:1/-1}
-@media(min-width:1200px) and (min-height:720px){
-  body:has(.arkan-floor-dashboard) .arkan-pos-page{min-height:100dvh;padding:12px 16px!important;gap:10px!important}
-  .arkan-pos-page>.arkan-floor-dashboard{grid-template-columns:minmax(230px,1fr) minmax(0,2.15fr) minmax(250px,1fr)!important;gap:12px!important}
-  .arkan-floor-dashboard>aside,.arkan-floor-dashboard>div{min-width:0}
-  .arkan-floor-dashboard>div:nth-child(2){min-height:0}
-  .arkan-floor-dashboard .floorDetails{grid-column:1/-1}
-}
-@media(max-width:1199px){
-  .arkan-pos-page{min-height:100vh;padding:16px!important}
-  .arkan-pos-page>.arkan-floor-dashboard{grid-template-columns:minmax(0,1fr) minmax(0,1.7fr)!important;gap:12px!important}
-  .arkan-floor-dashboard>aside:nth-of-type(2){grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr))}
-  .arkan-floor-dashboard .floorDetails{grid-column:1/-1}
-}
-@media(max-width:760px){
-  .arkan-pos-page{padding:12px!important;gap:12px!important}
-  .arkan-pos-page>.arkan-floor-dashboard{grid-template-columns:minmax(0,1fr)!important}
-  .arkan-floor-dashboard>aside:nth-of-type(2){grid-column:auto;grid-template-columns:minmax(0,1fr)}
-  .arkan-floor-dashboard .floorDetails{grid-column:auto}
-  .arkan-floor-dashboard .floorDetailRow{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px!important}
-  .arkan-floor-dashboard .floorDetailRow span{min-width:0;white-space:normal}
-  .arkan-floor-dashboard button{min-height:42px}
-  .arkan-floor-dashboard>div:nth-child(2)>div[style*="grid"]{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))!important}
-}
-@media(max-width:420px){
-  .arkan-pos-page{padding:8px!important}
-  .arkan-floor-dashboard .floorDetailRow{grid-template-columns:minmax(0,1fr)}
-}
-`}</style>
+
       <header style={s.header}>
         <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
         <button style={s.secondary} onClick={load}>تحديث البيانات</button>
@@ -670,11 +634,11 @@ export default function PosPage() {
             <h2>سداد الأوردر وإغلاق الطاولة</h2><small>ARK-{selectedTableOrder.id} — طاولة {selectedTableOrder.table_number}</small>
             <div style={s.modalAmount}>المتبقي: {fmt(selectedDue)} ج.م</div>
             <label style={s.floorLabel}>المبلغ المستلم من العميل</label>
-            <input autoFocus type="number" min={selectedDue+0.01} step="0.01" style={s.discountInput} value={cashReceived} onChange={e=>setCashReceived(e.target.value)} placeholder="اكتب المبلغ المستلم"/>
+            <input autoFocus type="number" min={selectedDue} step="0.01" style={s.discountInput} value={cashReceived} onChange={e=>setCashReceived(e.target.value)} placeholder="اكتب المبلغ المستلم"/>
             <div>الباقي للعميل: <b>{fmt(Math.max(0,Number(cashReceived||0)-selectedDue))} ج.م</b></div>
-            <small style={s.floorHint}>لازم المبلغ المستلم يكون أكبر من المتبقي على الفاتورة.</small>
+            <small style={s.floorHint}>المبلغ المستلم لازم يكون مساويًا للمتبقي أو أكبر منه.</small>
             <div style={{display:"flex",gap:8,marginTop:12}}>
-              <button style={s.submit} disabled={saving||!Number.isFinite(Number(cashReceived))||Number(cashReceived)<=selectedDue} onClick={()=>recordCashPayment(selectedTableOrder.id)}>{saving?"جاري السداد...":"سداد وإغلاق الأوردر"}</button>
+              <button style={s.submit} disabled={saving||!Number.isFinite(Number(cashReceived))||Number(cashReceived)<selectedDue} onClick={()=>recordCashPayment(selectedTableOrder.id)}>{saving?"جاري السداد...":"سداد وإغلاق الأوردر"}</button>
               <button style={s.secondary} disabled={saving} onClick={()=>setShowCashModal(false)}>إلغاء</button>
             </div>
           </div>
