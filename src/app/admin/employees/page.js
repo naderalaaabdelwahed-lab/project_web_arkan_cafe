@@ -62,6 +62,39 @@ const permissionGroups = [
       ["inventory.reports.view", "عرض تقارير المخزون"],
     ],
   },
+  {
+    title: "شؤون الموظفين",
+    items: [
+      ["hr.employees.view", "عرض ملفات الموظفين"],
+      ["hr.employees.create", "إضافة موظف جديد"],
+      ["hr.employees.update", "تعديل بيانات الموظفين"],
+      ["hr.employees.archive", "إيقاف وأرشفة الموظفين"],
+      ["hr.employees.accounts.manage", "إنشاء وإدارة حسابات دخول HR"],
+    ],
+  },
+  {
+    title: "الحضور والانصراف",
+    items: [
+      ["hr.attendance.view", "عرض سجلات الحضور والانصراف"],
+      ["hr.attendance.manage", "تسجيل وتصحيح الحضور والانصراف والغياب"],
+    ],
+  },
+  {
+    title: "الشيفتات",
+    items: [
+      ["hr.shifts.view", "عرض الشيفتات وتكليفات الموظفين"],
+      ["hr.shifts.manage", "إنشاء وتعديل وحذف الشيفتات والتكليفات"],
+    ],
+  },
+  {
+    title: "الرواتب والمستحقات",
+    items: [
+      ["hr.payroll.view", "عرض الرواتب وكشوف المرتبات"],
+      ["hr.payroll.adjust", "إضافة وحذف المكافآت والخصومات"],
+      ["hr.payroll.create", "إنشاء مسودة كشف الرواتب"],
+      ["hr.payroll.finalize", "اعتماد وإقفال كشف الرواتب"],
+    ],
+  },
 ];
 
 const colors = {
