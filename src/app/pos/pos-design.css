@@ -603,3 +603,9 @@
 .arkan-pos-page .pos-floor-order-preview tfoot th {
   font-size: 19px !important;
 }
+
+
+/* Keep the money amount shown on each floor table tile black */
+.arkan-pos-page .floor-table-tile .table-amount {
+  color: #000 !important;
+}
