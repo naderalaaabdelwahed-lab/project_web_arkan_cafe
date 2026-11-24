@@ -1053,11 +1053,24 @@
 /* Match POS cashier screens to the unified ARKAN floor palette */
 .arkan-pos-page {
   --pos-ink:#29251F;
-  --pos-muted:#746958;
+  --pos-muted:#62594f;
   --pos-border:#E8E0D4;
   --pos-surface:#FFFFFF;
   --pos-bg:#F6F4F0;
-  --pos-gold:#B58B4D;
+  --pos-gold:#91672f;
   --pos-gold-light:#F5EFE4;
 }
 .arkan-pos-page { background:var(--pos-bg)!important; color:var(--pos-ink)!important; }
+
+/* Readable POS text while preserving semantic button and status colors */
+.arkan-pos-page { color: #29251F; }
+.arkan-pos-page :is(h1,h2,h3,h4,h5,h6,p,label,th,td,small,strong,span) {
+  color: inherit;
+}
+.arkan-pos-page input,
+.arkan-pos-page select,
+.arkan-pos-page textarea { color: #29251F; background-color: #FFFFFF; }
+.arkan-pos-page input::placeholder,
+.arkan-pos-page textarea::placeholder { color: #62594F; opacity: 1; }
+.arkan-pos-page .tabs .tab.active,
+.arkan-pos-page .tabs .tab[aria-current="page"] { color: #FFFFFF !important; }
