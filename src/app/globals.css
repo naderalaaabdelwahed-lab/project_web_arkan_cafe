@@ -3773,3 +3773,102 @@ input:focus, textarea:focus, select:focus { border-color: var(--arkan-accent) !i
   /* Preserve each component's own semantic foreground/background. */
   color: inherit;
 }
+
+
+/* Additional legacy dark inline surfaces used by the remaining admin pages */
+.admin-main [style*="#0f172a"],
+.admin-main [style*="#111827"],
+.admin-main [style*="#0b1220"],
+.admin-main [style*="#172033"],
+.admin-main [style*="#172235"],
+.admin-main [style*="#172438"],
+.admin-main [style*="#1e293b"],
+.admin-main [style*="#202b3c"],
+.admin-main [style*="#26364d"],
+.admin-main [style*="#3b4960"],
+.admin-main [style*="#101820"],
+.admin-main [style*="#14212c"],
+.admin-main [style*="#14212c"],
+.admin-main [style*="#15120e"],
+.admin-main [style*="#211b14"],
+.admin-main [style*="#211b16"],
+.admin-main [style*="#1d1d1d"],
+.admin-main [style*="#292929"],
+.admin-main [style*="#202020"],
+.admin-main [style*="#1c1c1c"],
+.admin-main [style*="#171717"],
+.admin-main [style*="#151515"],
+.admin-main [style*="#100d0b"],
+.admin-main [style*="#15120e"],
+.inventory-layout [style*="#0f172a"],
+.inventory-layout [style*="#111827"],
+.inventory-layout [style*="#0b1220"],
+.inventory-layout [style*="#172033"],
+.inventory-layout [style*="#172235"],
+.inventory-layout [style*="#172438"],
+.inventory-layout [style*="#1e293b"],
+.inventory-layout [style*="#202b3c"],
+.inventory-layout [style*="#26364d"],
+.inventory-layout [style*="#3b4960"],
+.inventory-layout [style*="#29221b"],
+.inventory-layout [style*="#33291f"] {
+  background-color: #FFFFFF !important;
+  color: #29251F !important;
+  border-color: #E8E0D4 !important;
+}
+
+/* Inventory reports: legacy page-specific dark theme */
+.inventory-reports {
+  color: #29251F !important;
+}
+.inventory-reports .filters,
+.inventory-reports .report,
+.inventory-reports .stats article,
+.inventory-reports .tabs,
+.inventory-reports .summary,
+.inventory-reports .table-wrap {
+  background: #FFFFFF !important;
+  color: #29251F !important;
+  border-color: #E8E0D4 !important;
+}
+.inventory-reports .breadcrumb,
+.inventory-reports p,
+.inventory-reports .stats span {
+  color: #62594F !important;
+}
+.inventory-reports h1,
+.inventory-reports h2,
+.inventory-reports h3,
+.inventory-reports label,
+.inventory-reports .stats strong {
+  color: #29251F !important;
+}
+.inventory-reports input,
+.inventory-reports select {
+  background: #FFFFFF !important;
+  color: #29251F !important;
+  border-color: #D8CFC1 !important;
+}
+.inventory-reports .table-wrap th {
+  background: #F5EFE4 !important;
+  color: #79552E !important;
+  border-color: #E8E0D4 !important;
+}
+.inventory-reports .table-wrap td,
+.inventory-reports .table-wrap tbody tr:nth-child(even) td,
+.inventory-reports .table-wrap tbody tr:hover td {
+  background: #FFFFFF !important;
+  color: #29251F !important;
+  border-color: #E8E0D4 !important;
+}
+.inventory-reports button {
+  background: #F1E9DC;
+  color: #29251F;
+  border-color: #D8CFC1;
+}
+.inventory-reports button.primary,
+.inventory-reports .actions .primary {
+  background: #91672F !important;
+  border-color: #91672F !important;
+  color: #FFFFFF !important;
+}
