@@ -86,7 +86,7 @@ export async function POST(request) {
       return NextResponse.json({success:true,action,recorded_at:now.toISOString(),shift_date:today});
     }
     const {data:rows,error}=await auth.db.from("hr_attendance").select("id,shift_date,check_in_at")
-      .eq("employee_id",auth.employee.id).not("check_in_at","is",null).is("check_out_at",null).order("check_in_at",{ascending:false}).limit(1);
+      .eq("employee_id",auth.employee.id).not("check_in_at","is",null).is("check_out_at",null).is("checkout_skipped_at",null).order("check_in_at",{ascending:false}).limit(1);
     if(error)throw error;
     const open=rows?.[0];
     if(!open)return NextResponse.json({error:"لا يوجد حضور مفتوح. لا يمكن تسجيل الانصراف قبل الحضور."},{status:409});
