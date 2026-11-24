@@ -3598,3 +3598,178 @@ input:focus, textarea:focus, select:focus { border-color: var(--arkan-accent) !i
 .inventory-layout [class*="error"] {
   border-color: #E9C4BF;
 }
+
+
+/* ===== Admin visual consistency: match the menu management palette ===== */
+.admin-layout,
+.admin-layout.inventory-admin-layout,
+.admin-layout > .admin-main,
+.inventory-layout,
+.inventory-layout > main {
+  background: #F6F4F0 !important;
+  color: #29251F !important;
+}
+.admin-layout > .admin-sidebar,
+.inventory-layout > aside {
+  background: #FFFFFF !important;
+  color: #29251F !important;
+  border-color: #E8E0D4 !important;
+}
+.admin-layout .admin-logo,
+.admin-layout .admin-menu-title,
+.admin-layout .admin-sidebar-footer,
+.admin-layout .admin-sidebar-footer small,
+.admin-layout .admin-nav a,
+.inventory-layout > aside a {
+  color: #62594F !important;
+}
+.admin-layout .admin-nav a:hover,
+.admin-layout .admin-nav a.active,
+.inventory-layout > aside a:hover {
+  background: #F5EFE4 !important;
+  color: #79552E !important;
+}
+.admin-layout .admin-sidebar-footer button {
+  background: #91672F !important;
+  color: #FFFFFF !important;
+  border-color: #91672F !important;
+}
+
+/* Main page typography (keep status labels, badges and action buttons semantic) */
+.admin-main h1:not([class*="status"]):not([class*="badge"]),
+.admin-main h2:not([class*="status"]):not([class*="badge"]),
+.admin-main h3:not([class*="status"]):not([class*="badge"]),
+.admin-main h4:not([class*="status"]):not([class*="badge"]),
+.admin-main p:not([class*="status"]):not([class*="badge"]):not([class*="error"]),
+.admin-main label:not([class*="status"]):not([class*="badge"]),
+.admin-main th,
+.admin-main td {
+  color: #29251F;
+}
+.admin-main small:not([class*="status"]):not([class*="badge"]):not([class*="error"]) {
+  color: #62594F;
+}
+
+/* Shared light surfaces across admin cards, panels, tables and modal content */
+.admin-main [class*="card"],
+.admin-main [class*="panel"],
+.admin-main [class*="stat"],
+.admin-main [class*="summary"],
+.admin-main [class*="modal"]:not([class*="overlay"]),
+.admin-main [class*="table-wrap"],
+.inventory-layout [class*="card"],
+.inventory-layout [class*="panel"],
+.inventory-layout [class*="stat"],
+.inventory-layout [class*="summary"],
+.inventory-layout [class*="modal"]:not([class*="overlay"]),
+.inventory-layout [class*="table-wrap"] {
+  background-color: #FFFFFF !important;
+  color: #29251F;
+  border-color: #E8E0D4 !important;
+}
+
+/* Replace dark inline panel surfaces in pages that define styles in JSX */
+.admin-main [style*="#101010"],
+.admin-main [style*="#111"],
+.admin-main [style*="#15120e"],
+.admin-main [style*="#151515"],
+.admin-main [style*="#171717"],
+.admin-main [style*="#1b1b1b"],
+.admin-main [style*="#1c1c1c"],
+.admin-main [style*="#1d1d1d"],
+.admin-main [style*="#202020"],
+.admin-main [style*="#211b16"],
+.admin-main [style*="#211b14"],
+.admin-main [style*="#292929"],
+.inventory-layout [style*="#101010"],
+.inventory-layout [style*="#111"],
+.inventory-layout [style*="#151515"],
+.inventory-layout [style*="#171717"],
+.inventory-layout [style*="#1c1c1c"],
+.inventory-layout [style*="#202020"],
+.inventory-layout [style*="#292929"] {
+  background-color: #FFFFFF !important;
+  color: #29251F !important;
+  border-color: #E8E0D4 !important;
+}
+
+/* Inputs and filters: readable text and visible focus */
+.admin-main input:not([type="checkbox"]):not([type="radio"]),
+.admin-main select,
+.admin-main textarea,
+.inventory-layout input:not([type="checkbox"]):not([type="radio"]),
+.inventory-layout select,
+.inventory-layout textarea {
+  background: #FFFFFF !important;
+  color: #29251F !important;
+  border-color: #D8CFC1 !important;
+  caret-color: #91672F;
+}
+.admin-main input::placeholder,
+.admin-main textarea::placeholder,
+.inventory-layout input::placeholder,
+.inventory-layout textarea::placeholder {
+  color: #82796D !important;
+}
+.admin-main input:focus,
+.admin-main select:focus,
+.admin-main textarea:focus,
+.inventory-layout input:focus,
+.inventory-layout select:focus,
+.inventory-layout textarea:focus {
+  border-color: #91672F !important;
+  outline-color: #91672F;
+}
+
+/* Tables */
+.admin-main table,
+.inventory-layout table {
+  color: #29251F;
+  border-color: #E8E0D4;
+}
+.admin-main th,
+.inventory-layout th {
+  background: #F5EFE4 !important;
+  color: #79552E !important;
+  border-color: #E8E0D4 !important;
+}
+.admin-main td,
+.inventory-layout td {
+  color: #29251F !important;
+  border-color: #E8E0D4 !important;
+}
+
+/* Keep distinct action and feedback colors */
+.admin-main button[class*="primary"],
+.admin-main button[class*="save"],
+.admin-main button[class*="add"],
+.admin-main button[class*="submit"],
+.inventory-layout button[class*="primary"],
+.inventory-layout button[class*="save"],
+.inventory-layout button[class*="add"],
+.inventory-layout button[class*="submit"] {
+  background: #91672F !important;
+  border-color: #91672F !important;
+  color: #FFFFFF !important;
+}
+.admin-main button[class*="delete"],
+.admin-main button[class*="remove"],
+.inventory-layout button[class*="delete"],
+.inventory-layout button[class*="remove"] {
+  background: #A83D35 !important;
+  border-color: #A83D35 !important;
+  color: #FFFFFF !important;
+}
+.admin-main [class*="status"],
+.admin-main [class*="badge"],
+.admin-main [class*="success"],
+.admin-main [class*="warning"],
+.admin-main [class*="error"],
+.inventory-layout [class*="status"],
+.inventory-layout [class*="badge"],
+.inventory-layout [class*="success"],
+.inventory-layout [class*="warning"],
+.inventory-layout [class*="error"] {
+  /* Preserve each component's own semantic foreground/background. */
+  color: inherit;
+}
