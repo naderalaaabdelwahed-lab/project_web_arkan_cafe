@@ -89,6 +89,7 @@ export default function PrintersSettingsPage() {
         setAllowed(true);
       } catch (err) {
         setError(err.message || "تعذر التحقق من الصلاحيات.");
+        setLoading(false);
       }
     }
     initialize();
