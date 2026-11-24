@@ -313,3 +313,91 @@
     padding: 18px;
   }
 }
+
+
+/* Menu category management - kitchen and bar */
+.menu-category-management {
+  margin: 0 0 26px;
+  padding: 22px;
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 12px;
+}
+.menu-department-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.menu-department-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  background: #151515;
+}
+.menu-department-card h3 {
+  margin: 0 0 14px;
+  color: #d4af37;
+}
+.menu-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 38px;
+}
+.menu-category-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  background: #222;
+  border: 1px solid #3b3b3b;
+  border-radius: 8px;
+}
+.menu-category-chip > span { color: #eee; font-weight: 600; }
+.menu-category-chip > small { color: #999; margin-inline-start: auto; white-space: nowrap; }
+.menu-category-chip > div { display: flex; gap: 5px; }
+.menu-category-chip button {
+  padding: 5px 9px;
+  color: #eee;
+  background: #333;
+}
+.menu-category-chip button:last-child { background: #7f2525; }
+.menu-category-add {
+  margin-top: 12px;
+  width: 100%;
+  background: #d4af37;
+  color: #111;
+}
+.menu-category-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #333;
+}
+.menu-category-form strong { color: #d4af37; width: 100%; }
+.menu-category-form input,
+.menu-category-form select {
+  flex: 1;
+  min-width: 180px;
+  padding: 11px;
+  color: #fff;
+  background: #202020;
+  border: 1px solid #444;
+  border-radius: 8px;
+}
+.menu-category-form button {
+  margin-inline-start: 6px;
+  padding: 10px 16px;
+  background: #d4af37;
+  color: #111;
+}
+.menu-category-form button[type="button"] { background: #333; color: #fff; }
+@media (max-width: 650px) {
+  .menu-department-grid { grid-template-columns: 1fr; }
+  .menu-category-management { padding: 15px; }
+  .menu-category-chip { flex-wrap: wrap; }
+}
