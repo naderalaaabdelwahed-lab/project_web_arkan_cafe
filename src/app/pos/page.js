@@ -460,7 +460,7 @@ export default function PosPage() {
 
   return (
     <main dir="rtl" className="arkan-pos-page" style={s.page}>
-      <style jsx global>{`.arkan-pos-page input,.arkan-pos-page textarea,.arkan-pos-page select{color:#000!important;-webkit-text-fill-color:#000!important;background-color:#fff!important;caret-color:#000!important;opacity:1!important}.arkan-pos-page input::placeholder,.arkan-pos-page textarea::placeholder{color:#555!important;-webkit-text-fill-color:#555!important;opacity:1!important}.arkan-pos-page select option{color:#000!important;background:#fff!important}.arkan-pos-page input:-webkit-autofill,.arkan-pos-page input:-webkit-autofill:hover,.arkan-pos-page input:-webkit-autofill:focus{ -webkit-text-fill-color:#000!important;box-shadow:0 0 0 1000px #fff inset!important;caret-color:#000!important}.arkan-pos-page .pos-filter-control{font-weight:600}.arkan-pos-page input::-webkit-calendar-picker-indicator{opacity:1}`}</style>
+      <style jsx global>{`.arkan-floor-dashboard{min-width:0}@media(max-width:1100px){.arkan-floor-dashboard{grid-template-columns:1fr!important}.arkan-floor-dashboard .floorDetails{grid-column:1!important}}.arkan-pos-page input,.arkan-pos-page textarea,.arkan-pos-page select{color:#000!important;-webkit-text-fill-color:#000!important;background-color:#fff!important;caret-color:#000!important;opacity:1!important}.arkan-pos-page input::placeholder,.arkan-pos-page textarea::placeholder{color:#555!important;-webkit-text-fill-color:#555!important;opacity:1!important}.arkan-pos-page select option{color:#000!important;background:#fff!important}.arkan-pos-page input:-webkit-autofill,.arkan-pos-page input:-webkit-autofill:hover,.arkan-pos-page input:-webkit-autofill:focus{ -webkit-text-fill-color:#000!important;box-shadow:0 0 0 1000px #fff inset!important;caret-color:#000!important}.arkan-pos-page .pos-filter-control{font-weight:600}.arkan-pos-page input::-webkit-calendar-picker-indicator{opacity:1}`}</style>
       <header style={s.header}>
         <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
         <button style={s.secondary} onClick={load}>تحديث البيانات</button>
@@ -527,7 +527,7 @@ export default function PosPage() {
           </div>
         </section>
       ) : mode === "dine-in" && screen === "tables" ? (
-        <section style={s.floorDashboard}>
+        <section className="arkan-floor-dashboard" style={s.floorDashboard}>
           <aside style={s.floorSidebar}>
             <div style={s.floorTotal}>
               <small>إجمالي أوردرات الصالة المفتوحة</small><strong style={{fontSize:28}}>{fmt(floorTotal)} ج.م</strong>
@@ -543,7 +543,8 @@ export default function PosPage() {
                 <small>المدفوع: {fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</small>
                 <small>المتبقي: {fmt(selectedDue)} ج.م</small>
                 <button style={s.submit} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>إضافة أصناف / فتح الأوردر</button>
-                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>حذف أو تعديل أصناف الطلب</button>
+                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>حذف أصناف من الطلب</button>
+                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>خصم من الفاتورة</button>
                 <button style={s.secondary} onClick={()=>{setCashReceived("");setShowCashModal(true);}}>السداد النقدي وإغلاق الأوردر</button>
                 <button style={s.secondary} onClick={()=>{setShowTransfer(true);setTransferTarget("");}}>نقل الطاولة بالكامل</button>
                 <div style={{display:"grid",gap:7}}>
