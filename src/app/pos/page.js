@@ -137,7 +137,7 @@ export default function PosPage() {
 
       const [p, c, st, r, sellable, days, reportProducts, reportCategories] = await Promise.all([
         supabase.from("products").select("id,name,price,image_url,category_id,is_available").eq("is_available", true).order("name"),
-        supabase.from("categories").select("id,name,display_order").eq("is_active", true).order("display_order"),
+        supabase.from("categories").select("id,name,department,display_order").eq("is_active", true).order("department").order("display_order"),
         supabase.from("restaurant_settings").select("indoor_tables,outdoor_tables").eq("id", 1).single(),
         supabase.from("reservations").select("id,customer_name,phone,reservation_date,reservation_time,status,seating_area,table_number").in("status", ["pending","confirmed"]),
         supabase.rpc("get_pos_sellable_product_ids"),
@@ -165,8 +165,8 @@ export default function PosPage() {
         setSalesFrom(openBusinessDay.business_date);
         setSalesTo(openBusinessDay.business_date);
       }
-      const categoryNameById = Object.fromEntries((reportCategories.data || []).map((item) => [item.id, item.name]));
-      setProductCategoryNames(Object.fromEntries((reportProducts.data || []).map((item) => [item.id, categoryNameById[item.category_id] || "غير محدد"])));
+      const categoryDepartmentById = Object.fromEntries((reportCategories.data || []).map((item) => [item.id, item.department || "kitchen"]));
+      setProductCategoryNames(Object.fromEntries((reportProducts.data || []).map((item) => [item.id, categoryDepartmentById[item.category_id] || "kitchen"])));
       const today = todayISO();
       setReservations((r.data || []).filter((x) => x.reservation_date === today));
       const allOrders = [];
@@ -265,7 +265,7 @@ export default function PosPage() {
         summary.deliveryFees += Number(order.delivery_fee || 0);
         (order.order_items || []).forEach((item) => {
           const itemAmount = Number(item.subtotal ?? (Number(item.quantity || 0) * Number(item.unit_price || 0)));
-          if (productCategoryNames[item.product_id] === "مشروبات") summary.barSales += itemAmount;
+          if (productCategoryNames[item.product_id] === "bar") summary.barSales += itemAmount;
           else summary.kitchenSales += itemAmount;
         });
       });
@@ -1260,7 +1260,14 @@ export default function PosPage() {
             </div>
             <div style={s.categories}>
               <button style={s.category} onClick={() => setCategory("all")}>الكل</button>
-              {categories.map(c => <button key={c.id} style={s.category} onClick={() => setCategory(String(c.id))}>{c.name}</button>)}
+              {["kitchen", "bar"].map(department => {
+                const departmentCategories = categories.filter(c => (c.department || "kitchen") === department);
+                if (!departmentCategories.length) return null;
+                return <div key={department} style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <small style={{color:"#d4af37",fontWeight:700}}>{department === "kitchen" ? "المطبخ" : "البار"}:</small>
+                  {departmentCategories.map(c => <button key={c.id} style={s.category} onClick={() => setCategory(String(c.id))}>{c.name}</button>)}
+                </div>;
+              })}
             </div>
             <div className="products" style={s.products}>
               {productsShown.map(p => <button key={p.id} className="product" style={s.product} disabled={editingOrderClosed} onClick={() => add(p)}>
