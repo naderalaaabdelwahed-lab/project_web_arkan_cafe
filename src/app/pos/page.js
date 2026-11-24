@@ -622,7 +622,7 @@ export default function PosPage() {
       <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       {error && <p style={s.error}>{error}</p>}
       {showTransfer && (selectedTableOrder || editingOrderId) && !editingOrderClosed && <div style={s.modalBackdrop} onClick={() => { if (!saving) { setShowTransfer(false); setTransferTarget(""); } }}>
-        <div role="dialog" aria-modal="true" aria-labelledby="transfer-table-title" style={{...s.itemNoteModal,width:"min(680px,96vw)",maxHeight:"90dvh",overflowY:"auto"}} onClick={e => e.stopPropagation()}>
+        <div role="dialog" aria-modal="true" aria-labelledby="transfer-table-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden"}} onClick={e => e.stopPropagation()}>
           <h2 id="transfer-table-title" style={{margin:0,textAlign:"center"}}>اختار الطاولة الجديدة</h2>
           <p style={{margin:0,textAlign:"center",color:"#75664f"}}>نقل الأوردر ARK-{selectedTableOrder?.id || editingOrderId}. الطاولات المشغولة أو المحجوزة غير متاحة للاختيار.</p>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(125px,1fr))",gap:10}}>
