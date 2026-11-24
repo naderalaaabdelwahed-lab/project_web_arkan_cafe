@@ -26,6 +26,12 @@ export default function PosPage() {
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [orderDateFrom, setOrderDateFrom] = useState("");
+  const [orderDateTo, setOrderDateTo] = useState("");
+  const [orderTableFilter, setOrderTableFilter] = useState("");
   const [reservations, setReservations] = useState([]);
   const [settings, setSettings] = useState({ indoor_tables: 0, outdoor_tables: 0 });
   const [area, setArea] = useState("indoor");
@@ -52,11 +58,10 @@ export default function PosPage() {
       setAllowed(canUse);
       if (!canUse) return;
 
-      const [p, c, st, day, r] = await Promise.all([
+      const [p, c, st, r] = await Promise.all([
         supabase.from("products").select("id,name,price,image_url,category_id,is_available").eq("is_available", true).order("name"),
         supabase.from("categories").select("id,name,display_order").eq("is_active", true).order("display_order"),
         supabase.from("restaurant_settings").select("indoor_tables,outdoor_tables").eq("id", 1).single(),
-        supabase.from("business_days").select("id").eq("status", "open").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("reservations").select("id,customer_name,phone,reservation_date,reservation_time,status,seating_area,table_number").in("status", ["pending","confirmed"]),
       ]);
       if (p.error) throw p.error;
@@ -68,12 +73,9 @@ export default function PosPage() {
       setSettings(st.data || { indoor_tables: 0, outdoor_tables: 0 });
       const today = new Date().toLocaleDateString("en-CA");
       setReservations((r.data || []).filter((x) => x.reservation_date === today));
-      if (day.error) throw day.error;
-      if (day.data) {
-        const result = await supabase.from("orders").select("*,order_items(*)").eq("business_day_id", day.data.id).order("created_at", { ascending: false }).limit(100);
-        if (result.error) throw result.error;
-        setOrders(result.data || []);
-      } else setOrders([]);
+      const result = await supabase.from("orders").select("*,order_items(*)").order("created_at", { ascending: false }).limit(500);
+      if (result.error) throw result.error;
+      setOrders(result.data || []);
     } catch (e) {
       setError("تعذر تحميل شاشة الكاشير: " + e.message);
     } finally {
@@ -95,6 +97,18 @@ export default function PosPage() {
   const total = Math.max(0, subtotal - discount);
   const productsShown = products.filter((p) => (category === "all" || String(p.category_id) === category) && p.name.toLowerCase().includes(search.toLowerCase()));
   const ordersShown = orders.filter((o) => tab === "all" || o.order_type === tab);
+  const allOrdersFiltered = orders.filter((o) => {
+    const query = orderSearch.trim().toLowerCase();
+    const created = o.created_at ? new Date(o.created_at) : null;
+    const orderDate = created && !Number.isNaN(created.getTime()) ? created.toLocaleDateString("en-CA") : "";
+    const matchesSearch = !query || [String(o.id), `ark-${o.id}`, o.customer_name || "", o.phone || "", String(o.table_number || "")].some((v) => v.toLowerCase().includes(query));
+    const matchesType = orderTypeFilter === "all" || o.order_type === orderTypeFilter;
+    const matchesStatus = orderStatusFilter === "all" || o.status === orderStatusFilter;
+    const matchesFrom = !orderDateFrom || orderDate >= orderDateFrom;
+    const matchesTo = !orderDateTo || orderDate <= orderDateTo;
+    const matchesTable = !orderTableFilter || (o.order_type === "dine-in" && String(o.table_number || "") === orderTableFilter.trim());
+    return matchesSearch && matchesType && matchesStatus && matchesFrom && matchesTo && matchesTable;
+  });
   const activeTables = orders.filter((o) => o.order_type === "dine-in" && !["delivered","cancelled"].includes(o.status));
   const tableCount = Number(area === "indoor" ? settings.indoor_tables : settings.outdoor_tables) || 0;
 
@@ -159,13 +173,49 @@ export default function PosPage() {
       {error && <p style={s.error}>{error}</p>}
       {message && <p style={s.success}>{message}</p>}
       <nav style={s.tabs}>{tabs.map((t) => <button key={t.id} style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id !== "all") { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
-      <div style={{...s.stats,display:mode === "dine-in" && screen === "tables" ? "none" : s.stats.display}}>
-        <div style={s.stat}><small>طلبات اليوم</small><b>{orders.length}</b></div>
-        <div style={s.stat}><small>طلبات نشطة</small><b>{orders.filter(o => !["delivered","cancelled"].includes(o.status)).length}</b></div>
-        <div style={s.stat}><small>مبيعات اليوم</small><b>{fmt(orders.filter(o => o.status !== "cancelled").reduce((a,o) => a + Number(o.total_amount || 0),0))} ج.م</b></div>
-        <div style={s.stat}><small>عدد الطاولات</small><b>{Number(settings.indoor_tables || 0) + Number(settings.outdoor_tables || 0)}</b></div>
-      </div>
-      {mode === "dine-in" && screen === "tables" ? (
+      {tab === "all" ? (
+        <section style={s.allOrdersPage}>
+          <div style={s.allOrdersHeading}>
+            <div><h2 style={{margin:"0 0 5px"}}>كل الطلبات</h2><small style={s.muted}>عرض شامل لكل الطلبات المسجلة، وليس يوم العمل الحالي فقط</small></div>
+            <b>{allOrdersFiltered.length} / {orders.length} طلب</b>
+          </div>
+          <div style={s.orderFilters}>
+            <input style={s.filterInput} placeholder="بحث برقم الأوردر أو الفاتورة أو العميل أو الطاولة" value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} />
+            <select style={s.filterInput} value={orderTypeFilter} onChange={e=>setOrderTypeFilter(e.target.value)}><option value="all">كل الأنواع</option><option value="dine-in">الصالة</option><option value="takeaway">تيك أواي</option><option value="delivery">دليفري</option></select>
+            <select style={s.filterInput} value={orderStatusFilter} onChange={e=>setOrderStatusFilter(e.target.value)}><option value="all">كل الحالات</option><option value="pending">جديد</option><option value="confirmed">مؤكد</option><option value="preparing">قيد التحضير</option><option value="delivered">تم التسليم / مغلق</option><option value="cancelled">ملغي</option></select>
+            <input style={s.filterInput} type="date" aria-label="من تاريخ" value={orderDateFrom} onChange={e=>setOrderDateFrom(e.target.value)} />
+            <input style={s.filterInput} type="date" aria-label="إلى تاريخ" value={orderDateTo} onChange={e=>setOrderDateTo(e.target.value)} />
+            <input style={s.filterInput} type="number" min="1" placeholder="رقم الطاولة" value={orderTableFilter} onChange={e=>setOrderTableFilter(e.target.value)} />
+            <button style={s.secondary} onClick={()=>{setOrderSearch("");setOrderTypeFilter("all");setOrderStatusFilter("all");setOrderDateFrom("");setOrderDateTo("");setOrderTableFilter("");}}>مسح الفلاتر</button>
+          </div>
+          <div style={s.allOrdersList}>
+            {allOrdersFiltered.map(o => {
+              const dineIn = o.order_type === "dine-in";
+              const closed = ["delivered","cancelled"].includes(o.status);
+              const typeLabel = dineIn ? "صالة" : o.order_type === "takeaway" ? "تيك أواي" : "دليفري";
+              const statusLabel = ({pending:"جديد",confirmed:"مؤكد",preparing:"قيد التحضير",delivered:"تم التسليم",cancelled:"ملغي"})[o.status] || o.status || "غير محدد";
+              const created = o.created_at ? new Date(o.created_at) : null;
+              return <article key={o.id} style={s.orderRow}>
+                <div style={s.orderMainInfo}>
+                  <strong>أوردر #{o.id}</strong>
+                  <span>فاتورة ARK-{o.id}</span>
+                  <span>{created && !Number.isNaN(created.getTime()) ? created.toLocaleDateString("ar-EG") : "—"}</span>
+                  <span>{created && !Number.isNaN(created.getTime()) ? created.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) : "—"}</span>
+                </div>
+                <div style={s.orderDetailsLine}>
+                  <span>النوع: <b>{typeLabel}</b></span>
+                  {dineIn && <span>الطاولة: <b>{o.table_number || "—"}</b></span>}
+                  {dineIn && <span>حالة الطاولة: <b style={{color:closed?"#267447":"#a66a19"}}>{closed ? "مغلقة" : "مفتوحة"}</b></span>}
+                  <span>حالة الطلب: <b>{statusLabel}</b></span>
+                  <span>الخصم: <b>{fmt(o.discount_amount)} ج.م</b></span>
+                  <strong style={s.orderAmount}>{fmt(o.total_amount)} ج.م</strong>
+                </div>
+              </article>;
+            })}
+            {!allOrdersFiltered.length && <p style={s.muted}>لا توجد طلبات مطابقة للفلاتر.</p>}
+          </div>
+        </section>
+      ) : mode === "dine-in" && screen === "tables" ? (
         <section style={s.panel}>
           <div style={s.head}>
             <div><h2>اختار الطاولة</h2><small style={s.muted}>اختار طاولة لفتح المنيو وإنشاء الطلب</small></div>
@@ -243,19 +293,22 @@ export default function PosPage() {
           </section>
         </div>
       )}
-      <section style={{ ...s.panel, marginTop: 18 }}>
-        <div style={s.head}><div><h2>طلبات اليوم</h2><small style={s.muted}>طلبات يوم العمل المفتوح</small></div><b>{ordersShown.length} طلب</b></div>
-        <div style={s.orders}>{ordersShown.map(o => <article key={o.id} style={s.order}>
-          <b>ARK-{o.id}</b><b>{o.order_type === "dine-in" ? "الصالة" : o.order_type === "takeaway" ? "تيك أواي" : "دليفري"} {o.table_number ? " · طاولة " + o.table_number : ""}</b>
-          <small>{o.customer_name || "عميل نقدي"} · {(o.order_items || []).length} أصناف</small><strong>{fmt(o.total_amount)} ج.م</strong><small>{new Date(o.created_at).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"})}</small>
-        </article>)}{!ordersShown.length && <p style={s.muted}>لا توجد طلبات في هذا القسم.</p>}</div>
-      </section>
+
     </main>
   );
 }
 
 const s = {
  page:{minHeight:"100vh",padding:24,background:"#f4f2ee",color:"#242424"},
+ allOrdersPage:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:18,minWidth:0},
+ allOrdersHeading:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:16},
+ orderFilters:{display:"grid",gridTemplateColumns:"minmax(220px,2fr) repeat(5,minmax(130px,1fr)) auto",gap:8,marginBottom:16},
+ filterInput:{minWidth:0,width:"100%",boxSizing:"border-box",padding:"10px 11px",border:"1px solid #ddd",borderRadius:8,background:"#fff",fontFamily:"inherit"},
+ allOrdersList:{display:"grid",gap:9},
+ orderRow:{display:"grid",gridTemplateColumns:"minmax(230px,0.8fr) minmax(0,2fr)",alignItems:"center",gap:14,padding:"14px 16px",border:"1px solid #eee8df",borderRadius:10,background:"#fff"},
+ orderMainInfo:{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"},
+ orderDetailsLine:{display:"flex",alignItems:"center",gap:"10px 20px",flexWrap:"wrap",fontSize:13,color:"#666"},
+ orderAmount:{fontSize:16,color:"#267447",marginRight:"auto"},
  header:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18},eyebrow:{color:"#a7793d",fontWeight:800,letterSpacing:2},muted:{color:"#777",fontSize:12},
  secondary:{padding:"9px 13px",border:"1px solid #ddd",borderRadius:8,background:"#fff",cursor:"pointer"},
  error:{padding:12,background:"#ffeded",color:"#a12c2c",borderRadius:9},success:{padding:12,background:"#e9f7ee",color:"#246c45",borderRadius:9},
