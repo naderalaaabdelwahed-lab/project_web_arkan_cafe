@@ -867,7 +867,7 @@ export default function PosPage() {
 }
 
 const s = {
- page:{minHeight:"100vh",padding:24,background:"#f4f2ee",color:"#242424"},
+ page:{minHeight:"100vh",padding:24,background:"#fff",color:"#242424"},
  allOrdersPage:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:18,minWidth:0},
  allOrdersHeading:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:16},
  orderFilters:{display:"grid",gridTemplateColumns:"minmax(220px,2fr) repeat(5,minmax(130px,1fr)) auto",gap:8,marginBottom:16},
@@ -890,12 +890,12 @@ const s = {
  categories:{display:"flex",gap:7,overflowX:"auto",paddingBottom:12},category:{padding:"8px 12px",border:"1px solid #e5dfd6",borderRadius:20,background:"#fff",whiteSpace:"nowrap",cursor:"pointer"},
  products:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(125px,1fr))",gap:9},product:{display:"grid",gap:6,textAlign:"right",padding:9,border:"1px solid #eee8df",borderRadius:10,background:"#fff",cursor:"pointer"},image:{width:"100%",height:78,objectFit:"cover",borderRadius:7},imageBlank:{height:78,display:"grid",placeItems:"center",background:"#f6f1e9",borderRadius:7,fontSize:24,color:"#a7793d"},
  floorDashboard:{display:"grid",gridTemplateColumns:"260px minmax(320px,1fr) minmax(330px,0.95fr)",gap:12,alignItems:"start",direction:"ltr"},
- floorSidebar:{display:"grid",gap:12,minWidth:0,direction:"rtl",position:"sticky",top:12},
- floorTotal:{display:"grid",gap:10,padding:16,background:"#29251f",color:"#fff",borderRadius:13},
+ floorSidebar:{display:"grid",gap:12,minWidth:0,direction:"rtl",position:"sticky",top:12,background:"#fff"},
+ floorTotal:{display:"grid",gap:10,padding:16,background:"#fff",color:"#242424",border:"1px solid #e9e4dc",borderRadius:13,boxShadow:"0 2px 8px rgba(45,35,22,.05)"},
  floorStatusStrip:{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8},floorStatusCard:{display:"grid",gap:4,justifyItems:"center",padding:"10px 6px",background:"#fff",border:"1px solid #e9e4dc",borderRadius:10},floorCountPill:{padding:"8px 12px",background:"#f7f0e5",color:"#805a2a",borderRadius:20,fontSize:13,whiteSpace:"nowrap"},
  floorTools:{display:"grid",gap:9,padding:14,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,minWidth:0},
  floorTables:{padding:16,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,minWidth:0,direction:"rtl",display:"grid",gap:12},
- floorOrderSidebar:{minWidth:0,direction:"rtl",position:"sticky",top:12},
+ floorOrderSidebar:{minWidth:0,direction:"rtl",position:"sticky",top:12,background:"#fff"},
  floorOrderPreview:{display:"grid",gap:10,padding:14,background:"#fff",border:"1px solid #e9e4dc",borderRadius:12,minWidth:0,minHeight:260},
  floorPreviewTableWrap:{width:"100%",maxHeight:300,overflow:"auto",border:"1px solid #e7dfd3",borderRadius:9},
  floorPreviewTable:{width:"100%",minWidth:620,borderCollapse:"collapse",textAlign:"right",fontSize:13,background:"#fff"},
