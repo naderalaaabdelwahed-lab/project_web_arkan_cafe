@@ -22,7 +22,7 @@ export default function PreparationStationPage({ station }) {
   const [tickets, setTickets] = useState([]);
   const [busyOrder, setBusyOrder] = useState(null);
   const [error, setError] = useState("");
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
 
   const loadTickets = useCallback(async () => {
     setError("");
@@ -118,6 +118,7 @@ export default function PreparationStationPage({ station }) {
   }, [allowed, station, loadTickets]);
 
   useEffect(() => {
+    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
