@@ -424,7 +424,7 @@ export default function PosPage() {
               <div><h2>{editingOrderId ? "تعديل الأوردر الحالي #" + editingOrderId : "الطلب الحالي"}</h2><small style={s.muted}>{mode === "dine-in" ? (area === "indoor" ? "طاولة داخلية " : "طاولة خارجية ") + table : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div>
               <div style={{display:"flex",gap:7}}>
                 {editingOrderId && <button style={s.secondary} onClick={() => { setShowTransfer((v) => !v); setShowItemTransfer(false); setTransferTarget(""); }}>نقل الطاولة بالكامل</button>}
-                {editingOrderId && cart.some((item) => item.existing && item.preparationStatus === "pending") && <button style={s.secondary} onClick={startItemTransfer}>نقل أصناف لطاولة أخرى</button>}
+                {editingOrderId && <button style={s.secondary} onClick={startItemTransfer}>نقل أصناف لطاولة أخرى</button>}
                 {mode === "dine-in" && <button style={s.secondary} onClick={() => setScreen("tables")}>رجوع للطاولات</button>}
                 <button style={s.clear} onClick={() => { reset(); if (editingOrderId && mode === "dine-in") setScreen("tables"); }}>{editingOrderId ? "إلغاء التعديل" : "مسح الطلب"}</button>
               </div>
@@ -451,6 +451,7 @@ export default function PosPage() {
                   </option>;
                 })}
               </select>
+              {!cart.some((item) => item.existing && item.preparationStatus === "pending") && <small style={{ color: "#a12c2c" }}>لا توجد أصناف معلّقة قابلة للنقل في هذا الأوردر. الأصناف التي تم تجهيزها لا يمكن نقلها.</small>}
               <div style={{ display: "grid", gap: 7 }}>
                 {cart.filter((item) => item.existing && item.preparationStatus === "pending").map((item) => (
                   <div key={item.cartKey} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 110px", gap: 10, alignItems: "center", padding: "8px 0", borderBottom: "1px solid #eadfce" }}>
