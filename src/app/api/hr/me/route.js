@@ -90,17 +90,12 @@ export async function POST(request) {
     if(error)throw error;
     const open=rows?.[0];
     if(!open)return NextResponse.json({error:"لا يوجد حضور مفتوح. لا يمكن تسجيل الانصراف قبل الحضور."},{status:409});
-    const assignment=await getShift(auth.db,auth.employee.id,open.shift_date),shift=assignment?.hr_shifts||null;
-    const elapsed=Math.max(0,Math.round((now-new Date(open.check_in_at))/60000));
-    const breakMinutes=Number(shift?.break_minutes||0),worked=Math.max(0,elapsed-breakMinutes);
-    let planned=Number(auth.employee.daily_work_hours||8)*60;
-    if(shift) {
-      const start=localToUtc(open.shift_date,shift.start_time); let end=localToUtc(open.shift_date,shift.end_time);
-      if(shift.crosses_midnight||end<=start)end=new Date(end.getTime()+86400000);
-      planned=Math.max(0,Math.round((end-start)/60000)-breakMinutes);
-    }
+    const worked=Math.max(0,Math.round((now-new Date(open.check_in_at))/60000));
+    const planned=Math.round(Number(auth.employee.daily_work_hours||8)*60);
+    const overtime=Math.max(0,worked-planned),shortage=Math.max(0,planned-worked);
     const {error:updateError}=await auth.db.from("hr_attendance").update({
-      check_out_at:now.toISOString(),check_out_method:"account",worked_minutes:worked,overtime_minutes:Math.max(0,worked-planned),updated_at:now.toISOString()
+      check_out_at:now.toISOString(),check_out_method:"account",worked_minutes:worked,
+      overtime_minutes:overtime,shortage_minutes:shortage,late_minutes:0,updated_at:now.toISOString()
     }).eq("id",open.id);
     if(updateError)throw updateError;
     return NextResponse.json({success:true,action,recorded_at:now.toISOString(),shift_date:open.shift_date,worked_minutes:worked});
