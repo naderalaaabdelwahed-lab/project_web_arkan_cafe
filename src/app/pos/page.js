@@ -175,6 +175,10 @@ export default function PosPage() {
   const availableTransferTargets = transferTargets.filter((target) =>
     !activeTables.some((o) => o.table_area === target.area && o.table_number === target.number)
   );
+  const allFloorTransferTargets = [
+    ...Array.from({ length: Number(settings.indoor_tables) || 0 }, (_, i) => ({ area: "indoor", number: i + 1 })),
+    ...Array.from({ length: Number(settings.outdoor_tables) || 0 }, (_, i) => ({ area: "outdoor", number: i + 1 })),
+  ].filter((target) => !(target.area === area && target.number === table));
 
   function openItemNote(cartKey) {
     const item = cart.find((x) => x.cartKey === cartKey);
@@ -616,6 +620,38 @@ export default function PosPage() {
 
       <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       {error && <p style={s.error}>{error}</p>}
+      {showTransfer && (selectedTableOrder || editingOrderId) && !editingOrderClosed && <div style={s.modalBackdrop} onClick={() => { if (!saving) { setShowTransfer(false); setTransferTarget(""); } }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="transfer-table-title" style={{...s.itemNoteModal,width:"min(680px,96vw)",maxHeight:"90dvh",overflowY:"auto"}} onClick={e => e.stopPropagation()}>
+          <h2 id="transfer-table-title" style={{margin:0,textAlign:"center"}}>اختار الطاولة الجديدة</h2>
+          <p style={{margin:0,textAlign:"center",color:"#75664f"}}>نقل الأوردر ARK-{selectedTableOrder?.id || editingOrderId}. الطاولات المشغولة أو المحجوزة غير متاحة للاختيار.</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(125px,1fr))",gap:10}}>
+            {allFloorTransferTargets.map(target => {
+              const key = target.area + ":" + target.number;
+              const occupied = activeTables.find(order => order.table_area === target.area && order.table_number === target.number);
+              const reserved = reservations.some(res => res.table_number === target.number && (res.seating_area || "indoor") === target.area);
+              const selected = transferTarget === key;
+              const disabled = Boolean(occupied || reserved || saving);
+              const tileStyle = occupied
+                ? {background:"#fdeaea",borderColor:"#efc1c1",color:"#a12c2c"}
+                : reserved
+                  ? {background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"}
+                  : selected
+                    ? {background:"#fff0d8",borderColor:"#b88946",color:"#805a2a",outline:"3px solid #d28c2c"}
+                    : {background:"#eaf7ee",borderColor:"#cde5d4",color:"#246c45"};
+              return <button key={key} type="button" disabled={disabled} onClick={() => setTransferTarget(key)} style={{minHeight:92,padding:10,border:"2px solid",borderRadius:11,display:"grid",placeContent:"center",gap:5,fontFamily:"inherit",fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity:disabled?.88:1,...tileStyle}}>
+                <span>{target.area==="indoor"?"داخلية":"خارجية"}</span>
+                <strong style={{fontSize:18}}>طاولة {target.number}</strong>
+                <small>{occupied ? "مشغولة — ARK-"+occupied.id : reserved ? "محجوزة" : selected ? "تم الاختيار" : "متاحة"}</small>
+              </button>;
+            })}
+          </div>
+          {!allFloorTransferTargets.length && <p style={{textAlign:"center",color:"#8b681b"}}>لا توجد طاولات أخرى.</p>}
+          <div style={{display:"flex",justifyContent:"center",gap:9,flexWrap:"wrap"}}>
+            <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150}} disabled={saving || !transferTarget} onClick={() => transferTable(selectedTableOrder?.id || editingOrderId)}>{saving ? "جاري النقل..." : "OK — تأكيد النقل"}</button>
+            <button type="button" style={s.secondary} disabled={saving} onClick={() => {setShowTransfer(false);setTransferTarget("");}}>إلغاء</button>
+          </div>
+        </div>
+      </div>}
       {message && <div style={s.modalBackdrop}>
         <div role="alertdialog" aria-modal="true" aria-labelledby="pos-success-title" style={s.itemNoteModal} onClick={e => e.stopPropagation()}>
           <div style={{display:"grid",placeItems:"center",width:54,height:54,margin:"0 auto",borderRadius:"50%",background:"#e9f7ee",color:"#246c45",fontSize:30,fontWeight:900}}>✓</div>
@@ -796,15 +832,7 @@ export default function PosPage() {
             </section>
           </div>
         </section>
-        {showTransfer&&selectedTableOrder&&<div className="floorInlineModal" style={s.floorInlineModal}>
-          <b>نقل الطاولة بالكامل — ARK-{selectedTableOrder.id}</b>
-          <select style={s.filterInput} value={transferTarget} onChange={e=>setTransferTarget(e.target.value)}>
-            <option value="">اختار طاولة فارغة</option>
-            {availableTransferTargets.map(t=><option key={t.area+":"+t.number} value={t.area+":"+t.number}>{t.area==="indoor"?"داخلية":"خارجية"} — طاولة {t.number}</option>)}
-          </select>
-          <button className="submit" style={s.submit} disabled={saving||!transferTarget} onClick={()=>transferTable(selectedTableOrder.id)}>تأكيد النقل</button>
-          <button style={s.secondary} onClick={()=>setShowTransfer(false)}>إلغاء</button>
-        </div>}
+
         {showMergePanel&&selectedTableOrder&&<div className="floorInlineModal pos-floor-inline-action" style={s.floorInlineModal}>
           <b>دمج أوردر الطاولة {selectedTableOrder.table_number} داخل طاولة أخرى</b>
           <select style={s.filterInput} value={mergeTargetId} onChange={e=>setMergeTargetId(e.target.value)}>
@@ -880,17 +908,7 @@ export default function PosPage() {
               </div>
             </div>
             {editingOrderClosed && <p style={{padding:10,background:"#fff4d9",color:"#8b681b",borderRadius:8}}>هذا الأوردر مغلق/ملغي؛ يمكنك مراجعة تفاصيله وطباعته، لكن إضافة أصناف تتطلب إعادة فتح الأوردر بصلاحية المدير.</p>}
-            {showTransfer && editingOrderId && !editingOrderClosed && <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto", gap: 8, alignItems: "center", padding: 12, marginBottom: 12, border: "1px solid #e5d3b8", borderRadius: 9, background: "#fffaf1" }}>
-              <select className="pos-filter-control" style={s.filterInput} value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)}>
-                <option value="">اختار الطاولة الجديدة</option>
-                {availableTransferTargets.map((target) => <option key={target.area + ":" + target.number} value={target.area + ":" + target.number}>
-                  {target.area === "indoor" ? "داخلية" : "خارجية"} — طاولة {target.number}
-                </option>)}
-              </select>
-              <button className="submit" style={s.submit} disabled={saving || !transferTarget} onClick={transferTable}>{saving ? "جاري النقل..." : "تأكيد النقل"}</button>
-              <button style={s.secondary} disabled={saving} onClick={() => { setShowTransfer(false); setTransferTarget(""); }}>إلغاء</button>
-              {!availableTransferTargets.length && <small style={{ gridColumn: "1 / -1", color: "#8b681b" }}>لا توجد طاولات متاحة للنقل حاليًا.</small>}
-            </div>}
+
             {showItemTransfer && editingOrderId && !editingOrderClosed && <div style={{ display: "grid", gap: 10, padding: 14, marginBottom: 12, border: "1px solid #d9c39b", borderRadius: 10, background: "#fffaf1" }}>
               <div><b>نقل أصناف من الأوردر ARK-{editingOrderId}</b><small style={{ display: "block", color: "#75664f", marginTop: 4 }}>حدد الكمية من كل صنف، ثم اختار الطاولة المستقبِلة. الأصناف التي بدأ تجهيزها لا يمكن نقلها.</small></div>
               <select className="pos-filter-control" style={s.filterInput} value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)}>
