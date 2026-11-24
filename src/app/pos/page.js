@@ -52,6 +52,8 @@ export default function PosPage() {
   const [discountType, setDiscountType] = useState("amount");
   const [discountValue, setDiscountValue] = useState("0");
   const [payment, setPayment] = useState("cash");
+  const [cashReceived, setCashReceived] = useState("");
+  const [paymentSummary, setPaymentSummary] = useState({});
 
   const load = useCallback(async () => {
     setError("");
@@ -89,6 +91,11 @@ export default function PosPage() {
         if (!result.data || result.data.length < 1000) break;
       }
       setOrders(allOrders);
+      const paymentsResult = await supabase.from("pos_payments").select("order_id,amount");
+      if (paymentsResult.error) throw paymentsResult.error;
+      const paidByOrder = {};
+      (paymentsResult.data || []).forEach((row) => { paidByOrder[row.order_id] = (paidByOrder[row.order_id] || 0) + Number(row.amount || 0); });
+      setPaymentSummary(paidByOrder);
     } catch (e) {
       setError("تعذر تحميل شاشة الكاشير: " + e.message);
     } finally {
@@ -165,6 +172,7 @@ export default function PosPage() {
     setScreen("order");
     if (currentOrder) {
       setSelectedOrder(currentOrder);
+      setDiscountType("amount"); setDiscountValue(String(currentOrder.discount_amount || 0)); setCashReceived("");
       setEditingOrderClosed(false);
       setEditingOrderId(currentOrder.id);
       setEditingOrderTotal(Number(currentOrder.total_amount || 0));
@@ -194,6 +202,7 @@ export default function PosPage() {
   function openOrderFromAll(order) {
     reset();
     setSelectedOrder(order);
+    setDiscountType("amount"); setDiscountValue(String(order.discount_amount || 0)); setCashReceived("");
     setEditingOrderId(order.id);
     setEditingOrderTotal(Number(order.total_amount || 0));
     setEditingOrderClosed(["delivered", "cancelled"].includes(order.status));
@@ -215,7 +224,7 @@ export default function PosPage() {
     })));
   }
 
-  function printReceipt(order = selectedOrder) {
+  async function printReceipt(order = selectedOrder) {
     if (!order) return setError("افتح أوردر الأول علشان تطبع الفاتورة.");
     const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (ch) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     const rows = (order.order_items || []).map((it) => "<tr><td>"+esc(it.product_name || it.name)+"</td><td>"+fmt(it.quantity)+"</td><td>"+fmt(it.unit_price)+"</td><td>"+fmt(Number(it.quantity||0)*Number(it.unit_price||0))+"</td></tr>").join("");
@@ -235,6 +244,11 @@ export default function PosPage() {
     const w = window.open("", "arkan-receipt", "width=420,height=700");
     if (!w) return setError("المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة للموقع ثم حاول مرة أخرى.");
     w.document.open(); w.document.write(html); w.document.close();
+    if (order.order_type === "dine-in") {
+      const marked = await supabase.rpc("pos_mark_receipt_printed", { p_order_id: order.id });
+      if (marked.error) setError("تم فتح الطباعة لكن تعذر تحديث لون الطاولة: " + marked.error.message);
+      else await load();
+    }
   }
 
   async function checkout() {
@@ -272,7 +286,7 @@ export default function PosPage() {
         p_reservation_id: reservationId,
         p_discount_type: discountType,
         p_discount_value: Number(discountValue) || 0,
-        p_payments: total > 0 ? [{ method: payment, amount: Number(total.toFixed(2)) }] : [],
+        p_payments: mode === "dine-in" ? [] : (total > 0 ? [{ method: payment, amount: Number(total.toFixed(2)) }] : []),
       });
       if (result.error) throw result.error;
       setMessage("تم إنشاء الطلب رقم ARK-" + result.data + " وإرساله للتجهيز.");
@@ -282,6 +296,36 @@ export default function PosPage() {
     } catch (e) {
       setError("فشل إنشاء الطلب: " + e.message);
     } finally { setSaving(false); }
+  }
+
+  async function applyOrderDiscount() {
+    if (!editingOrderId) return;
+    if (newItemsSubtotal > 0) return setError("احفظ الأصناف الجديدة أولًا ثم طبّق الخصم.");
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await supabase.rpc("pos_update_order_discount", { p_order_id: editingOrderId, p_discount_type: discountType, p_discount_value: Number(discountValue) || 0 });
+      if (result.error) throw result.error;
+      setEditingOrderTotal(Number(result.data.total_amount));
+      setSelectedOrder((old) => old ? { ...old, total_amount: result.data.total_amount, discount_amount: result.data.discount_amount } : old);
+      setMessage("تم تحديث الخصم على الأوردر ARK-" + editingOrderId + " بنجاح.");
+      await load();
+    } catch (e) { setError("تعذر تطبيق الخصم: " + e.message); }
+    finally { setSaving(false); }
+  }
+
+  async function recordCashPayment() {
+    if (!editingOrderId) return;
+    const received = Number(cashReceived);
+    if (!Number.isFinite(received) || received <= 0) return setError("اكتب المبلغ النقدي المستلم.");
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await supabase.rpc("pos_record_cash_payment", { p_order_id: editingOrderId, p_received: received });
+      if (result.error) throw result.error;
+      setMessage("تم تسجيل السداد. الباقي للعميل: " + fmt(result.data.change) + " ج.م — المتبقي على الأوردر: " + fmt(result.data.remaining) + " ج.م");
+      setCashReceived("");
+      await load();
+    } catch (e) { setError("تعذر تسجيل السداد: " + e.message); }
+    finally { setSaving(false); }
   }
 
   function startItemTransfer() {
@@ -431,10 +475,12 @@ export default function PosPage() {
             <h3>الطاولات الداخلية ({Number(settings.indoor_tables || 0)})</h3>
             <div style={s.fullTableGrid}>
               {Array.from({length:Number(settings.indoor_tables)||0},(_,i)=>i+1).map(n => {
-                const occupied = activeTables.some(o => o.table_number === n && o.table_area === "indoor");
+                const occupiedOrder = activeTables.find(o => o.table_number === n && o.table_area === "indoor");
+                const occupied = Boolean(occupiedOrder);
+                const printed = Boolean(occupiedOrder?.receipt_printed_at);
                 const reserved = reservations.some(r => r.table_number === n && (r.seating_area || "indoor") === "indoor");
-                return <button key={"indoor-"+n} onClick={() => openTable(n, "indoor")} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
-                  <b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
+                return <button key={"indoor-"+n} onClick={() => openTable(n, "indoor")} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(printed?s.printedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
+                  <b>{n}</b><small>{printed ? "تمت طباعة الفاتورة" : occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
                 </button>;
               })}
               {!Number(settings.indoor_tables) && <small style={s.muted}>لا توجد طاولات داخلية محددة.</small>}
@@ -444,16 +490,18 @@ export default function PosPage() {
             <h3>الطاولات الخارجية ({Number(settings.outdoor_tables || 0)})</h3>
             <div style={s.fullTableGrid}>
               {Array.from({length:Number(settings.outdoor_tables)||0},(_,i)=>i+1).map(n => {
-                const occupied = activeTables.some(o => o.table_number === n && o.table_area === "outdoor");
+                const occupiedOrder = activeTables.find(o => o.table_number === n && o.table_area === "outdoor");
+                const occupied = Boolean(occupiedOrder);
+                const printed = Boolean(occupiedOrder?.receipt_printed_at);
                 const reserved = reservations.some(r => r.table_number === n && r.seating_area === "outdoor");
-                return <button key={"outdoor-"+n} onClick={() => openTable(n, "outdoor")} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
-                  <b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
+                return <button key={"outdoor-"+n} onClick={() => openTable(n, "outdoor")} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(printed?s.printedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
+                  <b>{n}</b><small>{printed ? "تمت طباعة الفاتورة" : occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
                 </button>;
               })}
               {!Number(settings.outdoor_tables) && <small style={s.muted}>لا توجد طاولات خارجية محددة.</small>}
             </div>
           </div>
-          <div style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🟡 محجوزة</span></div>
+          <div style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🔵 تمت طباعة الفاتورة</span></span><span>🟡 محجوزة</span></div>
         </section>
       ) : (
         <div style={s.orderWorkspace}>
@@ -537,8 +585,10 @@ export default function PosPage() {
               <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} disabled={Boolean(editingOrderId)} onChange={e=>setPhone(e.target.value)} />
               <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} disabled={Boolean(editingOrderId)} onChange={e=>setNotes(e.target.value)} />
             </div>
-            {!editingOrderId && <div style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input className="pos-filter-control" aria-label="قيمة الخصم" style={{...s.discountInput,color:"#000",WebkitTextFillColor:"#000",opacity:1}} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>}
+            <div style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input className="pos-filter-control" aria-label="قيمة الخصم" style={{...s.discountInput,color:"#000",WebkitTextFillColor:"#000",opacity:1}} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>}
+            {editingOrderId && <button style={s.submit} disabled={saving || editingOrderClosed || newItemsSubtotal > 0} onClick={applyOrderDiscount}>{saving ? "جاري تطبيق الخصم..." : "تطبيق الخصم على الأوردر"}</button>}
             {editingOrderId ? <div style={s.totals}><div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div><div><span>قيمة الإضافات</span><b>{fmt(newItemsSubtotal)} ج.م</b></div><div style={s.grand}><b>الإجمالي بعد الإضافة</b><b>{fmt(Number(editingOrderTotal || 0) + newItemsSubtotal)} ج.م</b></div></div> : <><div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div><div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div></>}
+            {editingOrderId && mode === "dine-in" && !editingOrderClosed && <div style={s.discountBox}><b>السداد النقدي</b><div>إجمالي الفاتورة: {fmt(editingOrderTotal)} ج.م</div><div>المدفوع: {fmt(paymentSummary[editingOrderId] || 0)} ج.م</div><div>المتبقي: {fmt(Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)))} ج.م</div><input className="pos-filter-control" style={s.discountInput} type="number" min="0" step="0.01" placeholder="المبلغ المستلم من العميل" value={cashReceived} onChange={e=>setCashReceived(e.target.value)} /><div>الباقي للعميل: {fmt(Math.max(0, Number(cashReceived || 0) - Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0))))} ج.م</div><button style={s.submit} disabled={saving || Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)) <= 0 || Number(cashReceived) <= 0} onClick={recordCashPayment}>{saving ? "جاري تسجيل السداد..." : "تسجيل السداد النقدي"}</button></div>}
             {!editingOrderClosed && <button style={s.submit} disabled={saving || (editingOrderId ? newItemsSubtotal <= 0 : !cart.length) || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : editingOrderId ? "حفظ الإضافات على نفس الأوردر" : "تأكيد الطلب وإرساله للتجهيز"}</button>}
           </section>
         </div>
