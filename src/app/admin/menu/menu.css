@@ -417,3 +417,14 @@
 .menu-modal-overlay { background:rgba(41,37,31,.45); }
 .menu-modal { border-color:#E8E0D4; }
 .menu-form label,.menu-category-chip > span { color:#29251F; }
+
+
+/* High-contrast menu management typography */
+html body .admin-menu * {
+  color: #29251F !important;
+}
+html body .admin-menu input::placeholder,
+html body .admin-menu textarea::placeholder {
+  color: #746958 !important;
+  opacity: 1;
+}
