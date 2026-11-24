@@ -512,6 +512,7 @@ export default function PosPage() {
       if (result.error) throw result.error;
       setMessage("تم دمج الأوردر ARK-" + selectedTableOrder.id + " في الأوردر ARK-" + result.data.target_order_id + "، والطاولة المصدر أصبحت متاحة.");
       setMergeTargetId("");
+      setShowMergePanel(false);
       setSelectedTableKey("");
       await load();
     } catch (e) { setError("تعذر دمج الطاولتين: " + e.message); }
@@ -779,7 +780,7 @@ export default function PosPage() {
                 <button type="button" disabled={!selectedTableOrder || saving} onClick={() => selectedTableOrder && openTable(selectedTableOrder.table_number, selectedTableOrder.table_area, "remove-items")}>
                   <span className="pos-action-icon">🗑️</span><b>مسح صنف من الطاولة</b>
                 </button>
-                <button type="button" disabled={!selectedTableOrder || mergeTargets.length === 0 || saving} onClick={() => { setShowMergePanel(v => !v); setShowTransfer(false); setShowDiscountPanel(false); setMergeTargetId(""); }}>
+                <button type="button" disabled={!selectedTableOrder || mergeTargets.length === 0 || saving} onClick={() => { setShowMergePanel(true); setShowTransfer(false); setShowDiscountPanel(false); setMergeTargetId(""); }}>
                   <span className="pos-action-icon">🧩</span><b>دمج طاولة في طاولة</b>
                 </button>
               </div>
@@ -833,14 +834,35 @@ export default function PosPage() {
           </div>
         </section>
 
-        {showMergePanel&&selectedTableOrder&&<div className="floorInlineModal pos-floor-inline-action" style={s.floorInlineModal}>
-          <b>دمج أوردر الطاولة {selectedTableOrder.table_number} داخل طاولة أخرى</b>
-          <select style={s.filterInput} value={mergeTargetId} onChange={e=>setMergeTargetId(e.target.value)}>
-            <option value="">اختار الطاولة المستقبِلة</option>
-            {mergeTargets.map(o=><option key={o.id} value={o.id}>{o.table_area==="indoor"?"داخلية":"خارجية"} — طاولة {o.table_number} — ARK-{o.id}</option>)}
-          </select>
-          <button className="submit" style={s.submit} disabled={saving||!mergeTargetId} onClick={mergeSelectedTable}>{saving?"جاري الدمج...":"تأكيد الدمج"}</button>
-          <button style={s.secondary} disabled={saving} onClick={()=>{setShowMergePanel(false);setMergeTargetId("");}}>إلغاء</button>
+        {showMergePanel&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>{if(!saving){setShowMergePanel(false);setMergeTargetId("");}}}>
+          <div role="dialog" aria-modal="true" aria-labelledby="merge-table-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
+            <h2 id="merge-table-title" style={{margin:0,textAlign:"center"}}>دمج أوردر الطاولة {selectedTableOrder.table_number}</h2>
+            <p style={{margin:0,textAlign:"center",color:"#75664f"}}>اختار الطاولة المشغولة اللي هينتقل ليها الأوردر. الطاولات الفاضية أو المحجوزة غير متاحة.</p>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(105px,1fr))",gap:8}}>
+              {allFloorTransferTargets.map(target=>{
+                const order=activeTables.find(o=>o.table_area===target.area&&o.table_number===target.number);
+                const reserved=reservations.some(r=>r.table_number===target.number&&(r.seating_area||"indoor")===target.area);
+                const selected=String(mergeTargetId)===String(order?.id||"");
+                const disabled=!order||reserved||saving;
+                const tileStyle=order
+                  ? selected
+                    ? {background:"#fff0d8",borderColor:"#b88946",color:"#805a2a",outline:"3px solid #d28c2c"}
+                    : {background:"#e3f0ff",borderColor:"#8bb9e8",color:"#1e5b94"}
+                  : reserved
+                    ? {background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"}
+                    : {background:"#f2f2f2",borderColor:"#dedede",color:"#777"};
+                return <button key={target.area+":"+target.number} type="button" disabled={disabled} onClick={()=>setMergeTargetId(String(order.id))} style={{minHeight:78,padding:8,border:"2px solid",borderRadius:10,display:"grid",placeContent:"center",gap:4,fontFamily:"inherit",fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.88:1,...tileStyle}}>
+                  <span>{target.area==="indoor"?"داخلية":"خارجية"}</span>
+                  <strong style={{fontSize:17}}>طاولة {target.number}</strong>
+                  <small>{order?"مشغولة — ARK-"+order.id:reserved?"محجوزة":"فارغة"}</small>
+                </button>;
+              })}
+            </div>
+            <div style={{display:"flex",justifyContent:"center",gap:9,flexWrap:"wrap"}}>
+              <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150}} disabled={saving||!mergeTargetId} onClick={mergeSelectedTable}>{saving?"جاري الدمج...":"OK — تأكيد الدمج"}</button>
+              <button type="button" style={s.secondary} disabled={saving} onClick={()=>{setShowMergePanel(false);setMergeTargetId("");}}>إلغاء</button>
+            </div>
+          </div>
         </div>}
         {showDiscountPanel&&selectedTableOrder&&<div className="floorInlineModal pos-floor-inline-action" style={s.floorInlineModal}>
           <b>تطبيق خصم على الأوردر ARK-{selectedTableOrder.id}</b>
