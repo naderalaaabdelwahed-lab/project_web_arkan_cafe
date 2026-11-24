@@ -71,3 +71,60 @@
 .hr-main > main[dir="rtl"] [role="alert"]{padding:12px 15px!important;border:1px solid #754343!important;border-radius:10px!important;background:#482323!important;color:#ffc5c5!important}
 .hr-main > main[dir="rtl"] [role="status"]{padding:12px 15px!important;border:1px solid #31684c!important;border-radius:10px!important;background:#193a2c!important;color:#b5f0ca!important}
 @media(max-width:650px){.hr-main > main[dir="rtl"] section{padding:15px!important}.hr-main > main[dir="rtl"] section:first-of-type{align-items:stretch!important}.hr-main > main[dir="rtl"] section:first-of-type label,.hr-main > main[dir="rtl"] section:first-of-type button{width:100%!important}}
+
+/* Balanced ARKAN HR palette — readable controls with distinct semantic states */
+.hr-shell { background:#F6F4F0; color:#29251F; }
+.hr-sidebar { background:#FFFFFF; border-color:#E8E0D4; }
+.hr-brand,.hr-page-heading h1,.hr-panel,.hr-attendance-form label { color:#29251F; }
+.hr-brand span,.hr-attendance-eyebrow { color:#91672F; }
+.hr-sidebar-caption,.hr-sidebar-bottom,.hr-page-heading p,.hr-stat span,.hr-attendance-form small,.hr-attendance-note { color:#62594F; }
+.hr-nav a { color:#51483E; }
+.hr-nav a:hover,.hr-nav a.active { background:#F1E9DC; border-color:#D8CFC1; color:#6B4A20; }
+.hr-panel,.hr-stat { background:#FFFFFF; border-color:#E8E0D4; box-shadow:0 4px 18px rgba(41,37,31,.045); }
+.hr-stat strong,.hr-table th { color:#79552E; }
+.hr-field,.hr-attendance-form input,.hr-attendance-actions button { background:#FFFFFF; color:#29251F; border-color:#D8CFC1; }
+.hr-table th,.hr-table td { border-color:#E8E0D4; }
+.hr-table td { color:#29251F; }
+.hr-action,.hr-attendance-actions button.selected { background:#91672F; border-color:#91672F; color:#FFFFFF; }
+.hr-action.secondary { background:#344657; border-color:#344657; color:#FFFFFF; }
+.hr-alert { background:#FBE9E7; border-color:#E9C4BF; color:#96352E; }
+.hr-success { background:#E6F2E8; border-color:#C9E2CE; color:#27613B; }
+.hr-attendance-actions button span { color:#91672F; }
+.hr-attendance-actions button.selected span { color:#FFFFFF; }
+.hr-main > main[dir="rtl"] { color:#29251F!important; }
+.hr-main > main[dir="rtl"]>h1 { color:#29251F!important; }
+.hr-main > main[dir="rtl"]>p { color:#62594F!important; }
+.hr-main > main[dir="rtl"] section { background:#FFFFFF!important; border-color:#E8E0D4!important; box-shadow:0 4px 18px rgba(41,37,31,.045)!important; }
+.hr-main > main[dir="rtl"] section h2 { color:#79552E!important; }
+.hr-main > main[dir="rtl"] label { color:#29251F!important; }
+.hr-main > main[dir="rtl"] input,.hr-main > main[dir="rtl"] select { background:#FFFFFF!important; color:#29251F!important; border-color:#D8CFC1!important; }
+.hr-main > main[dir="rtl"] button { background:#91672F!important; border-color:#91672F!important; color:#FFFFFF!important; }
+.hr-main > main[dir="rtl"] thead,.hr-main > main[dir="rtl"] th { background:#F1E9DC!important; color:#51483E!important; border-color:#E8E0D4!important; }
+.hr-main > main[dir="rtl"] td,.hr-main > main[dir="rtl"] tbody tr,.hr-main > main[dir="rtl"] tbody tr:nth-child(even) { background:#FFFFFF!important; color:#29251F!important; border-color:#E8E0D4!important; }
+.hr-main > main[dir="rtl"] tbody tr:hover { background:#F6F4F0!important; }
+
+
+/* Legacy HR management screens — match the admin menu palette */
+.hr-shell { background:#F6F4F0 !important; color:#29251F !important; }
+.hr-main { background:#F6F4F0 !important; color:#29251F !important; }
+.hr-main > main[dir="rtl"] {
+  background:#F6F4F0 !important;
+  color:#29251F !important;
+}
+.hr-main > main[dir="rtl"] [style*="#100d0b"],
+.hr-main > main[dir="rtl"] [style*="#15120e"],
+.hr-main > main[dir="rtl"] [style*="#211b14"],
+.hr-main > main[dir="rtl"] [style*="#211b16"],
+.hr-main > main[dir="rtl"] [style*="#302416"],
+.hr-main > main[dir="rtl"] [style*="#1c1711"] {
+  background:#FFFFFF !important;
+  color:#29251F !important;
+  border-color:#E8E0D4 !important;
+}
+.hr-main > main[dir="rtl"] a { color:#79552E; }
+.hr-main > main[dir="rtl"] button {
+  background:#91672F !important;
+  color:#FFFFFF !important;
+  border-color:#91672F !important;
+}
+.hr-main > main[dir="rtl"] button:disabled { opacity:.55; }

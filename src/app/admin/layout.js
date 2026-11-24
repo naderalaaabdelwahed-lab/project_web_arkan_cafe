@@ -28,6 +28,21 @@ const links = [
     permission: "menu.view",
   },
   {
+    href: "/admin/preparation-screens",
+    label: "🖥️ إدارة شاشات التجهيز",
+    permission: "menu.update",
+  },
+  {
+    href: "/admin/preparation-settings",
+    label: "⚙️ توزيع أقسام التجهيز",
+    permission: "menu.update",
+  },
+  {
+    href: "/admin/printers",
+    label: "🖨️ إعدادات الطابعات",
+    permission: "menu.update",
+  },
+  {
     href: "/admin/hall",
     label: "▥ إدارة الصالة",
     permission: "hall.view",
@@ -41,6 +56,26 @@ const links = [
     href: "/admin/inventory",
     label: "▦ إدارة المخزن",
     permission: "inventory.view",
+  },
+  {
+    href: "/admin/hr/employees",
+    label: "♙ شؤون الموظفين",
+    permission: "hr.employees.view",
+  },
+  {
+    href: "/admin/hr/attendance",
+    label: "✓ الحضور والانصراف",
+    permission: "hr.attendance.view",
+  },
+  {
+    href: "/admin/hr/shifts",
+    label: "◷ الشيفتات",
+    permission: "hr.shifts.view",
+  },
+  {
+    href: "/admin/hr/payroll",
+    label: "ج.م الرواتب",
+    permission: "hr.payroll.view",
   },
   {
     href: "/admin/employees",

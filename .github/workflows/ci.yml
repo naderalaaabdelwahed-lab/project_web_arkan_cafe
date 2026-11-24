@@ -1,9 +1,9 @@
 name: CI
 on:
   pull_request:
-    branches: [main]
+    branches: [main, "fix/project-audit-nov-2026"]
   push:
-    branches: [main, "fix/**"]
+    branches: [main, "fix/**", "feature/arkan-pos-web"]
   workflow_dispatch:
 permissions:
   contents: read

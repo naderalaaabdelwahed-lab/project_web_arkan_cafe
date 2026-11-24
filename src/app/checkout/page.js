@@ -234,7 +234,6 @@ export default function CheckoutPage() {
       const orderTypes = {
         delivery: "توصيل Delivery",
         takeaway: "استلام Takeaway",
-        "dine-in": "داخل المطعم Dine-in",
       };
 
       const paymentTypes = {
@@ -608,8 +607,8 @@ ${itemsDetails}
               >
                 <option value="delivery">توصيل Delivery</option>
                 <option value="takeaway">استلام Takeaway</option>
-                <option value="dine-in">داخل المطعم Dine-in</option>
               </select>
+              <small className="form-hint">طلبات الصالة يتم تسجيلها من الكاشير لتحديد الطاولة ومتابعة الطلب داخل المطعم.</small>
 
               {customer.orderType === "delivery" && (
                 <>

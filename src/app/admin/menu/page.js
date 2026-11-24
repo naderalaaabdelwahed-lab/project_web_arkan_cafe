@@ -25,6 +25,7 @@ function getStoragePath(imageUrl) {
 export default function AdminMenuPage() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
+  const [printers, setPrinters] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [accessLoading, setAccessLoading] = useState(true);
@@ -37,6 +38,12 @@ export default function AdminMenuPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [printerId, setPrinterId] = useState("");
+  const [productDepartment, setProductDepartment] = useState("kitchen");
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryDepartment, setCategoryDepartment] = useState("kitchen");
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
 
   const [imageUrl, setImageUrl] = useState("");
   const [originalImageUrl, setOriginalImageUrl] = useState("");
@@ -130,19 +137,22 @@ export default function AdminMenuPage() {
     setLoading(true);
     setError("");
 
-    const [categoriesResult, productsResult] = await Promise.all([
-      supabase.from("categories").select("*").order("id"),
-      supabase.from("products").select("*, categories(name)").order("id"),
+    const [categoriesResult, productsResult, printersResult] = await Promise.all([
+      supabase.from("categories").select("*").order("department").order("display_order").order("id"),
+      supabase.from("products").select("*, categories(name,department), printers(name)").order("id"),
+      supabase.from("printers").select("id,name,printer_type,is_active").order("id"),
     ]);
 
-    if (categoriesResult.error || productsResult.error) {
+    if (categoriesResult.error || productsResult.error || printersResult.error) {
       setError(
         categoriesResult.error?.message ||
-        productsResult.error?.message
+        productsResult.error?.message ||
+        printersResult.error?.message
       );
     } else {
       setCategories(categoriesResult.data || []);
       setProducts(productsResult.data || []);
+      setPrinters(printersResult.data || []);
     }
 
     setLoading(false);
@@ -153,6 +163,8 @@ export default function AdminMenuPage() {
     setDescription("");
     setPrice("");
     setCategoryId("");
+    setPrinterId("");
+    setProductDepartment("kitchen");
     setImageUrl("");
     setOriginalImageUrl("");
     setImageFile(null);
@@ -166,6 +178,7 @@ export default function AdminMenuPage() {
   function openCreateForm() {
     if (!can("menu.create")) return;
     resetForm();
+    setPrinterId(String(printers.find((item) => item.printer_type === "kitchen")?.id || ""));
     setShowForm(true);
   }
 
@@ -232,6 +245,62 @@ export default function AdminMenuPage() {
     return data.publicUrl;
   }
 
+  function resetCategoryForm() {
+    setCategoryName("");
+    setCategoryDepartment("kitchen");
+    setEditingCategoryId(null);
+    setShowCategoryForm(false);
+  }
+
+  async function saveCategory(e) {
+    e.preventDefault();
+    if (!categoryName.trim()) {
+      setError("اكتب اسم القسم");
+      return;
+    }
+    if (editingCategoryId ? !can("menu.update") : !can("menu.create")) return;
+    setSaving(true);
+    setError("");
+    try {
+      const payload = { name: categoryName.trim(), department: categoryDepartment, is_active: true };
+      const result = editingCategoryId
+        ? await supabase.from("categories").update({ name: payload.name, department: payload.department }).eq("id", editingCategoryId)
+        : await supabase.from("categories").insert([payload]);
+      if (result.error) throw result.error;
+      resetCategoryForm();
+      await loadData();
+    } catch (err) {
+      setError(err.message || "تعذر حفظ القسم");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function editCategory(item) {
+    if (!can("menu.update")) return;
+    setEditingCategoryId(item.id);
+    setShowCategoryForm(true);
+    setCategoryName(item.name || "");
+    setCategoryDepartment(item.department || "kitchen");
+    setError("");
+  }
+
+  async function deleteCategory(item) {
+    if (!can("menu.delete")) return;
+    const usedBy = products.filter((product) => String(product.category_id) === String(item.id)).length;
+    if (usedBy > 0) {
+      setError(`لا يمكن حذف قسم "${item.name}" لأنه مرتبط بـ ${usedBy} منتج. انقل المنتجات لقسم آخر أولاً.`);
+      return;
+    }
+    if (!window.confirm(`هل أنت متأكد من حذف قسم "${item.name}"؟`)) return;
+    const { error: deleteError } = await supabase.from("categories").delete().eq("id", item.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    await loadData();
+  }
+
   async function saveProduct(e) {
     e.preventDefault();
     setError("");
@@ -239,8 +308,8 @@ export default function AdminMenuPage() {
     if (editingId && !can("menu.update")) return;
     if (!editingId && !can("menu.create")) return;
 
-    if (!name.trim() || !price || !categoryId) {
-      setError("من فضلك اكتب اسم المنتج والسعر واختار القسم");
+    if (!name.trim() || !price || !categoryId || !printerId) {
+      setError("من فضلك اكتب اسم المنتج والسعر واختار القسم والطابعة");
       return;
     }
 
@@ -268,6 +337,7 @@ export default function AdminMenuPage() {
         description: description.trim(),
         price: Number(price),
         category_id: categoryId,
+        printer_id: Number(printerId),
         image_url: newImageUrl,
       };
 
@@ -319,6 +389,8 @@ export default function AdminMenuPage() {
     setDescription(product.description || "");
     setPrice(String(product.price ?? ""));
     setCategoryId(product.category_id || "");
+    setPrinterId(product.printer_id ? String(product.printer_id) : "");
+    setProductDepartment(product.categories?.department || categories.find((item) => String(item.id) === String(product.category_id))?.department || "kitchen");
     setImageUrl(product.image_url || "");
     setOriginalImageUrl(product.image_url || "");
     setImageFile(null);
@@ -431,6 +503,63 @@ export default function AdminMenuPage() {
         </div>
       </div>
 
+      <section className="menu-category-management">
+        <div className="menu-section-heading">
+          <div>
+            <h2>أقسام المنيو</h2>
+            <p>قسّم المنيو حسب مكان التحضير: المطبخ والبار</p>
+          </div>
+        </div>
+
+        <div className="menu-department-grid">
+          {[
+            { id: "kitchen", title: "المطبخ" },
+            { id: "bar", title: "البار" },
+          ].map((department) => (
+            <div className="menu-department-card" key={department.id}>
+              <h3>{department.title}</h3>
+              <div className="menu-category-list">
+                {categories.filter((item) => (item.department || "kitchen") === department.id).map((item) => (
+                  <div className="menu-category-chip" key={item.id}>
+                    <span>{item.name}</span>
+                    <small>{products.filter((product) => String(product.category_id) === String(item.id)).length} منتج</small>
+                    <div>
+                      {can("menu.update") && <button type="button" onClick={() => editCategory(item)} title="تعديل القسم">✎</button>}
+                      {can("menu.delete") && <button type="button" onClick={() => deleteCategory(item)} title="حذف القسم">×</button>}
+                    </div>
+                  </div>
+                ))}
+                {!categories.some((item) => (item.department || "kitchen") === department.id) && <small>لا توجد أقسام بعد</small>}
+              </div>
+              {can("menu.create") && (
+                <button type="button" className="menu-category-add" onClick={() => {
+                  resetCategoryForm();
+                  setCategoryDepartment(department.id);
+                  setShowCategoryForm(true);
+                }}>
+                  ＋ إضافة قسم
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {(can("menu.create") || can("menu.update")) && showCategoryForm && (
+          <form className="menu-category-form" onSubmit={saveCategory}>
+            <strong>{editingCategoryId ? "تعديل القسم" : "إضافة قسم جديد"}</strong>
+            <input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="اسم القسم الجديد" required />
+            <select value={categoryDepartment} onChange={(e) => setCategoryDepartment(e.target.value)}>
+              <option value="kitchen">المطبخ</option>
+              <option value="bar">البار</option>
+            </select>
+            <div>
+              <button type="submit" disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ القسم"}</button>
+              <button type="button" onClick={resetCategoryForm} disabled={saving}>إلغاء</button>
+            </div>
+          </form>
+        )}
+      </section>
+
       <section className="menu-products-section">
         <div className="menu-section-heading">
           <div>
@@ -485,11 +614,12 @@ export default function AdminMenuPage() {
 
                 <div className="menu-product-info">
                   <span className="menu-product-category">
-                    {product.categories?.name || "بدون قسم"}
+                    {product.categories?.name || "بدون قسم"} · {(product.categories?.department || "kitchen") === "bar" ? "البار" : "المطبخ"}
                   </span>
 
                   <h3>{product.name}</h3>
                   <p>{product.description || "لا يوجد وصف للمنتج"}</p>
+                  <small style={{ color: "#aaa", display: "block", marginBottom: 10 }}>الطابعة: {product.printers?.name || "لم يتم تحديد طابعة"}</small>
 
                   <div className="menu-product-bottom">
                     <strong>
@@ -584,6 +714,23 @@ export default function AdminMenuPage() {
                 </div>
 
                 <div>
+                  <label>مكان التحضير</label>
+                  <select
+                    value={productDepartment}
+                    onChange={(e) => {
+                      const nextDepartment = e.target.value;
+                      setProductDepartment(nextDepartment);
+                      setCategoryId("");
+                      const matchingPrinter = printers.find((item) => item.printer_type === nextDepartment);
+                      setPrinterId(matchingPrinter ? String(matchingPrinter.id) : "");
+                    }}
+                    required
+                  >
+                    <option value="kitchen">المطبخ</option>
+                    <option value="bar">البار</option>
+                  </select>
+                </div>
+                <div>
                   <label>القسم</label>
                   <select
                     value={categoryId}
@@ -591,14 +738,25 @@ export default function AdminMenuPage() {
                     required
                   >
                     <option value="">اختار القسم</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
+                    {categories.filter((item) => item.is_active && (item.department || "kitchen") === productDepartment).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
+
+              <label>الطابعة المسؤولة عن طباعة المنتج</label>
+              <select value={printerId} onChange={(e) => setPrinterId(e.target.value)} required>
+                <option value="">اختار الطابعة</option>
+                {printers.map((printer) => (
+                  <option key={printer.id} value={printer.id}>
+                    {printer.name}{printer.is_active ? " (مفعّلة)" : " (لم يتم توصيلها بعد)"}
+                  </option>
+                ))}
+              </select>
+              <small>اختيار الطابعة متاح حتى لو لم يتم شراؤها أو توصيلها بعد.</small>
 
               <label>صورة المنتج</label>
               <input

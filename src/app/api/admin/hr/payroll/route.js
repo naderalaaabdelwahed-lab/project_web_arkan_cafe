@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-function service(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}})}
-async function admin(request){const token=(request.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");if(!token)return {response:NextResponse.json({error:"سجل دخول المدير أولاً."},{status:401})};const auth=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}});const {data,error}=await auth.auth.getUser(token);if(error||!data?.user)return {response:NextResponse.json({error:"جلسة غير صالحة."},{status:401})};if(data.user.app_metadata?.account_type==="hr_employee")return {response:NextResponse.json({error:"حساب HR مخصص للحضور والانصراف الشخصي فقط."},{status:403})};const db=service(),{data:row}=await db.from("admin_users").select("user_id").eq("user_id",data.user.id).maybeSingle();return row?{db,user:data.user}:{response:NextResponse.json({error:"غير مسموح."},{status:403})}}
+import { authorizeAdminPermission } from "@/lib/server/admin-permissions";
+async function admin(request, permission) {
+  return authorizeAdminPermission(request, permission);
+}
+
 export async function GET(request){
  try{
-  const a=await admin(request);if(a.response)return a.response;
+  const a=await admin(request,"hr.payroll.view");if(a.response)return a.response;
   const month=new URL(request.url).searchParams.get("month");
   let runQuery=a.db.from("hr_payroll_runs").select("*,hr_payroll_items(*)").order("created_at",{ascending:false});
   if(month){
@@ -80,8 +82,8 @@ export async function GET(request){
 }
 export async function POST(request){
  try{
-  const a=await admin(request);if(a.response)return a.response;
   const b=await request.json();
+  const a=await admin(request,b.action==="adjustment"?"hr.payroll.adjust":"hr.payroll.create");if(a.response)return a.response;
   if(b.action==="refresh_draft"){
    const runId=String(b.id||"");
    if(!/^[0-9a-f-]{36}$/i.test(runId))return NextResponse.json({error:"كشف الرواتب غير صحيح."},{status:400});
@@ -113,11 +115,11 @@ export async function POST(request){
   return NextResponse.json({run:data.run,items:data.items||[]},{status:201});
  }catch(e){console.error("HR payroll POST",e);return NextResponse.json({error:e.message||"تعذر إنشاء كشف الرواتب."},{status:400})}
 }
-export async function PATCH(request){try{const a=await admin(request);if(a.response)return a.response;const b=await request.json();if(!/^[0-9a-f-]{36}$/i.test(String(b.id||"")))return NextResponse.json({error:"كشف غير صحيح."},{status:400});const {data,error}=await a.db.from("hr_payroll_runs").update({status:"finalized",finalized_by:a.user.id,finalized_at:new Date().toISOString()}).eq("id",b.id).eq("status","draft").select("*").single();if(error)throw error;return NextResponse.json({run:data})}catch(e){return NextResponse.json({error:e.message||"تعذر اعتماد الكشف."},{status:400})}}
+export async function PATCH(request){try{const b=await request.json();const a=await admin(request,"hr.payroll.finalize");if(a.response)return a.response;if(!/^[0-9a-f-]{36}$/i.test(String(b.id||"")))return NextResponse.json({error:"كشف غير صحيح."},{status:400});const {data,error}=await a.db.from("hr_payroll_runs").update({status:"finalized",finalized_by:a.user.id,finalized_at:new Date().toISOString()}).eq("id",b.id).eq("status","draft").select("*").single();if(error)throw error;return NextResponse.json({run:data})}catch(e){return NextResponse.json({error:e.message||"تعذر اعتماد الكشف."},{status:400})}}
 export async function DELETE(request){
  try{
-  const a=await admin(request);if(a.response)return a.response;
   const b=await request.json();
+  const a=await admin(request,"hr.payroll.adjust");if(a.response)return a.response;
   if(!/^[0-9a-f-]{36}$/i.test(String(b.id||"")))
    return NextResponse.json({error:"الخصم أو الإضافة غير صحيح."},{status:400});
   const {data,error}=await a.db.rpc("hr_delete_payroll_adjustment",{p_adjustment_id:b.id});
