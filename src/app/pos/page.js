@@ -688,6 +688,17 @@ export default function PosPage() {
       ) : (
         <div className="orderWorkspace" style={s.orderWorkspace}>
           <aside style={s.menuSidebar}>
+            {mode === "dine-in" && <div style={s.dineActions}>
+              <h3 style={{margin:"0 0 4px"}}>عمليات الطلب</h3>
+              {editingOrderId ? <>
+                <button type="button" style={s.secondary} onClick={() => printReceipt()}>طباعة الفاتورة</button>
+                <button type="button" style={s.secondary} onClick={() => { setShowTransfer(v => !v); setShowItemTransfer(false); setTransferTarget(""); }}>نقل الطاولة بالكامل</button>
+                <button type="button" style={s.secondary} onClick={startItemTransfer}>نقل أصناف لطاولة أخرى</button>
+                <button type="button" style={s.secondary} onClick={() => setScreen("tables")}>الرجوع للطاولات</button>
+                <button type="button" style={s.clear} onClick={() => { reset(); setScreen("tables"); }}>إلغاء فتح الأوردر</button>
+              </> : <button type="button" style={s.secondary} onClick={() => setScreen("tables")}>الرجوع للطاولات</button>}
+              <div style={s.actionHint}>اختار الصنف من المنيو بالأسفل لإضافته للأوردر الظاهر على اليمين.</div>
+            </div>}
             <div style={s.menuSidebarHead}>
               <div><h2>المنيو</h2><small style={s.muted}>اضغط على الصنف لإضافته</small></div>
               <input style={s.search} placeholder="بحث..." value={search} onChange={e => setSearch(e.target.value)} />
@@ -708,12 +719,9 @@ export default function PosPage() {
             <div style={s.head}>
               <div><h2>{editingOrderId ? "الأوردر ARK-" + editingOrderId : "الطلب الحالي"}</h2><small style={s.muted}>{mode === "dine-in" ? (area === "indoor" ? "طاولة داخلية " : "طاولة خارجية ") + table : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div>
               <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
-                {editingOrderId && <button style={s.secondary} onClick={() => printReceipt()}>طباعة الفاتورة</button>}
                 {tab === "all" && <button style={s.secondary} onClick={() => { reset(); setTab("all"); }}>رجوع لكل الأوردرات</button>}
-                {editingOrderId && mode === "dine-in" && <button style={s.secondary} onClick={() => { setShowTransfer((v) => !v); setShowItemTransfer(false); setTransferTarget(""); }}>نقل الطاولة بالكامل</button>}
-                {editingOrderId && mode === "dine-in" && <button style={s.secondary} onClick={startItemTransfer}>نقل أصناف لطاولة أخرى</button>}
-                {mode === "dine-in" && <button style={s.secondary} onClick={() => setScreen("tables")}>رجوع للطاولات</button>}
-                <button style={s.clear} onClick={() => { reset(); if (editingOrderId && mode === "dine-in") setScreen("tables"); }}>{editingOrderId ? "إلغاء التعديل" : "مسح الطلب"}</button>
+                {mode !== "dine-in" && editingOrderId && <button style={s.secondary} onClick={() => printReceipt()}>طباعة الفاتورة</button>}
+                {mode !== "dine-in" && <button style={s.clear} onClick={() => reset()}>{editingOrderId ? "إلغاء التعديل" : "مسح الطلب"}</button>}
               </div>
             </div>
             {editingOrderClosed && <p style={{padding:10,background:"#fff4d9",color:"#8b681b",borderRadius:8}}>هذا الأوردر مغلق/ملغي؛ يمكنك مراجعة تفاصيله وطباعته، لكن إضافة أصناف تتطلب إعادة فتح الأوردر بصلاحية المدير.</p>}
@@ -838,7 +846,7 @@ const s = {
  secondary:{padding:"9px 13px",border:"1px solid #ddd",borderRadius:8,background:"#fff",cursor:"pointer"},
  error:{padding:12,background:"#ffeded",color:"#a12c2c",borderRadius:9},success:{padding:12,background:"#e9f7ee",color:"#246c45",borderRadius:9},
  tabs:{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"},tab:{padding:"12px 24px",border:"1px solid #ddd",borderRadius:9,background:"#fff",cursor:"pointer",fontWeight:700},selectedTab:{background:"#2c2823",color:"#fff"},
- stats:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:15},stat:{background:"#fff",padding:15,border:"1px solid #e9e4dc",borderRadius:10,display:"grid",gap:7},workspace:{display:"grid",gridTemplateColumns:"minmax(0,1.5fr) minmax(320px,0.9fr)",gap:14,alignItems:"start"},orderWorkspace:{display:"grid",gridTemplateColumns:"minmax(280px,0.85fr) minmax(0,1.5fr)",gap:14,alignItems:"start"},menuSidebar:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:14,minWidth:0},menuSidebarHead:{display:"grid",gap:9,marginBottom:10},orderPanel:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:16,minWidth:0},
+ stats:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:15},stat:{background:"#fff",padding:15,border:"1px solid #e9e4dc",borderRadius:10,display:"grid",gap:7},workspace:{display:"grid",gridTemplateColumns:"minmax(0,1.5fr) minmax(320px,0.9fr)",gap:14,alignItems:"start"},orderWorkspace:{display:"grid",gridTemplateColumns:"minmax(280px,0.85fr) minmax(0,1.5fr)",gap:14,alignItems:"start",direction:"ltr"},menuSidebar:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:14,minWidth:0,direction:"rtl"},menuSidebarHead:{display:"grid",gap:9,marginBottom:10},dineActions:{display:"grid",gap:8,marginBottom:14,padding:12,border:"1px solid #e9dfd1",borderRadius:10,background:"#fffaf3"},actionHint:{fontSize:12,color:"#75664f",lineHeight:1.6},orderPanel:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:16,minWidth:0,direction:"rtl"},
  panel:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:16,minWidth:0},head:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:9,marginBottom:12},search:{padding:10,border:"1px solid #ddd",borderRadius:8,width:"40%"},
  categories:{display:"flex",gap:7,overflowX:"auto",paddingBottom:12},category:{padding:"8px 12px",border:"1px solid #e5dfd6",borderRadius:20,background:"#fff",whiteSpace:"nowrap",cursor:"pointer"},
  products:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(125px,1fr))",gap:9},product:{display:"grid",gap:6,textAlign:"right",padding:9,border:"1px solid #eee8df",borderRadius:10,background:"#fff",cursor:"pointer"},image:{width:"100%",height:78,objectFit:"cover",borderRadius:7},imageBlank:{height:78,display:"grid",placeItems:"center",background:"#f6f1e9",borderRadius:7,fontSize:24,color:"#a7793d"},
