@@ -197,8 +197,11 @@ export default function PrintersSettingsPage() {
     }
     if (!window.confirm(`حذف "${printer.name}"؟ المنتجات المرتبطة بها ستصبح بدون طابعة.`)) return;
     const { error: deleteError } = await supabase.from("printers").delete().eq("id", printer.id);
-    if (deleteError) setError(deleteError.message);
-    else {
+    if (deleteError) {
+      setError(deleteError.code === "23503"
+        ? "لا يمكن حذف الطابعة لأنها مرتبطة بمنتجات أو طلبات سابقة. أعد تعيين المنتجات أو أوقف الطابعة بدل حذفها."
+        : deleteError.message);
+    } else {
       setSuccess("تم حذف الطابعة.");
       await loadPrinters();
     }
@@ -261,7 +264,7 @@ export default function PrintersSettingsPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}><h2 style={{ color: "#d4af37", margin: 0 }}>{editingId ? "تعديل الطابعة" : "إضافة طابعة جديدة"}</h2><button type="button" onClick={closeForm} style={{ background: "#333", color: "#fff", border: 0, borderRadius: 7, padding: "6px 11px", cursor: "pointer" }}>×</button></div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14 }}>
                 <div><label style={labelStyle}>اسم الطابعة</label><input style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: طابعة الفطير" required /></div>
-                <div><label style={labelStyle}>نوع الطابعة</label><select style={inputStyle} value={form.printer_type} onChange={(e) => setForm({ ...form, printer_type: e.target.value })}><option value="kitchen">المطبخ</option><option value="bar">البار</option><option value="cashier">الكاشير</option><option value="custom">طابعة إضافية</option></select></div>
+                <div><label style={labelStyle}>نوع الطابعة</label><select style={inputStyle} disabled={Boolean(editingId && printers.find((item) => item.id === editingId)?.printer_key.startsWith("default-"))} value={form.printer_type} onChange={(e) => setForm({ ...form, printer_type: e.target.value })}><option value="kitchen">المطبخ</option><option value="bar">البار</option><option value="cashier">الكاشير</option><option value="custom">طابعة إضافية</option></select></div>
                 <div><label style={labelStyle}>طريقة الاتصال</label><select style={inputStyle} value={form.connection_type} onChange={(e) => setForm({ ...form, connection_type: e.target.value })}><option value="usb">USB</option><option value="network">شبكة (IP)</option><option value="system">طابعة النظام</option></select></div>
                 {form.connection_type === "network" && <><div><label style={labelStyle}>IP Address</label><input style={inputStyle} value={form.ip_address} onChange={(e) => setForm({ ...form, ip_address: e.target.value })} placeholder="192.168.1.100" required /></div><div><label style={labelStyle}>Port</label><input style={inputStyle} type="number" min="1" max="65535" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} /></div></>}
                 <div><label style={labelStyle}>عرض الورق</label><select style={inputStyle} value={form.paper_width_mm} onChange={(e) => setForm({ ...form, paper_width_mm: e.target.value })}><option value="58">58 مم</option><option value="80">80 مم</option></select></div>
