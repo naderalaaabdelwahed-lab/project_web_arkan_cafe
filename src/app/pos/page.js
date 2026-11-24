@@ -592,13 +592,13 @@ export default function PosPage() {
         
       `}</style>
 
+      <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       <header style={s.header}>
         <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
         <button style={s.secondary} onClick={load}>تحديث البيانات</button>
       </header>
       {error && <p style={s.error}>{error}</p>}
       {message && <p style={s.success}>{message}</p>}
-      <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       {tab === "all" && screen !== "order" ? (
         <section style={s.allOrdersPage}>
           <div className="allOrdersHeading" style={s.allOrdersHeading}>
@@ -661,36 +661,24 @@ export default function PosPage() {
         <>
         
         <section className="arkan-floor-dashboard" style={s.floorDashboard}>
-          <aside style={s.floorSidebar}>
-            <div className="floorTools floor-action-card" style={s.floorTools}>
-              <h3 style={{margin:"0 0 4px"}}>عمليات الطاولة</h3>
-              {selectedTableOrder ? <>
-                <b>{selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية"} — طاولة {selectedTableOrder.table_number}</b>
-                <small>الأوردر ARK-{selectedTableOrder.id}</small>
-                <small>الإجمالي: {fmt(selectedTableOrder.total_amount)} ج.م</small>
-                <small>المدفوع: {fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</small>
-                <small>المتبقي: {fmt(selectedDue)} ج.م</small>
-                <button className="submit" style={s.submit} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>إضافة أصناف / فتح الأوردر</button>
-                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"remove-items")}>حذف صنف / تعديل الكمية</button>
-                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"discount")}>فتح الخصم على الفاتورة</button>
-                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"transfer-items")}>نقل صنف لطاولة أخرى</button>
-                <button style={s.secondary} onClick={()=>{setShowTransfer(true);setTransferTarget("");}}>نقل الطاولة بالكامل</button>
-                <div style={{display:"grid",gap:7}}>
-                  <label style={s.floorLabel}>دمج مع طاولة مشغولة</label>
-                  <select style={s.filterInput} value={mergeTargetId} onChange={e=>setMergeTargetId(e.target.value)}>
-                    <option value="">اختار الطاولة المستقبِلة</option>
-                    {mergeTargets.map(o=><option key={o.id} value={o.id}>{o.table_area==="indoor"?"داخلية":"خارجية"} — طاولة {o.table_number} (ARK-{o.id})</option>)}
-                  </select>
-                  <button style={s.secondary} disabled={saving||!mergeTargetId} onClick={mergeSelectedTable}>تأكيد دمج الطاولتين</button>
-                </div>
-                <button className="submit" style={s.submit} disabled={selectedDue<=0} onClick={()=>{setCashReceived("");setShowCashModal(true);}}>سداد نقدي وإغلاق الأوردر</button>
-                <button style={s.secondary} onClick={()=>printReceipt(selectedTableOrder)}>طباعة الفاتورة</button>
-                <button style={s.clear} disabled={saving} onClick={emptySelectedTable}>إفراغ الطاولة وإنهاء الطلب</button>
-                <small style={s.floorHint}>العمليات متاحة للطاولة المشغولة المحددة فقط. الصالة لا تسجل الدفع إلا عند مغادرة العميل.</small>
-              </> : <>
-                <p style={s.muted}>اضغط مرة واحدة على الطاولة لعرض أوردرها في السايد بار اليمين. اضغط مرتين لفتح الأوردر.</p>
-                <button style={s.secondary} disabled={!selectedTableKey} onClick={()=>{const [a,n]=selectedTableKey.split(":");openTable(Number(n),a);}}>فتح الطاولة المحددة</button>
-              </>}
+          <aside className="pos-open-tables-sidebar" style={s.floorSidebar}>
+            <div className="pos-sidebar-total">
+              <small>إجمالي الفلوس</small>
+              <strong>{fmt(floorTotal)} <span>ج.م</span></strong>
+            </div>
+            <div className="pos-sidebar-count">
+              <b>{floorOccupiedCount}</b>
+              <span>طاولات مفتوحة</span>
+            </div>
+            <button className="pos-sidebar-refresh" type="button" onClick={load} disabled={loading}>↻ تحديث</button>
+            <div className="pos-open-table-list">
+              <h3>الطاولات المفتوحة</h3>
+              {activeTables.length ? activeTables.map((o) => (
+                <button key={o.id} type="button" className={selectedTableOrder?.id === o.id ? "active" : ""} onClick={() => openTable(o.table_number,o.table_area)}>
+                  <span>{o.table_area === "indoor" ? "داخلية" : "خارجية"}</span>
+                  <b>{o.table_number}</b>
+                </button>
+              )) : <small className="pos-no-open-tables">لا توجد طاولات مفتوحة</small>}
             </div>
           </aside>
           <div style={s.floorTables}>
