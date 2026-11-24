@@ -3339,3 +3339,112 @@ body .arkan-pos-page input:-webkit-autofill:focus {
   .arkan-pos-page .products { grid-template-columns: minmax(0,1fr) !important; }
   .arkan-floor-dashboard .floorDetailRow { grid-template-columns: minmax(0,1fr) !important; }
 }
+
+
+/* ===== ARKAN UNIFIED LIGHT THEME — colors only ===== */
+:root {
+  color-scheme: light;
+  --arkan-bg: #F6F4F0;
+  --arkan-surface: #FFFFFF;
+  --arkan-text: #29251F;
+  --arkan-muted: #746958;
+  --arkan-accent: #B58B4D;
+  --arkan-border: #E8E0D4;
+}
+body {
+  background: var(--arkan-bg);
+  color: var(--arkan-text);
+}
+.navbar, footer { background: var(--arkan-surface); color: var(--arkan-text); }
+.logo span, footer span { color: var(--arkan-text); }
+.logo small, .hero p, .about p, footer p, footer small { color: var(--arkan-muted); }
+.hero, .about-section {
+  background-color: var(--arkan-bg);
+  color: var(--arkan-text);
+}
+.hero h1, .hero-content h1, .section-heading h2, .about-content h2,
+.menu h2, .about h2, .reservation-heading h1, .reservation-form h2,
+.menu-main-heading h2, .menu-category-heading h2, .food-content h3 { color: var(--arkan-text); }
+.menu-card, .features, .about, .reservation-form, .checkout-form,
+.order-summary, .success-card, .cart-item, .cart-summary, .empty-cart,
+.menu-card, .menu-modal, .admin-sidebar, .admin-main,
+.admin-stat-card, .admin-card, .admin-panel, .admin-content,
+.inventory-admin-layout, .menu-admin, .menu-stat-card, .menu-products-section,
+.menu-product-card, .menu-category-management, .menu-department-card,
+.hr-shell, .hr-sidebar, .hr-panel, .hr-stat, .hr-main {
+  background: var(--arkan-surface);
+  color: var(--arkan-text);
+  border-color: var(--arkan-border);
+}
+.admin-layout { background: var(--arkan-bg); color: var(--arkan-text); }
+.admin-sidebar, .hr-sidebar { background: #FFFFFF; border-color: var(--arkan-border); }
+.admin-logo, .admin-header h1, .menu-admin-header h1,
+.menu-product-info h3, .menu-empty h3, .menu-modal-header h2,
+.hr-page-heading h1, .hr-brand { color: var(--arkan-text); }
+.admin-menu-title, .admin-sidebar-footer span, .admin-sidebar-footer small,
+.admin-nav a, .admin-header p, .menu-admin-header p, .menu-product-info > p,
+.menu-category-chip > small, .menu-empty, .hr-sidebar-caption,
+.hr-page-heading p, .hr-panel, .hr-stat span { color: var(--arkan-muted); }
+.admin-nav a:hover, .admin-nav a.active, .hr-nav a:hover, .hr-nav a.active {
+  background: #F5EFE4;
+  color: var(--arkan-accent);
+  border-color: var(--arkan-border);
+}
+.nav-btn, .primary-btn, .primary-button, .menu-add-btn, .menu-save-btn,
+.menu-category-add, .menu-category-form button, .food-footer button,
+.reservation-submit, .submit-order, .hr-action {
+  background: var(--arkan-accent);
+  border-color: var(--arkan-accent);
+  color: #FFFFFF;
+}
+.secondary-btn, .secondary-button { color: var(--arkan-text); border-color: var(--arkan-accent); }
+.menu-category-nav button, .menu-category-chip, .menu-product-actions button,
+.menu-modal-actions .cancel-btn, .menu-form input, .menu-form textarea,
+.menu-form select, .menu-toolbar input, .menu-toolbar select {
+  background: #FFFFFF;
+  color: var(--arkan-text);
+  border-color: var(--arkan-border);
+}
+input, textarea, select,
+.admin-layout input, .admin-layout textarea, .admin-layout select,
+.menu-admin input, .menu-admin textarea, .menu-admin select {
+  color: var(--arkan-text) !important;
+  background-color: #FFFFFF;
+  border-color: var(--arkan-border);
+  caret-color: var(--arkan-accent);
+}
+input::placeholder, textarea::placeholder { color: var(--arkan-muted) !important; }
+input:focus, textarea:focus, select:focus { border-color: var(--arkan-accent) !important; }
+.reservation-fields label, .reservation-form > p, .reservation-info > p,
+.reservation-detail p, .checkout-form label, .summary-row,
+.cart-item-info p, .continue-shopping { color: var(--arkan-muted); }
+.menu-category-nav button { color: var(--arkan-text); border-color: var(--arkan-border); }
+.menu-category-nav button:hover, .menu-category-nav button.active {
+  background: var(--arkan-accent); color: #FFFFFF; border-color: var(--arkan-accent);
+}
+.menu-product-bottom, .food-footer, .menu-category-heading { border-color: var(--arkan-border); }
+.menu-product-bottom > strong, .menu-category-heading .eyebrow,
+.menu-category-count, .food-price, .menu-message { color: var(--arkan-accent); }
+.menu-modal-overlay { background: rgba(41,37,31,.45); }
+.menu-modal { background: #FFFFFF; border-color: var(--arkan-border); }
+.menu-modal label, .menu-modal-header h2 { color: var(--arkan-text); }
+.checkout-form input:not([type="radio"]), .checkout-form textarea,
+.option-card, .reservation-fields input, .reservation-fields select,
+.reservation-fields textarea, .order-number {
+  background: #FFFFFF; color: var(--arkan-text); border-color: var(--arkan-border);
+}
+.summary-total { border-color: var(--arkan-accent); }
+.summary-total strong, .checkout-item strong, .cart-item-total, .cart-item-info p { color: var(--arkan-accent); }
+.success-icon { background: var(--arkan-accent); color: #FFFFFF; }
+.hr-shell { background: var(--arkan-bg); color: var(--arkan-text); }
+.hr-sidebar { background: #FFFFFF; }
+.hr-brand span, .hr-attendance-eyebrow, .hr-attendance-actions button span { color: var(--arkan-accent); }
+.hr-nav a { color: var(--arkan-muted); }
+.hr-panel, .hr-stat { background: #FFFFFF; border-color: var(--arkan-border); box-shadow: none; }
+.hr-stat strong, .hr-table th { color: var(--arkan-accent); }
+.hr-table td { color: var(--arkan-text); border-color: var(--arkan-border); }
+.hr-field, .hr-attendance-form input, .hr-attendance-actions button {
+  background: #FFFFFF; color: var(--arkan-text); border-color: var(--arkan-border);
+}
+.arkan-pos-page { --pos-ink:#29251F; --pos-muted:#746958; --pos-border:#E8E0D4; --pos-surface:#FFFFFF; --pos-bg:#F6F4F0; --pos-gold:#B58B4D; --pos-gold-light:#F5EFE4; }
+.arkan-floor-dashboard { background: #F6F4F0; color: #29251F; border-color: #E8E0D4; }
