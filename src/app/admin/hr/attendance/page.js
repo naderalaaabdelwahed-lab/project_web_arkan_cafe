@@ -101,6 +101,11 @@ export default function AttendancePage(){
   <section className="attendance-no-print" style={{...box,display:"flex",gap:12,flexWrap:"wrap",alignItems:"end",marginBottom:18}}>
    <label>الموظف<br/><select style={field} value={employee} onChange={e=>setEmployee(e.target.value)}><option value="">اختر الموظف</option>{employees.map(x=><option key={x.id} value={x.id}>{x.full_name}{x.employment_status==="inactive"?" (غير نشط)":""}</option>)}</select></label>
    <label>الشهر<br/><input style={field} type="month" value={month} onChange={e=>setMonth(e.target.value)}/></label>
+   <div style={{display:"flex",gap:6,alignItems:"end"}}>
+    <button type="button" style={field} onClick={()=>setMonth(v=>{const [y,m]=v.split("-").map(Number);return new Date(Date.UTC(y,m-2,1)).toISOString().slice(0,7)})}>الشهر السابق ←</button>
+    <button type="button" style={field} onClick={()=>setMonth(today.slice(0,7))}>الشهر الحالي</button>
+    <button type="button" style={field} disabled={month>=today.slice(0,7)} onClick={()=>setMonth(v=>{const [y,m]=v.split("-").map(Number);return new Date(Date.UTC(y,m,1)).toISOString().slice(0,7)})}>→ الشهر التالي</button>
+   </div>
    <button onClick={load} disabled={loading}>{loading?"جارٍ التحميل...":"تحديث الكشف"}</button>
    <button onClick={()=>window.print()} disabled={!selected||loading}>طباعة كشف الموظف</button>
   </section>
