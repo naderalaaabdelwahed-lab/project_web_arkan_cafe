@@ -39,6 +39,8 @@ export default function PosPage() {
   const [reservationId, setReservationId] = useState(null);
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [editingOrderTotal, setEditingOrderTotal] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [editingOrderClosed, setEditingOrderClosed] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTarget, setTransferTarget] = useState("");
   const [showItemTransfer, setShowItemTransfer] = useState(false);
@@ -148,7 +150,7 @@ export default function PosPage() {
   function reset() {
     setCart([]); setCustomer(""); setPhone(""); setAddress(""); setNotes("");
     setDiscountValue("0"); setTable(null); setReservationId(null);
-    setEditingOrderId(null); setEditingOrderTotal(null);
+    setEditingOrderId(null); setEditingOrderTotal(null); setSelectedOrder(null); setEditingOrderClosed(false);
     setShowTransfer(false); setTransferTarget("");
     setShowItemTransfer(false); setTransferQuantities({});
   }
@@ -162,6 +164,8 @@ export default function PosPage() {
     setTab("dine-in");
     setScreen("order");
     if (currentOrder) {
+      setSelectedOrder(currentOrder);
+      setEditingOrderClosed(false);
       setEditingOrderId(currentOrder.id);
       setEditingOrderTotal(Number(currentOrder.total_amount || 0));
       setCart((currentOrder.order_items || []).map((item) => ({
@@ -181,11 +185,60 @@ export default function PosPage() {
       setNotes(currentOrder.notes || "");
       setReservationId(currentOrder.reservation_id || null);
     } else {
+      setSelectedOrder(null);
+      setEditingOrderClosed(false);
       setReservationId(booking ? booking.id : null);
       if (booking) { setCustomer(booking.customer_name || ""); setPhone(booking.phone || ""); }
     }
   }
+  function openOrderFromAll(order) {
+    reset();
+    setSelectedOrder(order);
+    setEditingOrderId(order.id);
+    setEditingOrderTotal(Number(order.total_amount || 0));
+    setEditingOrderClosed(["delivered", "cancelled"].includes(order.status));
+    setMode(order.order_type || "takeaway");
+    setTab("all");
+    setScreen("order");
+    setArea(order.table_area || "indoor");
+    setTable(order.table_number || null);
+    setCustomer(order.customer_name || "");
+    setPhone(order.phone || "");
+    setAddress(order.address || "");
+    setNotes(order.notes || "");
+    setCart((order.order_items || []).map((item) => ({
+      cartKey: "existing-" + item.id, orderItemId: item.id,
+      preparationStatus: item.preparation_status, product_id: item.product_id,
+      name: item.product_name, price: Number(item.unit_price || 0),
+      quantity: Number(item.quantity || 0), originalQuantity: Number(item.quantity || 0),
+      note: item.item_note || "", existing: true,
+    })));
+  }
+
+  function printReceipt(order = selectedOrder) {
+    if (!order) return setError("افتح أوردر الأول علشان تطبع الفاتورة.");
+    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (ch) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    const rows = (order.order_items || []).map((it) => "<tr><td>"+esc(it.product_name || it.name)+"</td><td>"+fmt(it.quantity)+"</td><td>"+fmt(it.unit_price)+"</td><td>"+fmt(Number(it.quantity||0)*Number(it.unit_price||0))+"</td></tr>").join("");
+    const d = order.created_at ? new Date(order.created_at) : new Date();
+    const html = [
+      "<!doctype html><html lang='ar' dir='rtl'><head><meta charset='utf-8'><title>فاتورة ARK-"+esc(order.id)+"</title>",
+      "<style>@page{size:80mm auto;margin:3mm}*{box-sizing:border-box}body{width:74mm;margin:0 auto;font-family:Tahoma,Arial,sans-serif;color:#000;font-size:12px}h2,p{text-align:center;margin:4px 0}.muted{font-size:10px}.line{border-top:1px dashed #000;margin:8px 0}table{width:100%;border-collapse:collapse;font-size:10px}th,td{padding:4px 1px;text-align:right;border-bottom:1px dotted #aaa}.totals div{display:flex;justify-content:space-between;margin:5px 0}.grand{font-weight:bold;font-size:15px}.foot{text-align:center;margin-top:12px}</style></head><body>",
+      "<h2>ARKAN CAFE</h2><p class='muted'>فاتورة بيع</p><div class='line'></div>",
+      "<p>رقم الفاتورة: ARK-"+esc(order.id)+"</p><p>التاريخ: "+esc(d.toLocaleDateString("ar-EG"))+" — "+esc(d.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}))+"</p>",
+      "<p>النوع: "+esc(order.order_type==="dine-in"?"صالة":order.order_type==="delivery"?"دليفري":"تيك أواي")+(order.table_number?" — طاولة "+esc(order.table_number):"")+"</p>",
+      (order.customer_name ? "<p>العميل: "+esc(order.customer_name)+"</p>" : ""),
+      "<div class='line'></div><table><thead><tr><th>الصنف</th><th>ك</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>"+rows+"</tbody></table>",
+      "<div class='line'></div><div class='totals'><div><span>الخصم</span><b>"+fmt(order.discount_amount)+" ج.م</b></div><div class='grand'><span>الإجمالي</span><b>"+fmt(order.total_amount)+" ج.م</b></div></div>",
+      "<div class='line'></div><p class='foot'>شكراً لزيارتكم<br>نتمنى لكم يوماً سعيداً</p>",
+      "<script>window.onload=()=>{window.focus();window.print();};window.onafterprint=()=>window.close();<\\/script></body></html>"
+    ].join("");
+    const w = window.open("", "arkan-receipt", "width=420,height=700");
+    if (!w) return setError("المتصفح منع نافذة الطباعة. اسمح بالنوافذ المنبثقة للموقع ثم حاول مرة أخرى.");
+    w.document.open(); w.document.write(html); w.document.close();
+  }
+
   async function checkout() {
+    if (editingOrderClosed) return setError("الأوردر مغلق أو ملغي ولا يمكن إضافة أصناف إليه.");
     if (!cart.length) return setError("اختار أصناف الأول.");
     if (mode === "dine-in" && !table) return setError("اختار الطاولة الأول.");
     if (mode === "delivery" && !address.trim()) return setError("اكتب عنوان التوصيل.");
@@ -348,7 +401,7 @@ export default function PosPage() {
                   const typeLabel = dineIn ? "صالة" : o.order_type === "takeaway" ? "تيك أواي" : "دليفري";
                   const statusLabel = ({pending:"جديد",confirmed:"مؤكد",preparing:"قيد التحضير",delivered:"تم التسليم",cancelled:"ملغي"})[o.status] || o.status || "غير محدد";
                   const created = o.created_at ? new Date(o.created_at) : null;
-                  return <tr key={o.id}>
+                  return <tr key={o.id} onClick={() => openOrderFromAll(o)} title="اضغط لفتح تفاصيل الأوردر وإضافة أصناف" style={{cursor:"pointer"}}>
                     <td style={s.ordersTd}><b>#{o.id}</b></td>
                     <td style={s.ordersTd}>ARK-{o.id}</td>
                     <td style={s.ordersTd}>{created && !Number.isNaN(created.getTime()) ? created.toLocaleDateString("ar-EG") : "—"}</td>
@@ -412,7 +465,7 @@ export default function PosPage() {
               {categories.map(c => <button key={c.id} style={s.category} onClick={() => setCategory(String(c.id))}>{c.name}</button>)}
             </div>
             <div style={s.products}>
-              {productsShown.map(p => <button key={p.id} style={s.product} onClick={() => add(p)}>
+              {productsShown.map(p => <button key={p.id} style={s.product} disabled={editingOrderClosed} onClick={() => add(p)}>
                 {p.image_url ? <img src={p.image_url} alt="" style={s.image} /> : <span style={s.imageBlank}>＋</span>}
                 <b>{p.name}</b><small>{fmt(p.price)} ج.م</small>
               </button>)}
@@ -421,15 +474,18 @@ export default function PosPage() {
           </aside>
           <section style={s.orderPanel}>
             <div style={s.head}>
-              <div><h2>{editingOrderId ? "تعديل الأوردر الحالي #" + editingOrderId : "الطلب الحالي"}</h2><small style={s.muted}>{mode === "dine-in" ? (area === "indoor" ? "طاولة داخلية " : "طاولة خارجية ") + table : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div>
-              <div style={{display:"flex",gap:7}}>
+              <div><h2>{editingOrderId ? "الأوردر ARK-" + editingOrderId : "الطلب الحالي"}</h2><small style={s.muted}>{mode === "dine-in" ? (area === "indoor" ? "طاولة داخلية " : "طاولة خارجية ") + table : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div>
+              <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                {editingOrderId && <button style={s.secondary} onClick={() => printReceipt()}>طباعة الفاتورة</button>}
+                {tab === "all" && <button style={s.secondary} onClick={() => { reset(); setTab("all"); }}>رجوع لكل الأوردرات</button>}
                 {editingOrderId && <button style={s.secondary} onClick={() => { setShowTransfer((v) => !v); setShowItemTransfer(false); setTransferTarget(""); }}>نقل الطاولة بالكامل</button>}
                 {editingOrderId && <button style={s.secondary} onClick={startItemTransfer}>نقل أصناف لطاولة أخرى</button>}
                 {mode === "dine-in" && <button style={s.secondary} onClick={() => setScreen("tables")}>رجوع للطاولات</button>}
                 <button style={s.clear} onClick={() => { reset(); if (editingOrderId && mode === "dine-in") setScreen("tables"); }}>{editingOrderId ? "إلغاء التعديل" : "مسح الطلب"}</button>
               </div>
             </div>
-            {showTransfer && editingOrderId && <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto", gap: 8, alignItems: "center", padding: 12, marginBottom: 12, border: "1px solid #e5d3b8", borderRadius: 9, background: "#fffaf1" }}>
+            {editingOrderClosed && <p style={{padding:10,background:"#fff4d9",color:"#8b681b",borderRadius:8}}>هذا الأوردر مغلق/ملغي؛ يمكنك مراجعة تفاصيله وطباعته، لكن إضافة أصناف تتطلب إعادة فتح الأوردر بصلاحية المدير.</p>}
+            {showTransfer && editingOrderId && !editingOrderClosed && <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto auto", gap: 8, alignItems: "center", padding: 12, marginBottom: 12, border: "1px solid #e5d3b8", borderRadius: 9, background: "#fffaf1" }}>
               <select className="pos-filter-control" style={s.filterInput} value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)}>
                 <option value="">اختار الطاولة الجديدة</option>
                 {availableTransferTargets.map((target) => <option key={target.area + ":" + target.number} value={target.area + ":" + target.number}>
@@ -440,7 +496,7 @@ export default function PosPage() {
               <button style={s.secondary} disabled={saving} onClick={() => { setShowTransfer(false); setTransferTarget(""); }}>إلغاء</button>
               {!availableTransferTargets.length && <small style={{ gridColumn: "1 / -1", color: "#8b681b" }}>لا توجد طاولات متاحة للنقل حاليًا.</small>}
             </div>}
-            {showItemTransfer && editingOrderId && <div style={{ display: "grid", gap: 10, padding: 14, marginBottom: 12, border: "1px solid #d9c39b", borderRadius: 10, background: "#fffaf1" }}>
+            {showItemTransfer && editingOrderId && !editingOrderClosed && <div style={{ display: "grid", gap: 10, padding: 14, marginBottom: 12, border: "1px solid #d9c39b", borderRadius: 10, background: "#fffaf1" }}>
               <div><b>نقل أصناف من الأوردر ARK-{editingOrderId}</b><small style={{ display: "block", color: "#75664f", marginTop: 4 }}>حدد الكمية من كل صنف، ثم اختار الطاولة المستقبِلة. الأصناف التي بدأ تجهيزها لا يمكن نقلها.</small></div>
               <select className="pos-filter-control" style={s.filterInput} value={transferTarget} onChange={(e) => setTransferTarget(e.target.value)}>
                 <option value="">اختار الطاولة المستقبِلة</option>
@@ -481,7 +537,7 @@ export default function PosPage() {
             </div>
             {!editingOrderId && <div style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input className="pos-filter-control" aria-label="قيمة الخصم" style={{...s.discountInput,color:"#000",WebkitTextFillColor:"#000",opacity:1}} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>}
             {editingOrderId ? <div style={s.totals}><div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div><div><span>قيمة الإضافات</span><b>{fmt(newItemsSubtotal)} ج.م</b></div><div style={s.grand}><b>الإجمالي بعد الإضافة</b><b>{fmt(Number(editingOrderTotal || 0) + newItemsSubtotal)} ج.م</b></div></div> : <><div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div><div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div></>}
-            <button style={s.submit} disabled={saving || (editingOrderId ? newItemsSubtotal <= 0 : !cart.length) || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : editingOrderId ? "حفظ الإضافات على نفس الأوردر" : "تأكيد الطلب وإرساله للتجهيز"}</button>
+            {!editingOrderClosed && <button style={s.submit} disabled={saving || (editingOrderId ? newItemsSubtotal <= 0 : !cart.length) || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : editingOrderId ? "حفظ الإضافات على نفس الأوردر" : "تأكيد الطلب وإرساله للتجهيز"}</button>}
           </section>
         </div>
       )}
