@@ -25,6 +25,7 @@ function getStoragePath(imageUrl) {
 export default function AdminMenuPage() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
+  const [printers, setPrinters] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [accessLoading, setAccessLoading] = useState(true);
@@ -37,6 +38,7 @@ export default function AdminMenuPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [printerId, setPrinterId] = useState("");
   const [productDepartment, setProductDepartment] = useState("kitchen");
   const [categoryName, setCategoryName] = useState("");
   const [categoryDepartment, setCategoryDepartment] = useState("kitchen");
@@ -135,19 +137,22 @@ export default function AdminMenuPage() {
     setLoading(true);
     setError("");
 
-    const [categoriesResult, productsResult] = await Promise.all([
+    const [categoriesResult, productsResult, printersResult] = await Promise.all([
       supabase.from("categories").select("*").order("department").order("display_order").order("id"),
-      supabase.from("products").select("*, categories(name,department)").order("id"),
+      supabase.from("products").select("*, categories(name,department), printers(name)").order("id"),
+      supabase.from("printers").select("id,name,printer_type,is_active").order("id"),
     ]);
 
-    if (categoriesResult.error || productsResult.error) {
+    if (categoriesResult.error || productsResult.error || printersResult.error) {
       setError(
         categoriesResult.error?.message ||
-        productsResult.error?.message
+        productsResult.error?.message ||
+        printersResult.error?.message
       );
     } else {
       setCategories(categoriesResult.data || []);
       setProducts(productsResult.data || []);
+      setPrinters(printersResult.data || []);
     }
 
     setLoading(false);
@@ -158,6 +163,7 @@ export default function AdminMenuPage() {
     setDescription("");
     setPrice("");
     setCategoryId("");
+    setPrinterId("");
     setProductDepartment("kitchen");
     setImageUrl("");
     setOriginalImageUrl("");
@@ -172,6 +178,7 @@ export default function AdminMenuPage() {
   function openCreateForm() {
     if (!can("menu.create")) return;
     resetForm();
+    setPrinterId(String(printers.find((item) => item.printer_type === "kitchen")?.id || ""));
     setShowForm(true);
   }
 
@@ -301,8 +308,8 @@ export default function AdminMenuPage() {
     if (editingId && !can("menu.update")) return;
     if (!editingId && !can("menu.create")) return;
 
-    if (!name.trim() || !price || !categoryId) {
-      setError("من فضلك اكتب اسم المنتج والسعر واختار القسم");
+    if (!name.trim() || !price || !categoryId || !printerId) {
+      setError("من فضلك اكتب اسم المنتج والسعر واختار القسم والطابعة");
       return;
     }
 
@@ -330,6 +337,7 @@ export default function AdminMenuPage() {
         description: description.trim(),
         price: Number(price),
         category_id: categoryId,
+        printer_id: Number(printerId),
         image_url: newImageUrl,
       };
 
@@ -381,6 +389,7 @@ export default function AdminMenuPage() {
     setDescription(product.description || "");
     setPrice(String(product.price ?? ""));
     setCategoryId(product.category_id || "");
+    setPrinterId(product.printer_id ? String(product.printer_id) : "");
     setProductDepartment(product.categories?.department || categories.find((item) => String(item.id) === String(product.category_id))?.department || "kitchen");
     setImageUrl(product.image_url || "");
     setOriginalImageUrl(product.image_url || "");
@@ -610,6 +619,7 @@ export default function AdminMenuPage() {
 
                   <h3>{product.name}</h3>
                   <p>{product.description || "لا يوجد وصف للمنتج"}</p>
+                  <small style={{ color: "#aaa", display: "block", marginBottom: 10 }}>الطابعة: {product.printers?.name || "لم يتم تحديد طابعة"}</small>
 
                   <div className="menu-product-bottom">
                     <strong>
@@ -708,8 +718,11 @@ export default function AdminMenuPage() {
                   <select
                     value={productDepartment}
                     onChange={(e) => {
-                      setProductDepartment(e.target.value);
+                      const nextDepartment = e.target.value;
+                      setProductDepartment(nextDepartment);
                       setCategoryId("");
+                      const matchingPrinter = printers.find((item) => item.printer_type === nextDepartment);
+                      setPrinterId(matchingPrinter ? String(matchingPrinter.id) : "");
                     }}
                     required
                   >
@@ -733,6 +746,17 @@ export default function AdminMenuPage() {
                   </select>
                 </div>
               </div>
+
+              <label>الطابعة المسؤولة عن طباعة المنتج</label>
+              <select value={printerId} onChange={(e) => setPrinterId(e.target.value)} required>
+                <option value="">اختار الطابعة</option>
+                {printers.map((printer) => (
+                  <option key={printer.id} value={printer.id}>
+                    {printer.name}{printer.is_active ? " (مفعّلة)" : " (لم يتم توصيلها بعد)"}
+                  </option>
+                ))}
+              </select>
+              <small>اختيار الطابعة متاح حتى لو لم يتم شراؤها أو توصيلها بعد.</small>
 
               <label>صورة المنتج</label>
               <input
