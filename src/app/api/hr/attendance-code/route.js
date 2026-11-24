@@ -167,10 +167,15 @@ export async function POST(request) {
           error: "فيه حضور مفتوح من يوم سابق من غير انصراف. راجع التاريخ واضغط زر تجاوز الانصراف السابق لتسجيل حضور اليوم."
         }, { status: 409 });
       }
-      const saved = await db.from("hr_attendance").insert({
+      const values = {
         employee_id: employee.id, shift_date: today, check_in_at: now.toISOString(),
-        check_in_method: "pin", attendance_status: "present", late_minutes: 0, updated_at: now.toISOString()
-      });
+        check_in_method: "pin", attendance_status: "present", late_minutes: 0,
+        worked_minutes: 0, overtime_minutes: 0, shortage_minutes: 0,
+        checkout_skipped_at: null, updated_at: now.toISOString()
+      };
+      const saved = todayRow.data
+        ? await db.from("hr_attendance").update(values).eq("id", todayRow.data.id)
+        : await db.from("hr_attendance").insert(values);
       if (saved.error) {
         if (saved.error.code === "23505") return NextResponse.json({ error: "تم تسجيل حضور الموظف لهذا اليوم بالفعل." }, { status: 409 });
         throw saved.error;
