@@ -933,14 +933,21 @@ export default function PosPage() {
             </div>
           </div>
         </div>}
-        {showDiscountPanel&&selectedTableOrder&&<div className="floorInlineModal pos-floor-inline-action" style={s.floorInlineModal}>
-          <b>تطبيق خصم على الأوردر ARK-{selectedTableOrder.id}</b>
-          <select style={s.filterInput} value={discountType} onChange={e=>setDiscountType(e.target.value)}>
-            <option value="amount">خصم مبلغ بالجنيه</option><option value="percent">خصم بالنسبة المئوية</option>
-          </select>
-          <input style={s.filterInput} type="number" min="0" max={discountType==="percent"?100:undefined} step="0.01" value={discountValue} onChange={e=>setDiscountValue(e.target.value)} aria-label="قيمة الخصم" />
-          <button className="submit" style={s.submit} disabled={saving||Number(discountValue)<0||!discountValue.trim()} onClick={applySelectedTableDiscount}>{saving?"جاري تطبيق الخصم...":"تأكيد الخصم"}</button>
-          <button style={s.secondary} disabled={saving} onClick={()=>setShowDiscountPanel(false)}>إلغاء</button>
+        {showDiscountPanel&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowDiscountPanel(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="pos-discount-title" style={s.itemNoteModal} onClick={e=>e.stopPropagation()}>
+            <h2 id="pos-discount-title" style={{margin:0,textAlign:"center"}}>تطبيق خصم على الأوردر</h2>
+            <p style={{margin:0,textAlign:"center",color:"#666"}}>ARK-{selectedTableOrder.id} — طاولة {selectedTableOrder.table_number}</p>
+            <label style={{fontWeight:700}}>نوع الخصم</label>
+            <select style={s.filterInput} value={discountType} onChange={e=>setDiscountType(e.target.value)}>
+              <option value="amount">خصم مبلغ بالجنيه</option><option value="percent">خصم بالنسبة المئوية</option>
+            </select>
+            <label style={{fontWeight:700}}>قيمة الخصم {discountType==="percent"?"(%)":"(ج.م)"}</label>
+            <input autoFocus style={s.filterInput} type="number" min="0" max={discountType==="percent"?100:undefined} step="0.01" value={discountValue} onChange={e=>setDiscountValue(e.target.value)} aria-label="قيمة الخصم" />
+            <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+              <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:140}} disabled={saving||Number(discountValue)<0||!discountValue.trim()} onClick={applySelectedTableDiscount}>{saving?"جاري تطبيق الخصم...":"OK — تأكيد الخصم"}</button>
+              <button type="button" style={s.secondary} disabled={saving} onClick={()=>setShowDiscountPanel(false)}>إلغاء</button>
+            </div>
+          </div>
         </div>}
         {showCashModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowCashModal(false)}>
           <div className="cashModal" style={s.cashModal} onClick={e=>e.stopPropagation()}>
