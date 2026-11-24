@@ -57,6 +57,7 @@ export default function PosPage() {
   const [selectedTableKey, setSelectedTableKey] = useState("");
   const [showCashModal, setShowCashModal] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState("");
+  const [pendingFloorAction, setPendingFloorAction] = useState("");
 
   const load = useCallback(async () => {
     setError("");
@@ -115,6 +116,12 @@ export default function PosPage() {
     return () => { supabase.removeChannel(channel); };
   }, [load]);
 
+  useEffect(() => {
+    if (!pendingFloorAction || screen !== "order" || !editingOrderId || !cart.some((item) => item.existing)) return;
+    if (pendingFloorAction === "transfer-items") startItemTransfer();
+    setPendingFloorAction("");
+  }, [pendingFloorAction, screen, editingOrderId, cart]);
+
   const subtotal = useMemo(() => cart.reduce((sum, x) => sum + x.price * x.quantity, 0), [cart]);
   const newItemsSubtotal = useMemo(() => cart.reduce((sum, x) => sum + x.price * (x.quantity - (x.originalQuantity || 0)), 0), [cart]);
   const discount = Math.min(subtotal, discountType === "percent" ? subtotal * Math.min(100, Math.max(0, Number(discountValue) || 0)) / 100 : Math.max(0, Number(discountValue) || 0));
@@ -167,6 +174,7 @@ export default function PosPage() {
     setEditingOrderId(null); setEditingOrderTotal(null); setSelectedOrder(null); setEditingOrderClosed(false);
     setShowTransfer(false); setTransferTarget("");
     setShowItemTransfer(false); setTransferQuantities({});
+    setPendingFloorAction("");
   }
   function selectTable(n, selectedArea) {
     setSelectedTableKey(selectedArea + ":" + n);
@@ -174,7 +182,7 @@ export default function PosPage() {
     setTable(n);
   }
 
-  function openTable(n, selectedArea) {
+  function openTable(n, selectedArea, floorAction = "") {
     setSelectedTableKey(selectedArea + ":" + n);
     const currentOrder = activeTables.find((o) => o.table_number === n && o.table_area === selectedArea);
     const booking = reservations.find((r) => r.table_number === n && (r.seating_area || "indoor") === selectedArea);
@@ -184,6 +192,7 @@ export default function PosPage() {
     setMode("dine-in");
     setTab("dine-in");
     setScreen("order");
+    setPendingFloorAction(floorAction);
     if (currentOrder) {
       setSelectedOrder(currentOrder);
       setDiscountType("amount"); setDiscountValue(String(currentOrder.discount_amount || 0)); setCashReceived("");
@@ -460,540 +469,42 @@ export default function PosPage() {
 
   return (
     <main dir="rtl" className="arkan-pos-page" style={s.page}>
-      <style jsx global>{`.arkan-floor-dashboard{min-width:0}@media(max-width:1100px){.arkan-floor-dashboard{grid-template-columns:1fr!important}.arkan-floor-dashboard .floorDetails{grid-column:1!important}}.arkan-pos-page input,.arkan-pos-page textarea,.arkan-pos-page select{color:#000!important;-webkit-text-fill-color:#000!important;background-color:#fff!important;caret-color:#000!important;opacity:1!important}.arkan-pos-page input::placeholder,.arkan-pos-page textarea::placeholder{color:#555!important;-webkit-text-fill-color:#555!important;opacity:1!important}.arkan-pos-page select option{color:#000!important;background:#fff!important}.arkan-pos-page input:-webkit-autofill,.arkan-pos-page input:-webkit-autofill:hover,.arkan-pos-page input:-webkit-autofill:focus{ -webkit-text-fill-color:#000!important;box-shadow:0 0 0 1000px #fff inset!important;caret-color:#000!important}.arkan-pos-page .pos-filter-control{font-weight:600}.arkan-pos-page input::-webkit-calendar-picker-indicator{opacity:1}
-/* ===== POS FLOOR: FULL-VIEWPORT DESKTOP LAYOUT ===== */
-@media (min-width: 901px) {
-  html:has(.arkan-floor-dashboard), body:has(.arkan-floor-dashboard) {
-    height: 100%;
-    overflow: hidden;
-  }
-  body:has(.arkan-floor-dashboard) .arkan-pos-page {
-    height: 100dvh !important;
-    min-height: 0 !important;
-    max-height: 100dvh;
-    box-sizing: border-box;
-    padding: 10px 16px !important;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    overflow: hidden !important;
-  }
-  .arkan-pos-page > header {
-    flex: 0 0 auto;
-    min-height: 48px;
-    margin: 0 2px 2px !important;
-    align-items: center;
-  }
-  .arkan-pos-page > header h1 { font-size: 25px; }
-  .arkan-pos-page > header > div > small:last-child { font-size: 11px; }
-  .arkan-pos-page > nav {
-    flex: 0 0 auto;
-    margin: 0 0 2px !important;
-    gap: 7px;
-  }
-  .arkan-pos-page > nav button {
-    padding: 8px 20px !important;
-    min-height: 36px;
-  }
-  .arkan-pos-page > .arkan-floor-dashboard {
-    flex: 1 1 auto;
-    min-height: 0 !important;
-    height: auto !important;
-    grid-template-columns: minmax(205px,.78fr) minmax(0,2.2fr) minmax(205px,.82fr) !important;
-    grid-template-rows: minmax(0,1fr) auto;
-    gap: 10px !important;
-    padding: 10px !important;
-    overflow: hidden;
-    align-items: stretch !important;
-  }
-  .arkan-floor-dashboard > aside:first-child {
-    min-height: 0;
-    grid-template-rows: auto minmax(0,1fr);
-    gap: 9px !important;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:first-child {
-    padding: 12px 15px !important;
-    gap: 5px !important;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:first-child strong {
-    font-size: 27px !important;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:first-child button {
-    min-height: 30px;
-    padding: 5px 8px !important;
-    font-size: 11px;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) {
-    min-height: 0;
-    padding: 11px !important;
-    gap: 6px !important;
-    align-content: start;
-    overflow: hidden;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) h3,
-  .arkan-floor-dashboard > aside:nth-of-type(2) h3 {
-    font-size: 14px;
-    margin-bottom: 2px;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) small,
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) b {
-    font-size: 11px;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) button,
-  .arkan-floor-dashboard > aside:nth-of-type(2) button {
-    min-height: 31px !important;
-    padding: 6px 8px !important;
-    font-size: 11px;
-    line-height: 1.25;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) select {
-    padding: 7px !important;
-    font-size: 11px !important;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) {
-    min-height: 0;
-    padding: 13px !important;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) > .head {
-    flex: 0 0 auto;
-    padding-bottom: 8px;
-    margin-bottom: 2px;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) > .head h2 { font-size: 19px; }
-  .arkan-floor-dashboard > div:nth-child(2) h3 {
-    margin: 7px 0 6px !important;
-    font-size: 13px;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) > div[style*="grid"] {
-    gap: 7px !important;
-    grid-template-columns: repeat(auto-fill,minmax(82px,1fr)) !important;
-  }
-  .arkan-floor-dashboard button[style*="min-height: 112px"] {
-    min-height: clamp(58px,8vh,76px) !important;
-    padding: 6px !important;
-    gap: 3px !important;
-    border-radius: 11px !important;
-  }
-  .arkan-floor-dashboard button[style*="min-height: 112px"] b { font-size: 21px; }
-  .arkan-floor-dashboard button[style*="min-height: 112px"] small { font-size: 9px; }
-  .arkan-floor-dashboard > div:nth-child(2) > div:last-child {
-    margin-top: auto;
-    padding-top: 7px;
-    gap: 5px 9px !important;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) > div:last-child span {
-    padding: 4px 7px;
-    font-size: 10px;
-  }
-  .arkan-floor-dashboard > aside:nth-of-type(2) {
-    min-height: 0;
-    grid-template-rows: minmax(0,1fr) minmax(0,1fr);
-    gap: 9px !important;
-  }
-  .arkan-floor-dashboard > aside:nth-of-type(2) > div {
-    min-height: 0;
-    padding: 12px !important;
-    gap: 6px !important;
-    align-content: start;
-  }
-  .arkan-floor-dashboard > aside:nth-of-type(2) > div:first-child > div {
-    padding: 4px 0;
-    font-size: 11px;
-  }
-  .arkan-floor-dashboard > .floorDetails {
-    grid-column: 1 / -1;
-    padding: 9px 13px !important;
-    gap: 6px !important;
-  }
-  .arkan-floor-dashboard > .floorDetails > b { font-size: 12px; }
-  .arkan-floor-dashboard .floorDetailRow {
-    grid-template-columns: repeat(7,minmax(0,1fr));
-    gap: 6px !important;
-  }
-  .arkan-floor-dashboard .floorDetailRow span {
-    padding: 6px 8px;
-    font-size: 10px;
-    white-space: nowrap;
-  }
-  .arkan-floor-dashboard .floorInlineModal {
-    position: fixed;
-    z-index: 30;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%,-50%);
-    width: min(620px,calc(100vw - 40px));
-    box-shadow: 0 20px 70px rgba(0,0,0,.22);
-  }
+      <style jsx global>{`
+.arkan-floor-dashboard{min-width:0;align-items:stretch}
+.arkan-pos-page input,.arkan-pos-page textarea,.arkan-pos-page select{color:#171717!important;-webkit-text-fill-color:#171717!important;background:#fff!important;caret-color:#171717!important;opacity:1!important}
+.arkan-pos-page input::placeholder,.arkan-pos-page textarea::placeholder{color:#666!important;-webkit-text-fill-color:#666!important;opacity:1!important}
+.arkan-pos-page select option{color:#171717;background:#fff}
+.arkan-pos-page input:-webkit-autofill,.arkan-pos-page input:-webkit-autofill:hover,.arkan-pos-page input:-webkit-autofill:focus{-webkit-text-fill-color:#171717!important;box-shadow:0 0 0 1000px #fff inset!important;caret-color:#171717!important}
+.arkan-pos-page .pos-filter-control{font-weight:600}
+.arkan-pos-page input::-webkit-calendar-picker-indicator{opacity:1}
+.arkan-floor-dashboard .floorDetails{grid-column:1/-1}
+@media(min-width:1200px) and (min-height:720px){
+  body:has(.arkan-floor-dashboard) .arkan-pos-page{min-height:100dvh;padding:12px 16px!important;gap:10px!important}
+  .arkan-pos-page>.arkan-floor-dashboard{grid-template-columns:minmax(230px,1fr) minmax(0,2.15fr) minmax(250px,1fr)!important;gap:12px!important}
+  .arkan-floor-dashboard>aside,.arkan-floor-dashboard>div{min-width:0}
+  .arkan-floor-dashboard>div:nth-child(2){min-height:0}
+  .arkan-floor-dashboard .floorDetails{grid-column:1/-1}
 }
-
-/* ===== POS VISUAL PASS 2: REMOVE TOP WASTE + LARGE SQUARE CONTROLS ===== */
-@media (min-width: 901px) {
-  body:has(.arkan-floor-dashboard) .arkan-pos-page {
-    padding: 2px 12px 8px !important;
-    gap: 5px !important;
-  }
-  .arkan-pos-page > header {
-    min-height: 38px !important;
-    height: 38px;
-    margin: 0 !important;
-    padding: 0 4px !important;
-  }
-  .arkan-pos-page > header > div { display:flex; align-items:center; gap:12px; }
-  .arkan-pos-page > header > div > small:first-child { font-size:10px; }
-  .arkan-pos-page > header h1 { font-size:22px !important; margin:0 !important; }
-  .arkan-pos-page > header > div > small:last-child { font-size:12px !important; }
-  .arkan-pos-page > header > button { padding:7px 14px !important; min-height:32px; }
-  .arkan-pos-page > nav { margin:0 !important; min-height:36px; }
-  .arkan-pos-page > nav button { min-height:34px !important; padding:6px 18px !important; font-size:14px !important; }
-  .arkan-pos-page > .arkan-floor-dashboard {
-    grid-template-columns: minmax(290px,1.12fr) minmax(0,2.25fr) minmax(290px,1.12fr) !important;
-    gap:12px !important;
-    padding:8px !important;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:first-child {
-    padding:16px !important;
-    gap:8px !important;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:first-child > small { font-size:13px !important; }
-  .arkan-floor-dashboard > aside:first-child > div:first-child strong { font-size:32px !important; }
-  .arkan-floor-dashboard > aside:first-child > div:first-child button {
-    min-height:42px !important;
-    padding:9px 12px !important;
-    font-size:14px !important;
-    border-radius:9px !important;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) {
-    padding:15px !important;
-    gap:9px !important;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) h3,
-  .arkan-floor-dashboard > aside:nth-of-type(2) h3 {
-    font-size:17px !important;
-    margin:0 0 5px !important;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) b { font-size:14px !important; }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) small { font-size:13px !important; }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) button,
-  .arkan-floor-dashboard > aside:nth-of-type(2) button {
-    width:100%;
-    min-height:48px !important;
-    padding:10px 12px !important;
-    font-size:14px !important;
-    font-weight:700 !important;
-    line-height:1.35 !important;
-    border-radius:10px !important;
-    white-space:normal;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) select,
-  .arkan-floor-dashboard > aside:nth-of-type(2) select {
-    min-height:44px;
-    padding:9px 11px !important;
-    font-size:14px !important;
-  }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) > div[style*="grid"] {
-    gap:9px !important;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) {
-    padding:16px !important;
-    gap:9px !important;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) > .head h2 { font-size:22px !important; }
-  .arkan-floor-dashboard > div:nth-child(2) > .head small { font-size:13px !important; }
-  .arkan-floor-dashboard > div:nth-child(2) h3 { font-size:16px !important; }
-  .arkan-floor-dashboard > div:nth-child(2) > div[style*="grid"] {
-    grid-template-columns:repeat(auto-fill,minmax(100px,1fr)) !important;
-    gap:9px !important;
-  }
-  .arkan-floor-dashboard button[style*="min-height: 112px"] {
-    min-height:clamp(72px,9vh,94px) !important;
-    border-radius:12px !important;
-  }
-  .arkan-floor-dashboard button[style*="min-height: 112px"] b { font-size:25px !important; }
-  .arkan-floor-dashboard button[style*="min-height: 112px"] small { font-size:12px !important; }
-  .arkan-floor-dashboard > aside:nth-of-type(2) {
-    grid-template-rows:minmax(0,1fr) minmax(0,1fr);
-    gap:12px !important;
-  }
-  .arkan-floor-dashboard > aside:nth-of-type(2) > div {
-    padding:15px !important;
-    gap:10px !important;
-  }
-  .arkan-floor-dashboard > aside:nth-of-type(2) > div:first-child > div {
-    padding:7px 9px !important;
-    font-size:14px !important;
-    border-radius:8px;
-    background:rgba(100,116,139,.07);
-  }
-  .arkan-floor-dashboard > aside:nth-of-type(2) > div:first-child small { font-size:13px !important; }
-  .arkan-floor-dashboard > .floorDetails {
-    padding:11px 14px !important;
-    gap:9px !important;
-  }
-  .arkan-floor-dashboard > .floorDetails > b { font-size:15px !important; }
-  .arkan-floor-dashboard .floorDetailRow {
-    grid-template-columns:repeat(7,minmax(0,1fr));
-    gap:8px !important;
-  }
-  .arkan-floor-dashboard .floorDetailRow span {
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    min-height:42px;
-    padding:8px 10px !important;
-    border:1px solid rgba(100,116,139,.2);
-    border-radius:9px !important;
-    background:rgba(100,116,139,.06);
-    font-size:13px !important;
-    font-weight:700;
-    white-space:normal !important;
-    text-align:center;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) > div:last-child span {
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:36px;
-    padding:7px 12px !important;
-    border:1px solid rgba(100,116,139,.22);
-    border-radius:8px !important;
-    font-size:13px !important;
-    font-weight:700;
-  }
+@media(max-width:1199px){
+  .arkan-pos-page{min-height:100vh;padding:16px!important}
+  .arkan-pos-page>.arkan-floor-dashboard{grid-template-columns:minmax(0,1fr) minmax(0,1.7fr)!important;gap:12px!important}
+  .arkan-floor-dashboard>aside:nth-of-type(2){grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .arkan-floor-dashboard .floorDetails{grid-column:1/-1}
 }
-@media (min-width: 901px) and (max-height: 760px) {
-  body:has(.arkan-floor-dashboard) .arkan-pos-page { padding-top:2px !important; gap:4px !important; }
-  .arkan-pos-page > header { min-height:34px !important; height:34px; }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2),
-  .arkan-floor-dashboard > aside:nth-of-type(2) > div { padding:10px !important; gap:6px !important; }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) button,
-  .arkan-floor-dashboard > aside:nth-of-type(2) button { min-height:38px !important; padding:7px 9px !important; }
-  .arkan-floor-dashboard button[style*="min-height: 112px"] { min-height:62px !important; }
-  .arkan-floor-dashboard .floorDetailRow span { min-height:34px; }
+@media(max-width:760px){
+  .arkan-pos-page{padding:12px!important;gap:12px!important}
+  .arkan-pos-page>.arkan-floor-dashboard{grid-template-columns:minmax(0,1fr)!important}
+  .arkan-floor-dashboard>aside:nth-of-type(2){grid-column:auto;grid-template-columns:minmax(0,1fr)}
+  .arkan-floor-dashboard .floorDetails{grid-column:auto}
+  .arkan-floor-dashboard .floorDetailRow{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px!important}
+  .arkan-floor-dashboard .floorDetailRow span{min-width:0;white-space:normal}
+  .arkan-floor-dashboard button{min-height:42px}
+  .arkan-floor-dashboard>div:nth-child(2)>div[style*="grid"]{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))!important}
 }
-@media (min-width: 901px) and (max-height: 760px) {
-  body:has(.arkan-floor-dashboard) .arkan-pos-page { padding-top: 6px !important; padding-bottom: 6px !important; gap: 5px; }
-  .arkan-pos-page > header { min-height: 40px; }
-  .arkan-pos-page > header h1 { font-size: 21px; }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2),
-  .arkan-floor-dashboard > aside:nth-of-type(2) > div { padding: 8px !important; gap: 4px !important; }
-  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) button,
-  .arkan-floor-dashboard > aside:nth-of-type(2) button { min-height: 27px !important; padding: 4px 6px !important; }
-  .arkan-floor-dashboard button[style*="min-height: 112px"] { min-height: 54px !important; }
+@media(max-width:420px){
+  .arkan-pos-page{padding:8px!important}
+  .arkan-floor-dashboard .floorDetailRow{grid-template-columns:minmax(0,1fr)}
 }
-
-/* ===== RESPONSIVE FLOOR LAYOUT: viewport-aware, not fixed-size ===== */
-.arkan-pos-page,
-.arkan-pos-page * { box-sizing: border-box; }
-.arkan-pos-page { width:100%; max-width:100%; min-width:0; }
-.arkan-floor-dashboard { width:100%; min-width:0; }
-.arkan-floor-dashboard > * { min-width:0; }
-
-/* Large workstations: use the viewport only when both dimensions allow it. */
-@media (min-width: 1200px) and (min-height: 820px) {
-  html:has(.arkan-floor-dashboard), body:has(.arkan-floor-dashboard) {
-    height:100%;
-    overflow:hidden;
-  }
-  body:has(.arkan-floor-dashboard) .arkan-pos-page {
-    height:100dvh !important;
-    min-height:0 !important;
-    max-height:100dvh;
-    overflow:hidden !important;
-    padding:clamp(6px, .7vw, 12px) clamp(10px, 1vw, 18px) !important;
-    gap:clamp(5px, .55vw, 9px) !important;
-  }
-  .arkan-pos-page > header { flex:0 0 auto; min-height:clamp(38px,5vh,54px); }
-  .arkan-pos-page > nav { flex:0 0 auto; }
-  .arkan-pos-page > .arkan-floor-dashboard {
-    flex:1 1 auto;
-    min-height:0 !important;
-    height:auto !important;
-    grid-template-columns:minmax(235px,.95fr) minmax(0,2.05fr) minmax(245px,.98fr) !important;
-    grid-template-rows:minmax(0,1fr) auto;
-    gap:clamp(8px,.8vw,14px) !important;
-    overflow:hidden;
-    align-items:stretch !important;
-  }
-  .arkan-floor-dashboard > aside:first-child,
-  .arkan-floor-dashboard > aside:nth-of-type(2) { min-height:0; }
-  .arkan-floor-dashboard > div:nth-child(2) { min-height:0; overflow:auto; }
-  .arkan-floor-dashboard .floorDetailRow {
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(125px,1fr));
-  }
-}
-
-/* Laptops and medium screens: retain the dashboard hierarchy, allow page scrolling. */
-@media (min-width: 760px) and (max-width: 1199px), (min-width: 760px) and (max-height: 819px) {
-  html:has(.arkan-floor-dashboard), body:has(.arkan-floor-dashboard) {
-    height:auto !important;
-    min-height:100%;
-    overflow-x:hidden !important;
-    overflow-y:auto !important;
-  }
-  body:has(.arkan-floor-dashboard) .arkan-pos-page {
-    height:auto !important;
-    min-height:100dvh !important;
-    max-height:none !important;
-    overflow:visible !important;
-    padding:clamp(8px,1.2vw,16px) !important;
-    gap:10px !important;
-  }
-  .arkan-pos-page > header { min-height:42px; }
-  .arkan-pos-page > .arkan-floor-dashboard {
-    flex:none;
-    height:auto !important;
-    min-height:0 !important;
-    overflow:visible !important;
-    grid-template-columns:minmax(205px,.78fr) minmax(0,1.55fr) !important;
-    grid-template-rows:auto auto auto;
-    gap:10px !important;
-    align-items:stretch !important;
-  }
-  .arkan-floor-dashboard > aside:first-child { grid-column:1; grid-row:1; }
-  .arkan-floor-dashboard > div:nth-child(2) { grid-column:2; grid-row:1; min-height:390px; overflow:visible; }
-  .arkan-floor-dashboard > aside:nth-of-type(2) {
-    grid-column:1 / -1;
-    grid-row:2;
-    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-    grid-template-rows:auto !important;
-  }
-  .arkan-floor-dashboard > .floorDetails { grid-column:1 / -1; grid-row:3; }
-  .arkan-floor-dashboard .floorDetailRow {
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(135px,1fr));
-  }
-}
-
-/* Tablets and phones: stack sections, keep controls touch-friendly and prevent clipping. */
-@media (max-width: 759px) {
-  html:has(.arkan-floor-dashboard), body:has(.arkan-floor-dashboard) {
-    height:auto !important;
-    min-height:100%;
-    overflow-x:hidden !important;
-    overflow-y:auto !important;
-  }
-  body:has(.arkan-floor-dashboard) .arkan-pos-page {
-    width:100%;
-    height:auto !important;
-    min-height:100dvh !important;
-    max-height:none !important;
-    overflow:visible !important;
-    padding:10px !important;
-    gap:10px !important;
-  }
-  .arkan-pos-page > header {
-    min-height:0 !important;
-    height:auto !important;
-    gap:8px;
-    flex-wrap:wrap;
-    margin:0 !important;
-  }
-  .arkan-pos-page > header h1 { font-size:clamp(19px,5vw,24px) !important; }
-  .arkan-pos-page > header > button { min-height:40px; }
-  .arkan-pos-page > nav {
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:7px !important;
-    margin:0 !important;
-  }
-  .arkan-pos-page > nav button {
-    min-width:0;
-    min-height:42px !important;
-    padding:8px 6px !important;
-    font-size:14px !important;
-  }
-  .arkan-pos-page > .arkan-floor-dashboard {
-    display:grid !important;
-    grid-template-columns:minmax(0,1fr) !important;
-    grid-template-rows:auto !important;
-    gap:10px !important;
-    height:auto !important;
-    min-height:0 !important;
-    padding:0 !important;
-    overflow:visible !important;
-  }
-  .arkan-floor-dashboard > aside:first-child,
-  .arkan-floor-dashboard > div:nth-child(2),
-  .arkan-floor-dashboard > aside:nth-of-type(2),
-  .arkan-floor-dashboard > .floorDetails {
-    grid-column:1 !important;
-    grid-row:auto !important;
-    min-width:0;
-    min-height:0 !important;
-    overflow:visible !important;
-  }
-  .arkan-floor-dashboard > aside:first-child { grid-template-rows:auto auto !important; }
-  .arkan-floor-dashboard > aside:first-child > div,
-  .arkan-floor-dashboard > div:nth-child(2),
-  .arkan-floor-dashboard > aside:nth-of-type(2) > div,
-  .arkan-floor-dashboard > .floorDetails {
-    padding:12px !important;
-  }
-  .arkan-floor-dashboard > aside:nth-of-type(2) {
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-    grid-template-rows:auto !important;
-    gap:9px !important;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) > div[style*="grid"] {
-    grid-template-columns:repeat(auto-fill,minmax(88px,1fr)) !important;
-    gap:8px !important;
-  }
-  .arkan-floor-dashboard button[style*="min-height: 112px"] {
-    min-height:76px !important;
-    padding:8px !important;
-  }
-  .arkan-floor-dashboard .floorDetailRow {
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-    gap:7px !important;
-  }
-  .arkan-floor-dashboard .floorDetailRow span {
-    min-width:0;
-    min-height:42px;
-    white-space:normal !important;
-    overflow-wrap:anywhere;
-    text-align:center;
-    font-size:12px !important;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) > div:last-child {
-    margin-top:12px;
-    display:flex;
-    flex-wrap:wrap;
-    gap:7px !important;
-  }
-  .arkan-floor-dashboard > div:nth-child(2) > div:last-child span {
-    min-height:36px;
-    white-space:normal;
-    font-size:12px !important;
-  }
-  .arkan-floor-dashboard .floorInlineModal {
-    position:fixed;
-    z-index:1000;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    width:min(620px,calc(100vw - 24px));
-    max-height:calc(100dvh - 24px);
-    overflow:auto;
-  }
-}
-
-/* Very narrow phones: put paired action cards into one column. */
-@media (max-width: 420px) {
-  body:has(.arkan-floor-dashboard) .arkan-pos-page { padding:8px !important; }
-  .arkan-floor-dashboard > aside:nth-of-type(2) { grid-template-columns:minmax(0,1fr) !important; }
-  .arkan-floor-dashboard .floorDetailRow { grid-template-columns:minmax(0,1fr) !important; }
-  .arkan-floor-dashboard > div:nth-child(2) > div[style*="grid"] {
-    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-  }
-}
-
 `}</style>
       <header style={s.header}>
         <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
@@ -1078,8 +589,8 @@ export default function PosPage() {
                 <small>المدفوع: {fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</small>
                 <small>المتبقي: {fmt(selectedDue)} ج.م</small>
                 <button style={s.submit} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>إضافة أصناف / فتح الأوردر</button>
-                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>حذف أصناف من الطلب</button>
-                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>خصم من الفاتورة</button>
+                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"remove-items")}>فتح الأصناف وحذف المتاح</button>
+                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"discount")}>فتح الخصم على الفاتورة</button>
                 <button style={s.secondary} onClick={()=>{setCashReceived("");setShowCashModal(true);}}>السداد النقدي وإغلاق الأوردر</button>
                 <button style={s.secondary} onClick={()=>{setShowTransfer(true);setTransferTarget("");}}>نقل الطاولة بالكامل</button>
                 <div style={{display:"grid",gap:7}}>
@@ -1090,7 +601,7 @@ export default function PosPage() {
                   </select>
                   <button style={s.secondary} disabled={saving||!mergeTargetId} onClick={mergeSelectedTable}>دمج الأوردر وإخلاء الطاولة المصدر</button>
                 </div>
-                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>نقل أصناف من الطلب</button>
+                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"transfer-items")}>نقل أصناف من الطلب</button>
                 <button style={s.clear} disabled={saving} onClick={emptySelectedTable}>إفراغ الطاولة وإنهاء الطلب</button>
                 <small style={s.floorHint}>الدمج ينقل الأصناف والخصم وكل الدفعات، ويقفل أوردر المصدر. الأوردر المقفول لا يقبل أي تعديل.</small>
               </> : <>
@@ -1130,7 +641,7 @@ export default function PosPage() {
               <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>selectedTableOrder&&printReceipt(selectedTableOrder)}>طباعة الفاتورة</button>
               <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>selectedTableOrder&&openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>فتح تفاصيل الأوردر</button>
               <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>{setShowTransfer(true);setTransferTarget("");}}>نقل الطاولة</button>
-              <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>selectedTableOrder&&openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>نقل أصناف</button>
+              <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>selectedTableOrder&&openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"transfer-items")}>نقل أصناف</button>
               <button style={s.clear} disabled={!selectedTableOrder||saving} onClick={emptySelectedTable}>إفراغ الطاولة</button>
             </div>
           </aside>
