@@ -3448,3 +3448,153 @@ input:focus, textarea:focus, select:focus { border-color: var(--arkan-accent) !i
 }
 .arkan-pos-page { --pos-ink:#29251F; --pos-muted:#746958; --pos-border:#E8E0D4; --pos-surface:#FFFFFF; --pos-bg:#F6F4F0; --pos-gold:#B58B4D; --pos-gold-light:#F5EFE4; }
 .arkan-floor-dashboard { background: #F6F4F0; color: #29251F; border-color: #E8E0D4; }
+
+
+/* ===== ARKAN ADMIN PAGES — shared menu palette (colors only) ===== */
+.admin-layout,
+.admin-layout .admin-main,
+.inventory-layout,
+.inventory-layout > main,
+.inventory-admin-layout {
+  background: #F6F4F0 !important;
+  color: #29251F !important;
+}
+.admin-layout .admin-sidebar,
+.inventory-layout > aside {
+  background: #FFFFFF !important;
+  color: #29251F !important;
+  border-color: #E8E0D4 !important;
+}
+.admin-layout .admin-logo,
+.admin-layout .admin-menu-title,
+.admin-layout .admin-sidebar-footer,
+.admin-layout .admin-sidebar-footer small,
+.admin-layout .admin-nav a,
+.inventory-layout > aside a {
+  color: #62594F !important;
+}
+.admin-layout .admin-nav a:hover,
+.admin-layout .admin-nav a.active,
+.inventory-layout > aside a:hover,
+.inventory-layout > aside a[aria-current="page"] {
+  background: #F5EFE4 !important;
+  color: #79552E !important;
+  border-color: #E8E0D4 !important;
+}
+.admin-layout .admin-sidebar-footer button {
+  background: #91672F !important;
+  color: #FFFFFF !important;
+  border-color: #91672F !important;
+}
+
+/* Page headings and supporting copy */
+.admin-layout .admin-main h1,
+.admin-layout .admin-main h2,
+.admin-layout .admin-main h3,
+.admin-layout .admin-main h4,
+.inventory-layout h1,
+.inventory-layout h2,
+.inventory-layout h3,
+.inventory-layout h4 {
+  color: #29251F;
+}
+.admin-layout .admin-main p,
+.admin-layout .admin-main label,
+.admin-layout .admin-main small,
+.inventory-layout p,
+.inventory-layout label,
+.inventory-layout small {
+  color: #62594F;
+}
+
+/* Common cards, panels, summaries and data surfaces */
+.admin-layout .admin-main [class*="card"],
+.admin-layout .admin-main [class*="panel"],
+.admin-layout .admin-main [class*="stat"],
+.admin-layout .admin-main [class*="summary"],
+.admin-layout .admin-main [class*="table-wrap"],
+.inventory-layout [class*="card"],
+.inventory-layout [class*="panel"],
+.inventory-layout [class*="stat"],
+.inventory-layout [class*="summary"],
+.inventory-layout [class*="table-wrap"] {
+  background-color: #FFFFFF;
+  color: #29251F;
+  border-color: #E8E0D4;
+}
+
+/* Forms and filters */
+.admin-layout .admin-main input:not([type="checkbox"]):not([type="radio"]),
+.admin-layout .admin-main select,
+.admin-layout .admin-main textarea,
+.inventory-layout input:not([type="checkbox"]):not([type="radio"]),
+.inventory-layout select,
+.inventory-layout textarea {
+  background-color: #FFFFFF !important;
+  color: #29251F !important;
+  border-color: #D8CFC1 !important;
+  caret-color: #91672F;
+}
+.admin-layout .admin-main input::placeholder,
+.admin-layout .admin-main textarea::placeholder,
+.inventory-layout input::placeholder,
+.inventory-layout textarea::placeholder {
+  color: #82796D !important;
+}
+.admin-layout .admin-main input:focus,
+.admin-layout .admin-main select:focus,
+.admin-layout .admin-main textarea:focus,
+.inventory-layout input:focus,
+.inventory-layout select:focus,
+.inventory-layout textarea:focus {
+  border-color: #91672F !important;
+  outline-color: #91672F;
+}
+
+/* Tables */
+.admin-layout .admin-main table,
+.inventory-layout table {
+  color: #29251F;
+  border-color: #E8E0D4;
+}
+.admin-layout .admin-main th,
+.inventory-layout th {
+  background-color: #F5EFE4;
+  color: #79552E;
+  border-color: #E8E0D4;
+}
+.admin-layout .admin-main td,
+.inventory-layout td {
+  color: #29251F;
+  border-color: #E8E0D4;
+}
+
+/* Primary actions; destructive and semantic status colors remain distinct */
+.admin-layout .admin-main button[class*="primary"],
+.admin-layout .admin-main button[class*="save"],
+.admin-layout .admin-main button[class*="add"],
+.admin-layout .admin-main button[class*="submit"],
+.inventory-layout button[class*="primary"],
+.inventory-layout button[class*="save"],
+.inventory-layout button[class*="add"],
+.inventory-layout button[class*="submit"] {
+  background-color: #91672F;
+  border-color: #91672F;
+  color: #FFFFFF;
+}
+.admin-layout .admin-main button[class*="delete"],
+.admin-layout .admin-main button[class*="remove"],
+.inventory-layout button[class*="delete"],
+.inventory-layout button[class*="remove"] {
+  background-color: #A83D35;
+  border-color: #A83D35;
+  color: #FFFFFF;
+}
+.admin-layout .admin-main [class*="success"],
+.inventory-layout [class*="success"] {
+  border-color: #C9E2CE;
+}
+.admin-layout .admin-main [class*="error"],
+.inventory-layout [class*="error"] {
+  border-color: #E9C4BF;
+}
