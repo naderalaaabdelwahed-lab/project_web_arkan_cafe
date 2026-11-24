@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { authorizeAdminPermission } from "@/lib/server/admin-permissions";
-function service(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}})}
 async function admin(request, permission) {
   return authorizeAdminPermission(request, permission);
 }
