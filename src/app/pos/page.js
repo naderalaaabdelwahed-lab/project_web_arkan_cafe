@@ -616,7 +616,14 @@ export default function PosPage() {
 
       <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       {error && <p style={s.error}>{error}</p>}
-      {message && <p style={s.success}>{message}</p>}
+      {message && <div style={s.modalBackdrop}>
+        <div role="alertdialog" aria-modal="true" aria-labelledby="pos-success-title" style={s.itemNoteModal} onClick={e => e.stopPropagation()}>
+          <div style={{display:"grid",placeItems:"center",width:54,height:54,margin:"0 auto",borderRadius:"50%",background:"#e9f7ee",color:"#246c45",fontSize:30,fontWeight:900}}>✓</div>
+          <h2 id="pos-success-title" style={{margin:0,textAlign:"center",color:"#246c45"}}>تمت العملية بنجاح</h2>
+          <p style={{margin:0,textAlign:"center",fontSize:16,lineHeight:1.8,color:"#333"}}>{message}</p>
+          <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:120,justifySelf:"center"}} onClick={() => setMessage("")}>OK</button>
+        </div>
+      </div>}
       {tab === "all" && screen !== "order" ? (
         <section style={s.allOrdersPage}>
           <div className="allOrdersHeading" style={s.allOrdersHeading}>
