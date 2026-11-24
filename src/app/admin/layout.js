@@ -58,6 +58,26 @@ const links = [
     permission: "inventory.view",
   },
   {
+    href: "/admin/hr/employees",
+    label: "♙ شؤون الموظفين",
+    permission: "hr.employees.view",
+  },
+  {
+    href: "/admin/hr/attendance",
+    label: "✓ الحضور والانصراف",
+    permission: "hr.attendance.view",
+  },
+  {
+    href: "/admin/hr/shifts",
+    label: "◷ الشيفتات",
+    permission: "hr.shifts.view",
+  },
+  {
+    href: "/admin/hr/payroll",
+    label: "ج.م الرواتب",
+    permission: "hr.payroll.view",
+  },
+  {
     href: "/admin/employees",
     label: "♟ إدارة الموظفين",
     adminOnly: true,
