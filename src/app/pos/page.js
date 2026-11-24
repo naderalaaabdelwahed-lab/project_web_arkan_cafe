@@ -678,21 +678,21 @@ export default function PosPage() {
             </div>
           </aside>
           <div style={s.floorTables}>
-            {["indoor","outdoor"].map((a)=> <div key={a} style={s.tableSection}>
-              <h3>{a==="indoor"?"الطاولات الداخلية":"الطاولات الخارجية"} ({Number(a==="indoor"?settings.indoor_tables:settings.outdoor_tables)||0})</h3>
-              <div className="floor-table-grid" style={s.fullTableGrid}>
-                {Array.from({length:Number(a==="indoor"?settings.indoor_tables:settings.outdoor_tables)||0},(_,i)=>i+1).map(n=>{
-                  const o=activeTables.find(x=>x.table_number===n&&x.table_area===a);
-                  const reserved=reservations.some(r=>r.table_number===n&&(r.seating_area||"indoor")===a);
-                  const key=a+":"+n;
-                  return <button key={key} className="tableTile floor-table-tile" onClick={()=>selectTable(n,a)} onDoubleClick={()=>openTable(n,a)} style={{...s.tableTile,...(o?s.occupiedTile:{}),...(o?.receipt_printed_at?s.printedTile:{}),...(reserved&&!o?s.reservedTile:{}),...(selectedTableKey===key?s.tableSelected:{})}}>
-                    <b style={{fontSize:24}}>{n}</b><small>{o?"مشغولة":reserved?"محجوزة":"متاحة"}</small>{o&&<span className="table-amount">{fmt(o.total_amount)} ج.م</span>}
-                  </button>;
-                })}
-              </div>
-            </div>)}
+            <h3 style={{margin:"0 0 8px"}}>الطاولات ({floorTableCount})</h3>
+            <div className="floor-table-grid" style={s.fullTableGrid}>
+              {[
+                ...Array.from({length:Number(settings.indoor_tables)||0},(_,i)=>({area:"indoor",number:i+1})),
+                ...Array.from({length:Number(settings.outdoor_tables)||0},(_,i)=>({area:"outdoor",number:i+1})),
+              ].map(({area:tableArea,number:n})=>{
+                const o=activeTables.find(x=>x.table_number===n&&x.table_area===tableArea);
+                const reserved=reservations.some(r=>r.table_number===n&&(r.seating_area||"indoor")===tableArea);
+                const key=tableArea+":"+n;
+                return <button key={key} className="tableTile floor-table-tile" onClick={()=>selectTable(n,tableArea)} onDoubleClick={()=>openTable(n,tableArea)} style={{...s.tableTile,...(o?s.occupiedTile:{}),...(o?.receipt_printed_at?s.printedTile:{}),...(reserved&&!o?s.reservedTile:{}),...(selectedTableKey===key?s.tableSelected:{})}}>
+                  <b style={{fontSize:24}}>{n}</b><small>{o?"مشغولة":reserved?"محجوزة":"متاحة"}</small>{o&&<span className="table-amount">{fmt(o.total_amount)} ج.م</span>}
+                </button>;
+              })}
+            </div>
             <div className="floor-legend" style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🔵 تمت طباعة الفاتورة</span><span>🟡 محجوزة</span><span>🟠 محددة</span></div>
-
           </div>
           <aside className="pos-floor-summary-sidebar" style={s.floorOrderSidebar}>
             <div className="floor-action-card pos-floor-total-card" style={s.floorTotal}>
