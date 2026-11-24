@@ -514,6 +514,23 @@ export default function PosPage() {
 
   return (
     <main dir="rtl" className="arkan-pos-page" style={s.page}>
+      <style jsx global>{`
+        .arkan-pos-page { width: 100%; min-height: 100vh; box-sizing: border-box; padding: clamp(20px, 2.2vw, 34px) !important; font-size: 16px; }
+        .arkan-pos-page h1 { font-size: clamp(28px, 2.2vw, 36px) !important; }
+        .arkan-pos-page h2 { font-size: clamp(22px, 1.8vw, 29px) !important; }
+        .arkan-pos-page h3 { font-size: 19px !important; }
+        .arkan-pos-page button, .arkan-pos-page input, .arkan-pos-page select, .arkan-pos-page textarea { font-size: 15px !important; }
+        .arkan-pos-page button { min-height: 44px; }
+        .arkan-pos-page .tabs { gap: 10px !important; margin-bottom: 18px !important; }
+        .arkan-pos-page .tab { min-width: 120px; padding: 14px 26px !important; font-size: 16px !important; }
+        .arkan-pos-page table { font-size: 15px !important; }
+        .arkan-pos-page th, .arkan-pos-page td { padding: 14px 12px !important; }
+        .arkan-pos-page input, .arkan-pos-page select, .arkan-pos-page textarea { padding: 12px !important; }
+        @media (max-width: 760px) {
+          .arkan-pos-page { padding: 12px !important; }
+          .arkan-pos-page .tab { min-width: 0; flex: 1 1 auto; padding: 12px 14px !important; }
+        }
+      `}</style>
 
       <header style={s.header}>
         <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
@@ -583,7 +600,7 @@ export default function PosPage() {
       ) : mode === "dine-in" && screen === "tables" ? (
         <>
         <style jsx>{`
-          .arkan-floor-dashboard { gap: 16px !important; }
+          .arkan-floor-dashboard { gap: 18px !important; grid-template-columns: 285px minmax(420px, 1.4fr) minmax(350px, 1fr) !important; }
           .arkan-floor-dashboard > aside:first-child,
           .arkan-floor-dashboard > aside:first-child .floorTools {
             background: #fff !important;
@@ -599,7 +616,7 @@ export default function PosPage() {
           }
           .arkan-floor-dashboard > aside:first-child .floorTools > button {
             width: calc(50% - 5px);
-            min-height: 124px;
+            min-height: 140px;
             aspect-ratio: 1 / 1;
             box-sizing: border-box;
             padding: 10px;
@@ -612,15 +629,15 @@ export default function PosPage() {
           .arkan-floor-dashboard button { min-height: 40px; font-weight: 700; transition: transform .15s ease, box-shadow .15s ease; }
           .arkan-floor-dashboard button:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,35,22,.10); }
           .arkan-floor-dashboard button:focus-visible { outline: 3px solid #d28c2c; outline-offset: 2px; }
-          .arkan-floor-dashboard .floor-table-tile { min-height: 124px; padding: 12px 8px; border-radius: 14px; box-shadow: 0 2px 7px rgba(45,35,22,.05); }
+          .arkan-floor-dashboard .floor-table-tile { min-height: 145px; padding: 16px 10px; border-radius: 14px; box-shadow: 0 2px 7px rgba(45,35,22,.05); }
           .arkan-floor-dashboard .floor-table-tile small { font-size: 12px; line-height: 1.5; }
           .arkan-floor-dashboard .floor-table-tile .table-amount { font-size: 12px; font-weight: 800; }
           .arkan-floor-dashboard .floor-action-card { box-shadow: 0 3px 12px rgba(45,35,22,.05); }
-          @media (max-width: 1250px) {
-            .arkan-floor-dashboard { grid-template-columns: minmax(220px,.7fr) minmax(0,1.3fr) !important; }
+          @media (max-width: 1450px) {
+            .arkan-floor-dashboard { grid-template-columns: minmax(250px,.75fr) minmax(0,1.25fr) !important; }
             .arkan-floor-dashboard > :last-child { grid-column: 1 / -1; position: static !important; }
           }
-          @media (max-width: 760px) {
+          @media (max-width: 900px) {
             .arkan-floor-dashboard { grid-template-columns: minmax(0,1fr) !important; }
             .arkan-floor-dashboard > * { grid-column: 1 / -1; position: static !important; }
             .arkan-floor-dashboard .floor-table-grid { grid-template-columns: repeat(auto-fill,minmax(105px,1fr)); }
