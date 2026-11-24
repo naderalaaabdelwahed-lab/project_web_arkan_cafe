@@ -392,6 +392,7 @@ export default function PosPage() {
                   <th style={s.ordersTh}>حالة الطلب</th>
                   <th style={s.ordersTh}>الخصم</th>
                   <th style={s.ordersTh}>الإجمالي</th>
+                  <th style={s.ordersTh}>إجراء</th>
                 </tr>
               </thead>
               <tbody>
@@ -401,7 +402,7 @@ export default function PosPage() {
                   const typeLabel = dineIn ? "صالة" : o.order_type === "takeaway" ? "تيك أواي" : "دليفري";
                   const statusLabel = ({pending:"جديد",confirmed:"مؤكد",preparing:"قيد التحضير",delivered:"تم التسليم",cancelled:"ملغي"})[o.status] || o.status || "غير محدد";
                   const created = o.created_at ? new Date(o.created_at) : null;
-                  return <tr key={o.id} onClick={() => openOrderFromAll(o)} title="اضغط لفتح تفاصيل الأوردر وإضافة أصناف" style={{cursor:"pointer"}}>
+                  return <tr key={o.id} onClick={() => openOrderFromAll(o)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOrderFromAll(o); } }} tabIndex={0} role="button" title="اضغط لفتح تفاصيل الأوردر وإضافة أصناف" style={{cursor:"pointer"}}>
                     <td style={s.ordersTd}><b>#{o.id}</b></td>
                     <td style={s.ordersTd}>ARK-{o.id}</td>
                     <td style={s.ordersTd}>{created && !Number.isNaN(created.getTime()) ? created.toLocaleDateString("ar-EG") : "—"}</td>
@@ -412,9 +413,10 @@ export default function PosPage() {
                     <td style={s.ordersTd}>{statusLabel}</td>
                     <td style={s.ordersTd}>{fmt(Number(o.discount_amount ?? 0))} ج.م</td>
                     <td style={{...s.ordersTd,fontWeight:800,color:"#267447"}}>{fmt(o.total_amount)} ج.م</td>
+                    <td style={s.ordersTd}><button type="button" style={s.secondary} onClick={e => { e.stopPropagation(); openOrderFromAll(o); }}>فتح الأوردر وإضافة أصناف</button></td>
                   </tr>;
                 })}
-                {!allOrdersFiltered.length && <tr><td style={s.ordersTd} colSpan={10}>لا توجد طلبات مطابقة للفلاتر.</td></tr>}
+                {!allOrdersFiltered.length && <tr><td style={s.ordersTd} colSpan={11}>لا توجد طلبات مطابقة للفلاتر.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -553,7 +555,7 @@ const s = {
  orderFilters:{display:"grid",gridTemplateColumns:"minmax(220px,2fr) repeat(5,minmax(130px,1fr)) auto",gap:8,marginBottom:16},
  filterInput:{minWidth:0,width:"100%",boxSizing:"border-box",padding:"10px 11px",border:"1px solid #cfcfcf",borderRadius:8,background:"#fff",color:"#242424",fontFamily:"inherit",fontSize:14},
  ordersTableWrap:{width:"100%",maxHeight:"calc(100vh - 310px)",minHeight:300,overflow:"auto",border:"1px solid #e3ded5",borderRadius:10},
- ordersTable:{width:"100%",minWidth:1050,borderCollapse:"separate",borderSpacing:0,textAlign:"right",background:"#fff",fontSize:13},
+ ordersTable:{width:"100%",minWidth:1160,borderCollapse:"separate",borderSpacing:0,textAlign:"right",background:"#fff",fontSize:13},
  ordersTh:{position:"sticky",top:0,zIndex:2,background:"#29251f",color:"#fff",padding:"14px 12px",whiteSpace:"nowrap",fontWeight:800,borderBottom:"2px solid #b88946"},
  ordersTd:{padding:"13px 12px",whiteSpace:"nowrap",borderBottom:"1px solid #eee9e1",color:"#302d29"},
  allOrdersList:{display:"grid",gap:9},
