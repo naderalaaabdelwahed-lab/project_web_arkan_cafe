@@ -82,7 +82,7 @@ export async function GET(request) {
         .eq("employee_id", employeeId).order("shift_date", { ascending: false }).limit(10),
       db.from("hr_attendance").select("shift_date,check_in_at")
         .eq("employee_id", employeeId).not("check_in_at", "is", null)
-        .is("check_out_at", null).order("shift_date", { ascending: false }).limit(1)
+        .is("check_out_at", null).is("checkout_skipped_at", null).order("shift_date", { ascending: false }).limit(1)
     ]);
     if (rowsError) throw rowsError;
     if (openError) throw openError;
@@ -128,50 +128,64 @@ export async function POST(request) {
       .eq("employee_id", employee.id).eq("shift_date", today).maybeSingle();
     if (todayRow.error) throw todayRow.error;
 
-    if (action === "check_in" || action === "skip_previous") {
+    if (action === "skip_previous") {
+      const { data: skipped, error: skipError } = await db.rpc("hr_skip_previous_checkout_and_check_in", {
+        p_employee_id: employee.id,
+        p_shift_date: today,
+        p_check_in_at: now.toISOString()
+      });
+      if (skipError) {
+        if (skipError.code === "23505") return NextResponse.json({ error: "تم تسجيل حضور الموظف لهذا اليوم بالفعل." }, { status: 409 });
+        if (skipError.code === "P0002") return NextResponse.json({ error: "مفيش حضور سابق مفتوح يحتاج التجاوز." }, { status: 409 });
+        throw skipError;
+      }
+      return NextResponse.json({
+        success: true,
+        employee_name: employee.full_name,
+        action: "check_in",
+        recorded_at: now.toISOString(),
+        shift_date: today,
+        skipped_previous_checkout: true,
+        previous_shift_date: skipped?.skipped_shift_date || null
+      });
+    }
+
+    if (action === "check_in") {
       if (todayRow.data?.check_in_at) {
         return NextResponse.json({ error: "تم تسجيل حضور الموظف لهذا اليوم بالفعل." }, { status: 409 });
       }
       const { data: openRows, error: openError } = await db.from("hr_attendance")
         .select("id,shift_date,check_in_at").eq("employee_id", employee.id)
-        .not("check_in_at", "is", null).is("check_out_at", null)
+        .not("check_in_at", "is", null).is("check_out_at", null).is("checkout_skipped_at", null)
         .lt("shift_date", today).order("shift_date", { ascending: false }).limit(1);
       if (openError) throw openError;
       const openPrevious = openRows?.[0] || null;
-      if (action === "check_in" && openPrevious) {
+      if (openPrevious) {
         return NextResponse.json({
           needs_skip: true,
           open_shift_date: openPrevious.shift_date,
           error: "فيه حضور مفتوح من يوم سابق من غير انصراف. راجع التاريخ واضغط زر تجاوز الانصراف السابق لتسجيل حضور اليوم."
         }, { status: 409 });
       }
-      if (action === "skip_previous" && !openPrevious) {
-        return NextResponse.json({ error: "مفيش حضور سابق مفتوح يحتاج التجاوز. استخدم تسجيل الحضور العادي." }, { status: 409 });
-      }
-
-      const values = {
+      const saved = await db.from("hr_attendance").insert({
         employee_id: employee.id, shift_date: today, check_in_at: now.toISOString(),
         check_in_method: "pin", attendance_status: "present", late_minutes: 0, updated_at: now.toISOString()
-      };
-      const saved = await db.from("hr_attendance").insert(values);
+      });
       if (saved.error) {
         if (saved.error.code === "23505") return NextResponse.json({ error: "تم تسجيل حضور الموظف لهذا اليوم بالفعل." }, { status: 409 });
         throw saved.error;
       }
       return NextResponse.json({
         success: true, employee_name: employee.full_name, action: "check_in",
-        recorded_at: now.toISOString(), shift_date: today,
-        skipped_previous_checkout: action === "skip_previous",
-        previous_shift_date: openPrevious?.shift_date || null
+        recorded_at: now.toISOString(), shift_date: today
       });
     }
-
     const parts = cairoParts(now);
     const checkoutShiftDate = Number(parts.hour) < 4 ? addDays(today, -1) : today;
     const { data: open, error: openError } = await db.from("hr_attendance")
       .select("id,shift_date,check_in_at").eq("employee_id", employee.id)
       .eq("shift_date", checkoutShiftDate)
-      .not("check_in_at", "is", null).is("check_out_at", null).maybeSingle();
+      .not("check_in_at", "is", null).is("check_out_at", "is", null).is("checkout_skipped_at", "is", null).maybeSingle();
     if (openError) throw openError;
     if (!open) {
       return NextResponse.json({
