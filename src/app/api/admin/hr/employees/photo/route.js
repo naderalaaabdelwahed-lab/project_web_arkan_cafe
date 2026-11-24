@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { authorizeAdminPermission } from "@/lib/server/admin-permissions";
 
 export async function POST(request) {
   try {
-    const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-    if (!token) return NextResponse.json({ error: "سجل دخول المدير أولاً." }, { status: 401 });
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const publishable = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !publishable || !secret) throw new Error("Supabase server configuration is missing.");
-    const auth = createClient(url, publishable, { auth: { autoRefreshToken: false, persistSession: false } });
-    const { data: userData, error: authError } = await auth.auth.getUser(token);
-    if (!authError && userData?.user?.app_metadata?.account_type === "hr_employee") return NextResponse.json({ error: "حساب HR مخصص للحضور والانصراف الشخصي فقط." }, { status: 403 });
-    if (authError || !userData?.user) return NextResponse.json({ error: "جلسة الدخول غير صالحة." }, { status: 401 });
-    const db = createClient(url, secret, { auth: { autoRefreshToken: false, persistSession: false } });
-    const { data: admin } = await db.from("admin_users").select("user_id").eq("user_id", userData.user.id).maybeSingle();
-    if (!admin) return NextResponse.json({ error: "غير مسموح." }, { status: 403 });
+    const auth = await authorizeAdminPermission(request, "hr.employees.update");
+    if (auth.response) return auth.response;
+    const db = auth.db;
     const form = await request.formData();
     const employeeId = String(form.get("employee_id") || "");
     const file = form.get("file");
