@@ -717,7 +717,7 @@ export default function PosPage() {
                     <td className="ordersTd" style={s.ordersTd}>{statusLabel}</td>
                     <td className="ordersTd" style={s.ordersTd}>{fmt(Number(o.discount_amount ?? 0))} ج.م</td>
                     <td style={{...s.ordersTd,fontWeight:800,color:"#267447"}}>{fmt(o.total_amount)} ج.م</td>
-                    <td className="ordersTd" style={s.ordersTd}><button type="button" style={s.secondary} onClick={e => { e.stopPropagation(); openOrderFromAll(o); }}>فتح الأوردر وإضافة أصناف</button></td>
+                    <td className="ordersTd" style={s.ordersTd}><button type="button" style={s.secondary} disabled={closed} title={closed ? "الأوردر مغلق ولا يمكن إضافة أصناف" : "إضافة صنف إلى الأوردر"} onClick={e => { e.stopPropagation(); openOrderFromAll(o); }}>{closed ? "الأوردر مغلق" : "إضافة صنف"}</button></td>
                   </tr>;
                 })}
                 {!allOrdersFiltered.length && <tr><td style={s.ordersTd} colSpan={11}>لا توجد طلبات مطابقة للفلاتر.</td></tr>}
