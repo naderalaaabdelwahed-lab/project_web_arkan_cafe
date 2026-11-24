@@ -37,6 +37,8 @@ export default function PosPage() {
   const [area, setArea] = useState("indoor");
   const [table, setTable] = useState(null);
   const [reservationId, setReservationId] = useState(null);
+  const [editingOrderId, setEditingOrderId] = useState(null);
+  const [editingOrderTotal, setEditingOrderTotal] = useState(null);
   const [customer, setCustomer] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -98,6 +100,7 @@ export default function PosPage() {
   }, [load]);
 
   const subtotal = useMemo(() => cart.reduce((sum, x) => sum + x.price * x.quantity, 0), [cart]);
+  const newItemsSubtotal = useMemo(() => cart.reduce((sum, x) => sum + x.price * (x.quantity - (x.originalQuantity || 0)), 0), [cart]);
   const discount = Math.min(subtotal, discountType === "percent" ? subtotal * Math.min(100, Math.max(0, Number(discountValue) || 0)) / 100 : Math.max(0, Number(discountValue) || 0));
   const total = Math.max(0, subtotal - discount);
   const productsShown = products.filter((p) => (category === "all" || String(p.category_id) === category) && p.name.toLowerCase().includes(search.toLowerCase()));
@@ -117,22 +120,52 @@ export default function PosPage() {
 
   function add(p) {
     setCart((old) => {
-      const found = old.find((x) => x.id === p.id);
-      return found ? old.map((x) => x.id === p.id ? { ...x, quantity: x.quantity + 1 } : x) : [...old, { id: p.id, name: p.name, price: Number(p.price), quantity: 1, note: "" }];
+      const found = old.find((x) => x.product_id === p.id);
+      return found
+        ? old.map((x) => x.cartKey === found.cartKey ? { ...x, quantity: x.quantity + 1 } : x)
+        : [...old, { cartKey: "new-" + p.id, product_id: p.id, name: p.name, price: Number(p.price), quantity: 1, originalQuantity: 0, note: "" }];
     });
   }
-  function qty(id, delta) {
-    setCart((old) => old.map((x) => x.id === id ? { ...x, quantity: x.quantity + delta } : x).filter((x) => x.quantity > 0));
+  function qty(cartKey, delta) {
+    setCart((old) => old.map((x) => x.cartKey === cartKey
+      ? { ...x, quantity: Math.max(x.originalQuantity || 0, x.quantity + delta) }
+      : x).filter((x) => x.quantity > 0));
   }
   function reset() {
     setCart([]); setCustomer(""); setPhone(""); setAddress(""); setNotes("");
     setDiscountValue("0"); setTable(null); setReservationId(null);
+    setEditingOrderId(null); setEditingOrderTotal(null);
   }
-  function chooseTable(n, selectedArea = area) {
-    setTable(n);
+  function openTable(n, selectedArea) {
+    const currentOrder = activeTables.find((o) => o.table_number === n && o.table_area === selectedArea);
     const booking = reservations.find((r) => r.table_number === n && (r.seating_area || "indoor") === selectedArea);
-    setReservationId(booking ? booking.id : null);
-    if (booking) { setCustomer(booking.customer_name || ""); setPhone(booking.phone || ""); }
+    reset();
+    setArea(selectedArea);
+    setTable(n);
+    setMode("dine-in");
+    setTab("dine-in");
+    setScreen("order");
+    if (currentOrder) {
+      setEditingOrderId(currentOrder.id);
+      setEditingOrderTotal(Number(currentOrder.total_amount || 0));
+      setCart((currentOrder.order_items || []).map((item) => ({
+        cartKey: "existing-" + item.id,
+        product_id: item.product_id,
+        name: item.product_name,
+        price: Number(item.unit_price || 0),
+        quantity: Number(item.quantity || 0),
+        originalQuantity: Number(item.quantity || 0),
+        note: item.item_note || "",
+        existing: true,
+      })));
+      setCustomer(currentOrder.customer_name || "");
+      setPhone(currentOrder.phone || "");
+      setNotes(currentOrder.notes || "");
+      setReservationId(currentOrder.reservation_id || null);
+    } else {
+      setReservationId(booking ? booking.id : null);
+      if (booking) { setCustomer(booking.customer_name || ""); setPhone(booking.phone || ""); }
+    }
   }
   async function checkout() {
     if (!cart.length) return setError("اختار أصناف الأول.");
@@ -140,9 +173,25 @@ export default function PosPage() {
     if (mode === "delivery" && !address.trim()) return setError("اكتب عنوان التوصيل.");
     setSaving(true); setError(""); setMessage("");
     try {
+      if (editingOrderId) {
+        const additions = cart
+          .map((x) => ({ product_id: x.product_id, quantity: x.quantity - (x.originalQuantity || 0), note: x.note }))
+          .filter((x) => x.quantity > 0);
+        if (!additions.length) throw new Error("أضف صنفًا جديدًا أو زوّد كمية صنف قبل الحفظ.");
+        const result = await supabase.rpc("append_pos_order_items", {
+          p_order_id: editingOrderId,
+          p_items: additions,
+        });
+        if (result.error) throw result.error;
+        setMessage("تمت إضافة الأصناف إلى نفس الأوردر ARK-" + editingOrderId + " بنجاح.");
+        reset();
+        setScreen("tables");
+        await load();
+        return;
+      }
       const result = await supabase.rpc("create_pos_order", {
         p_order_type: mode,
-        p_items: cart.map((x) => ({ product_id: x.id, quantity: x.quantity, note: x.note })),
+        p_items: cart.map((x) => ({ product_id: x.product_id, quantity: x.quantity, note: x.note })),
         p_table_number: mode === "dine-in" ? table : null,
         p_table_area: mode === "dine-in" ? area : null,
         p_customer_name: customer || null,
@@ -245,7 +294,7 @@ export default function PosPage() {
               {Array.from({length:Number(settings.indoor_tables)||0},(_,i)=>i+1).map(n => {
                 const occupied = activeTables.some(o => o.table_number === n && o.table_area === "indoor");
                 const reserved = reservations.some(r => r.table_number === n && (r.seating_area || "indoor") === "indoor");
-                return <button key={"indoor-"+n} disabled={activeTables.some(o => o.table_number === n && o.table_area === "indoor")} onClick={() => { setArea("indoor"); chooseTable(n, "indoor"); setScreen("order"); }} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
+                return <button key={"indoor-"+n} onClick={() => openTable(n, "indoor")} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
                   <b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
                 </button>;
               })}
@@ -258,7 +307,7 @@ export default function PosPage() {
               {Array.from({length:Number(settings.outdoor_tables)||0},(_,i)=>i+1).map(n => {
                 const occupied = activeTables.some(o => o.table_number === n && o.table_area === "outdoor");
                 const reserved = reservations.some(r => r.table_number === n && r.seating_area === "outdoor");
-                return <button key={"outdoor-"+n} disabled={activeTables.some(o => o.table_number === n && o.table_area === "outdoor")} onClick={() => { setArea("outdoor"); chooseTable(n, "outdoor"); setScreen("order"); }} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
+                return <button key={"outdoor-"+n} onClick={() => openTable(n, "outdoor")} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
                   <b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
                 </button>;
               })}
@@ -288,7 +337,7 @@ export default function PosPage() {
           </aside>
           <section style={s.orderPanel}>
             <div style={s.head}>
-              <div><h2>الطلب الحالي</h2><small style={s.muted}>{mode === "dine-in" ? (area === "indoor" ? "طاولة داخلية " : "طاولة خارجية ") + table : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div>
+              <div><h2>{editingOrderId ? "تعديل الأوردر الحالي #" + editingOrderId : "الطلب الحالي"}</h2><small style={s.muted}>{mode === "dine-in" ? (area === "indoor" ? "طاولة داخلية " : "طاولة خارجية ") + table : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div>
               <div style={{display:"flex",gap:7}}>
                 {mode === "dine-in" && <button style={s.secondary} onClick={() => setScreen("tables")}>رجوع للطاولات</button>}
                 <button style={s.clear} onClick={reset}>مسح الطلب</button>
@@ -297,17 +346,16 @@ export default function PosPage() {
             {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
             <div style={s.cart}>{cart.map(x => <div key={x.id} style={s.cartItem}>
               <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><b>{fmt(x.price*x.quantity)} ج.م</b></div>
-              <div style={s.head}><div style={s.qty}><button onClick={() => qty(x.id,-1)}>−</button><b>{x.quantity}</b><button onClick={() => qty(x.id,1)}>+</button></div><input style={s.note} placeholder="ملاحظة للصنف" value={x.note} onChange={e => setCart(old => old.map(i => i.id === x.id ? {...i,note:e.target.value} : i))} /></div>
+              <div style={s.head}><div style={s.qty}><button disabled={x.existing && x.quantity <= x.originalQuantity} onClick={() => qty(x.cartKey,-1)}>−</button><b>{x.quantity}</b><button onClick={() => qty(x.cartKey,1)}>+</button></div><input style={s.note} placeholder="ملاحظة للصنف" value={x.note} disabled={x.existing} onChange={e => setCart(old => old.map(i => i.cartKey === x.cartKey ? {...i,note:e.target.value} : i))} /></div>
             </div>)}{!cart.length && <p style={s.empty}>السلة فارغة — اختار أصناف من المنيو.</p>}</div>
             <div style={s.fields}>
               <input style={s.field} placeholder="اسم العميل (اختياري)" value={customer} onChange={e=>setCustomer(e.target.value)} />
               <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} onChange={e=>setPhone(e.target.value)} />
               <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} onChange={e=>setNotes(e.target.value)} />
             </div>
-            <div style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input className="pos-filter-control" aria-label="قيمة الخصم" style={{...s.discountInput,color:"#000",WebkitTextFillColor:"#000",opacity:1}} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>
-            <div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div>
-            <div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div>
-            <button style={s.submit} disabled={saving || !cart.length || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : "تأكيد الطلب وإرساله للتجهيز"}</button>
+            {!editingOrderId && <div style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input className="pos-filter-control" aria-label="قيمة الخصم" style={{...s.discountInput,color:"#000",WebkitTextFillColor:"#000",opacity:1}} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>}
+            {editingOrderId ? <div style={s.totals}><div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div><div><span>قيمة الإضافات</span><b>{fmt(newItemsSubtotal)} ج.م</b></div><div style={s.grand}><b>الإجمالي بعد الإضافة</b><b>{fmt(Number(editingOrderTotal || 0) + newItemsSubtotal)} ج.م</b></div></div> : <><div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div><div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div></>}
+            <button style={s.submit} disabled={saving || (editingOrderId ? newItemsSubtotal <= 0 : !cart.length) || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : editingOrderId ? "حفظ الإضافات على نفس الأوردر" : "تأكيد الطلب وإرساله للتجهيز"}</button>
           </section>
         </div>
       )}
