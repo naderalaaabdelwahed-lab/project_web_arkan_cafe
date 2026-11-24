@@ -527,6 +527,7 @@ export default function PosPage() {
           </div>
         </section>
       ) : mode === "dine-in" && screen === "tables" ? (
+        <>
         <section className="arkan-floor-dashboard" style={s.floorDashboard}>
           <aside style={s.floorSidebar}>
             <div style={s.floorTotal}>
@@ -631,6 +632,7 @@ export default function PosPage() {
             </div>
           </div>
         </div>}
+        </>
       ) : (
         <div style={s.orderWorkspace}>
           <aside style={s.menuSidebar}>
