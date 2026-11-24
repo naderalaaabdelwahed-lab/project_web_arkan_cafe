@@ -37,6 +37,10 @@ export default function AdminMenuPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [productDepartment, setProductDepartment] = useState("kitchen");
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryDepartment, setCategoryDepartment] = useState("kitchen");
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
 
   const [imageUrl, setImageUrl] = useState("");
   const [originalImageUrl, setOriginalImageUrl] = useState("");
@@ -131,7 +135,7 @@ export default function AdminMenuPage() {
     setError("");
 
     const [categoriesResult, productsResult] = await Promise.all([
-      supabase.from("categories").select("*").order("id"),
+      supabase.from("categories").select("*").order("department").order("display_order").order("id"),
       supabase.from("products").select("*, categories(name)").order("id"),
     ]);
 
@@ -153,6 +157,7 @@ export default function AdminMenuPage() {
     setDescription("");
     setPrice("");
     setCategoryId("");
+    setProductDepartment("kitchen");
     setImageUrl("");
     setOriginalImageUrl("");
     setImageFile(null);
@@ -230,6 +235,60 @@ export default function AdminMenuPage() {
       .getPublicUrl(filePath);
 
     return data.publicUrl;
+  }
+
+  function resetCategoryForm() {
+    setCategoryName("");
+    setCategoryDepartment("kitchen");
+    setEditingCategoryId(null);
+  }
+
+  async function saveCategory(e) {
+    e.preventDefault();
+    if (!categoryName.trim()) {
+      setError("اكتب اسم القسم");
+      return;
+    }
+    if (editingCategoryId ? !can("menu.update") : !can("menu.create")) return;
+    setSaving(true);
+    setError("");
+    try {
+      const payload = { name: categoryName.trim(), department: categoryDepartment, is_active: true };
+      const result = editingCategoryId
+        ? await supabase.from("categories").update({ name: payload.name, department: payload.department }).eq("id", editingCategoryId)
+        : await supabase.from("categories").insert([payload]);
+      if (result.error) throw result.error;
+      resetCategoryForm();
+      await loadData();
+    } catch (err) {
+      setError(err.message || "تعذر حفظ القسم");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function editCategory(item) {
+    if (!can("menu.update")) return;
+    setEditingCategoryId(item.id);
+    setCategoryName(item.name || "");
+    setCategoryDepartment(item.department || "kitchen");
+    setError("");
+  }
+
+  async function deleteCategory(item) {
+    if (!can("menu.delete")) return;
+    const usedBy = products.filter((product) => String(product.category_id) === String(item.id)).length;
+    if (usedBy > 0) {
+      setError(`لا يمكن حذف قسم "${item.name}" لأنه مرتبط بـ ${usedBy} منتج. انقل المنتجات لقسم آخر أولاً.`);
+      return;
+    }
+    if (!window.confirm(`هل أنت متأكد من حذف قسم "${item.name}"؟`)) return;
+    const { error: deleteError } = await supabase.from("categories").delete().eq("id", item.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    await loadData();
   }
 
   async function saveProduct(e) {
@@ -319,6 +378,7 @@ export default function AdminMenuPage() {
     setDescription(product.description || "");
     setPrice(String(product.price ?? ""));
     setCategoryId(product.category_id || "");
+    setProductDepartment(product.categories?.department || categories.find((item) => String(item.id) === String(product.category_id))?.department || "kitchen");
     setImageUrl(product.image_url || "");
     setOriginalImageUrl(product.image_url || "");
     setImageFile(null);
@@ -431,6 +491,62 @@ export default function AdminMenuPage() {
         </div>
       </div>
 
+      <section className="menu-category-management">
+        <div className="menu-section-heading">
+          <div>
+            <h2>أقسام المنيو</h2>
+            <p>قسّم المنيو حسب مكان التحضير: المطبخ والبار</p>
+          </div>
+        </div>
+
+        <div className="menu-department-grid">
+          {[
+            { id: "kitchen", title: "المطبخ" },
+            { id: "bar", title: "البار" },
+          ].map((department) => (
+            <div className="menu-department-card" key={department.id}>
+              <h3>{department.title}</h3>
+              <div className="menu-category-list">
+                {categories.filter((item) => (item.department || "kitchen") === department.id).map((item) => (
+                  <div className="menu-category-chip" key={item.id}>
+                    <span>{item.name}</span>
+                    <small>{products.filter((product) => String(product.category_id) === String(item.id)).length} منتج</small>
+                    <div>
+                      {can("menu.update") && <button type="button" onClick={() => editCategory(item)} title="تعديل القسم">✎</button>}
+                      {can("menu.delete") && <button type="button" onClick={() => deleteCategory(item)} title="حذف القسم">×</button>}
+                    </div>
+                  </div>
+                ))}
+                {!categories.some((item) => (item.department || "kitchen") === department.id) && <small>لا توجد أقسام بعد</small>}
+              </div>
+              {can("menu.create") && (
+                <button type="button" className="menu-category-add" onClick={() => {
+                  resetCategoryForm();
+                  setCategoryDepartment(department.id);
+                }}>
+                  ＋ إضافة قسم
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {(can("menu.create") || can("menu.update")) && (categoryName || editingCategoryId || categoryDepartment) && (
+          <form className="menu-category-form" onSubmit={saveCategory}>
+            <strong>{editingCategoryId ? "تعديل القسم" : "إضافة قسم جديد"}</strong>
+            <input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="اسم القسم الجديد" required />
+            <select value={categoryDepartment} onChange={(e) => setCategoryDepartment(e.target.value)}>
+              <option value="kitchen">المطبخ</option>
+              <option value="bar">البار</option>
+            </select>
+            <div>
+              <button type="submit" disabled={saving}>{saving ? "جاري الحفظ..." : "حفظ القسم"}</button>
+              <button type="button" onClick={resetCategoryForm} disabled={saving}>إلغاء</button>
+            </div>
+          </form>
+        )}
+      </section>
+
       <section className="menu-products-section">
         <div className="menu-section-heading">
           <div>
@@ -485,7 +601,7 @@ export default function AdminMenuPage() {
 
                 <div className="menu-product-info">
                   <span className="menu-product-category">
-                    {product.categories?.name || "بدون قسم"}
+                    {product.categories?.name || "بدون قسم"} · {(product.categories?.department || "kitchen") === "bar" ? "البار" : "المطبخ"}
                   </span>
 
                   <h3>{product.name}</h3>
@@ -584,6 +700,20 @@ export default function AdminMenuPage() {
                 </div>
 
                 <div>
+                  <label>مكان التحضير</label>
+                  <select
+                    value={productDepartment}
+                    onChange={(e) => {
+                      setProductDepartment(e.target.value);
+                      setCategoryId("");
+                    }}
+                    required
+                  >
+                    <option value="kitchen">المطبخ</option>
+                    <option value="bar">البار</option>
+                  </select>
+                </div>
+                <div>
                   <label>القسم</label>
                   <select
                     value={categoryId}
@@ -591,9 +721,9 @@ export default function AdminMenuPage() {
                     required
                   >
                     <option value="">اختار القسم</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
+                    {categories.filter((item) => item.is_active && (item.department || "kitchen") === productDepartment).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
                       </option>
                     ))}
                   </select>
