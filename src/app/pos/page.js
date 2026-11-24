@@ -285,7 +285,7 @@ export default function PosPage() {
       ) : mode === "dine-in" && screen === "tables" ? (
         <section style={s.panel}>
           <div style={s.head}>
-            <div><h2>اختار الطاولة</h2><small style={s.muted}>اختار طاولة لفتح المنيو وإنشاء الطلب</small></div>
+            <div><h2>اختار الطاولة</h2><small style={s.muted}>اضغط على طاولة مشغولة لفتح أوردرها، أو متاحة لبدء أوردر جديد</small></div>
             <b>{Number(settings.indoor_tables || 0) + Number(settings.outdoor_tables || 0)} طاولة</b>
           </div>
           <div style={s.tableSection}>
@@ -340,7 +340,7 @@ export default function PosPage() {
               <div><h2>{editingOrderId ? "تعديل الأوردر الحالي #" + editingOrderId : "الطلب الحالي"}</h2><small style={s.muted}>{mode === "dine-in" ? (area === "indoor" ? "طاولة داخلية " : "طاولة خارجية ") + table : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div>
               <div style={{display:"flex",gap:7}}>
                 {mode === "dine-in" && <button style={s.secondary} onClick={() => setScreen("tables")}>رجوع للطاولات</button>}
-                <button style={s.clear} onClick={reset}>مسح الطلب</button>
+                <button style={s.clear} onClick={() => { reset(); if (editingOrderId && mode === "dine-in") setScreen("tables"); }}>{editingOrderId ? "إلغاء التعديل" : "مسح الطلب"}</button>
               </div>
             </div>
             {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
@@ -349,9 +349,9 @@ export default function PosPage() {
               <div style={s.head}><div style={s.qty}><button disabled={x.existing && x.quantity <= x.originalQuantity} onClick={() => qty(x.cartKey,-1)}>−</button><b>{x.quantity}</b><button onClick={() => qty(x.cartKey,1)}>+</button></div><input style={s.note} placeholder="ملاحظة للصنف" value={x.note} disabled={x.existing} onChange={e => setCart(old => old.map(i => i.cartKey === x.cartKey ? {...i,note:e.target.value} : i))} /></div>
             </div>)}{!cart.length && <p style={s.empty}>السلة فارغة — اختار أصناف من المنيو.</p>}</div>
             <div style={s.fields}>
-              <input style={s.field} placeholder="اسم العميل (اختياري)" value={customer} onChange={e=>setCustomer(e.target.value)} />
-              <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} onChange={e=>setPhone(e.target.value)} />
-              <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} onChange={e=>setNotes(e.target.value)} />
+              <input style={s.field} placeholder="اسم العميل (اختياري)" value={customer} disabled={Boolean(editingOrderId)} onChange={e=>setCustomer(e.target.value)} />
+              <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} disabled={Boolean(editingOrderId)} onChange={e=>setPhone(e.target.value)} />
+              <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} disabled={Boolean(editingOrderId)} onChange={e=>setNotes(e.target.value)} />
             </div>
             {!editingOrderId && <div style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input className="pos-filter-control" aria-label="قيمة الخصم" style={{...s.discountInput,color:"#000",WebkitTextFillColor:"#000",opacity:1}} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>}
             {editingOrderId ? <div style={s.totals}><div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div><div><span>قيمة الإضافات</span><b>{fmt(newItemsSubtotal)} ج.م</b></div><div style={s.grand}><b>الإجمالي بعد الإضافة</b><b>{fmt(Number(editingOrderTotal || 0) + newItemsSubtotal)} ج.م</b></div></div> : <><div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div><div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div></>}
