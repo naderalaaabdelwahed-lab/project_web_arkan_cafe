@@ -629,6 +629,151 @@ export default function PosPage() {
     box-shadow: 0 20px 70px rgba(0,0,0,.22);
   }
 }
+
+/* ===== POS VISUAL PASS 2: REMOVE TOP WASTE + LARGE SQUARE CONTROLS ===== */
+@media (min-width: 901px) {
+  body:has(.arkan-floor-dashboard) .arkan-pos-page {
+    padding: 2px 12px 8px !important;
+    gap: 5px !important;
+  }
+  .arkan-pos-page > header {
+    min-height: 38px !important;
+    height: 38px;
+    margin: 0 !important;
+    padding: 0 4px !important;
+  }
+  .arkan-pos-page > header > div { display:flex; align-items:center; gap:12px; }
+  .arkan-pos-page > header > div > small:first-child { font-size:10px; }
+  .arkan-pos-page > header h1 { font-size:22px !important; margin:0 !important; }
+  .arkan-pos-page > header > div > small:last-child { font-size:12px !important; }
+  .arkan-pos-page > header > button { padding:7px 14px !important; min-height:32px; }
+  .arkan-pos-page > nav { margin:0 !important; min-height:36px; }
+  .arkan-pos-page > nav button { min-height:34px !important; padding:6px 18px !important; font-size:14px !important; }
+  .arkan-pos-page > .arkan-floor-dashboard {
+    grid-template-columns: minmax(290px,1.12fr) minmax(0,2.25fr) minmax(290px,1.12fr) !important;
+    gap:12px !important;
+    padding:8px !important;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:first-child {
+    padding:16px !important;
+    gap:8px !important;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:first-child > small { font-size:13px !important; }
+  .arkan-floor-dashboard > aside:first-child > div:first-child strong { font-size:32px !important; }
+  .arkan-floor-dashboard > aside:first-child > div:first-child button {
+    min-height:42px !important;
+    padding:9px 12px !important;
+    font-size:14px !important;
+    border-radius:9px !important;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) {
+    padding:15px !important;
+    gap:9px !important;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) h3,
+  .arkan-floor-dashboard > aside:nth-of-type(2) h3 {
+    font-size:17px !important;
+    margin:0 0 5px !important;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) b { font-size:14px !important; }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) small { font-size:13px !important; }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) button,
+  .arkan-floor-dashboard > aside:nth-of-type(2) button {
+    width:100%;
+    min-height:48px !important;
+    padding:10px 12px !important;
+    font-size:14px !important;
+    font-weight:700 !important;
+    line-height:1.35 !important;
+    border-radius:10px !important;
+    white-space:normal;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) select,
+  .arkan-floor-dashboard > aside:nth-of-type(2) select {
+    min-height:44px;
+    padding:9px 11px !important;
+    font-size:14px !important;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) > div[style*="grid"] {
+    gap:9px !important;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) {
+    padding:16px !important;
+    gap:9px !important;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) > .head h2 { font-size:22px !important; }
+  .arkan-floor-dashboard > div:nth-child(2) > .head small { font-size:13px !important; }
+  .arkan-floor-dashboard > div:nth-child(2) h3 { font-size:16px !important; }
+  .arkan-floor-dashboard > div:nth-child(2) > div[style*="grid"] {
+    grid-template-columns:repeat(auto-fill,minmax(100px,1fr)) !important;
+    gap:9px !important;
+  }
+  .arkan-floor-dashboard button[style*="min-height: 112px"] {
+    min-height:clamp(72px,9vh,94px) !important;
+    border-radius:12px !important;
+  }
+  .arkan-floor-dashboard button[style*="min-height: 112px"] b { font-size:25px !important; }
+  .arkan-floor-dashboard button[style*="min-height: 112px"] small { font-size:12px !important; }
+  .arkan-floor-dashboard > aside:nth-of-type(2) {
+    grid-template-rows:minmax(0,1fr) minmax(0,1fr);
+    gap:12px !important;
+  }
+  .arkan-floor-dashboard > aside:nth-of-type(2) > div {
+    padding:15px !important;
+    gap:10px !important;
+  }
+  .arkan-floor-dashboard > aside:nth-of-type(2) > div:first-child > div {
+    padding:7px 9px !important;
+    font-size:14px !important;
+    border-radius:8px;
+    background:rgba(100,116,139,.07);
+  }
+  .arkan-floor-dashboard > aside:nth-of-type(2) > div:first-child small { font-size:13px !important; }
+  .arkan-floor-dashboard > .floorDetails {
+    padding:11px 14px !important;
+    gap:9px !important;
+  }
+  .arkan-floor-dashboard > .floorDetails > b { font-size:15px !important; }
+  .arkan-floor-dashboard .floorDetailRow {
+    grid-template-columns:repeat(7,minmax(0,1fr));
+    gap:8px !important;
+  }
+  .arkan-floor-dashboard .floorDetailRow span {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:42px;
+    padding:8px 10px !important;
+    border:1px solid rgba(100,116,139,.2);
+    border-radius:9px !important;
+    background:rgba(100,116,139,.06);
+    font-size:13px !important;
+    font-weight:700;
+    white-space:normal !important;
+    text-align:center;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) > div:last-child span {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:36px;
+    padding:7px 12px !important;
+    border:1px solid rgba(100,116,139,.22);
+    border-radius:8px !important;
+    font-size:13px !important;
+    font-weight:700;
+  }
+}
+@media (min-width: 901px) and (max-height: 760px) {
+  body:has(.arkan-floor-dashboard) .arkan-pos-page { padding-top:2px !important; gap:4px !important; }
+  .arkan-pos-page > header { min-height:34px !important; height:34px; }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2),
+  .arkan-floor-dashboard > aside:nth-of-type(2) > div { padding:10px !important; gap:6px !important; }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) button,
+  .arkan-floor-dashboard > aside:nth-of-type(2) button { min-height:38px !important; padding:7px 9px !important; }
+  .arkan-floor-dashboard button[style*="min-height: 112px"] { min-height:62px !important; }
+  .arkan-floor-dashboard .floorDetailRow span { min-height:34px; }
+}
 @media (min-width: 901px) and (max-height: 760px) {
   body:has(.arkan-floor-dashboard) .arkan-pos-page { padding-top: 6px !important; padding-bottom: 6px !important; gap: 5px; }
   .arkan-pos-page > header { min-height: 40px; }
