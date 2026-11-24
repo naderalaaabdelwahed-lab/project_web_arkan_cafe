@@ -96,12 +96,11 @@ export default function PosPage() {
       setAllowed(canUse);
       if (!canUse) return;
 
-      const [p, c, st, r, day, sellable, days, reportProducts, reportCategories] = await Promise.all([
+      const [p, c, st, r, sellable, days, reportProducts, reportCategories] = await Promise.all([
         supabase.from("products").select("id,name,price,image_url,category_id,is_available").eq("is_available", true).order("name"),
         supabase.from("categories").select("id,name,display_order").eq("is_active", true).order("display_order"),
         supabase.from("restaurant_settings").select("indoor_tables,outdoor_tables").eq("id", 1).single(),
         supabase.from("reservations").select("id,customer_name,phone,reservation_date,reservation_time,status,seating_area,table_number").in("status", ["pending","confirmed"]),
-        supabase.from("business_days").select("*").order("opened_at", { ascending: false }),
         supabase.rpc("get_pos_sellable_product_ids"),
         supabase.from("business_days").select("*").order("opened_at", { ascending: false }),
         supabase.from("products").select("id,category_id"),
@@ -111,7 +110,6 @@ export default function PosPage() {
       if (c.error) throw c.error;
       if (st.error) throw st.error;
       if (r.error) throw r.error;
-      if (day.error) throw day.error;
       if (sellable.error) throw sellable.error;
       if (days.error) throw days.error;
       if (reportProducts.error) throw reportProducts.error;
@@ -120,8 +118,9 @@ export default function PosPage() {
       setProducts((p.data || []).filter((product) => sellableProductIds.has(Number(product.id))));
       setCategories(c.data || []);
       setSettings(st.data || { indoor_tables: 0, outdoor_tables: 0 });
-      setCurrentBusinessDayId(day.data?.id ?? null);
-      setBusinessDays(days.data || []);
+      const dayList = days.data || [];
+      setCurrentBusinessDayId(dayList.find((item) => item.status === "open")?.id ?? null);
+      setBusinessDays(dayList);
       const categoryNameById = Object.fromEntries((reportCategories.data || []).map((item) => [item.id, item.name]));
       setProductCategoryNames(Object.fromEntries((reportProducts.data || []).map((item) => [item.id, categoryNameById[item.category_id] || "غير محدد"])));
       const today = todayISO();
@@ -151,6 +150,7 @@ export default function PosPage() {
     const channel = supabase.channel("arkan-pos")
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "reservations" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "business_days" }, load)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [load]);
