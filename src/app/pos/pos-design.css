@@ -904,3 +904,148 @@
   }
   .arkan-pos-page .ordersTable td b { font-size: 16px !important; }
 }
+
+
+/* POS sales summary screen */
+.arkan-pos-page > .tabs { grid-template-columns: repeat(5,minmax(0,1fr)) !important; }
+.arkan-pos-page .pos-sales-page {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--pos-border);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: var(--pos-shadow);
+}
+.arkan-pos-page .pos-sales-heading,
+.arkan-pos-page .pos-sales-close {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.arkan-pos-page .pos-sales-heading h2 { margin: 0 0 4px; }
+.arkan-pos-page .pos-sales-heading p,
+.arkan-pos-page .pos-sales-close small {
+  display: block;
+  margin: 0;
+  color: var(--pos-muted);
+  font-size: 13px;
+}
+.arkan-pos-page .pos-sales-heading button,
+.arkan-pos-page .pos-sales-presets button {
+  min-height: 42px;
+  padding: 9px 14px !important;
+  border: 1px solid var(--pos-border) !important;
+  border-radius: 9px !important;
+  background: #faf8f4 !important;
+  color: #554635 !important;
+  font-weight: 800;
+}
+.arkan-pos-page .pos-sales-filter-card {
+  display: grid;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid var(--pos-border);
+  border-radius: 12px;
+  background: #faf9f6;
+}
+.arkan-pos-page .pos-sales-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.arkan-pos-page .pos-sales-dates {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 12px;
+  max-width: 620px;
+}
+.arkan-pos-page .pos-sales-dates label {
+  display: grid;
+  gap: 6px;
+  color: #5d554b;
+  font-size: 14px;
+  font-weight: 800;
+}
+.arkan-pos-page .pos-sales-dates input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--pos-border);
+  border-radius: 9px;
+  background: #fff;
+  color: #292622;
+}
+.arkan-pos-page .pos-sales-filter-card > small { color: var(--pos-muted); }
+.arkan-pos-page .pos-sales-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(190px,1fr));
+  gap: 12px;
+}
+.arkan-pos-page .pos-sales-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 9px;
+  min-height: 112px;
+  padding: 17px;
+  border: 1px solid var(--pos-border);
+  border-radius: 12px;
+  background: #fff;
+}
+.arkan-pos-page .pos-sales-card span {
+  color: #6d665c;
+  font-size: 14px;
+  font-weight: 800;
+}
+.arkan-pos-page .pos-sales-card strong {
+  color: #292622;
+  font-size: 24px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.arkan-pos-page .pos-sales-card small {
+  color: var(--pos-muted);
+  font-size: 12px;
+}
+.arkan-pos-page .pos-sales-card.pos-sales-total {
+  border-color: #d6c09e;
+  background: #fbf5eb;
+}
+.arkan-pos-page .pos-sales-card.pos-sales-total strong { color: #79552e; font-size: 28px; }
+.arkan-pos-page .pos-sales-close {
+  padding: 16px;
+  border: 1px solid #ead5d1;
+  border-radius: 12px;
+  background: #fff7f5;
+}
+.arkan-pos-page .pos-sales-close b { display: block; margin-bottom: 5px; color: #8f352d; font-size: 16px; }
+.arkan-pos-page .pos-sales-close button {
+  min-width: 145px;
+  padding: 11px 18px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: #a52d2d !important;
+  color: #fff !important;
+  font-weight: 850;
+}
+.arkan-pos-page .pos-sales-warning {
+  margin: 0;
+  padding: 12px;
+  border-radius: 9px;
+  background: #fff4d9;
+  color: #8b681b;
+}
+@media (max-width: 700px) {
+  .arkan-pos-page .pos-sales-page { padding: 12px; }
+  .arkan-pos-page .pos-sales-dates { grid-template-columns: minmax(0,1fr); }
+  .arkan-pos-page .pos-sales-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .arkan-pos-page .pos-sales-card { min-height: 100px; padding: 12px; }
+  .arkan-pos-page .pos-sales-card strong { font-size: 19px; }
+  .arkan-pos-page .pos-sales-card.pos-sales-total strong { font-size: 23px; }
+}
+@media (max-width: 420px) {
+  .arkan-pos-page .pos-sales-grid { grid-template-columns: minmax(0,1fr); }
+  .arkan-pos-page > .tabs .tab { padding: 9px 3px !important; font-size: 12px !important; }
+}
