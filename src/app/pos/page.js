@@ -191,31 +191,45 @@ export default function PosPage() {
             <input style={s.filterInput} type="number" min="1" placeholder="رقم الطاولة" value={orderTableFilter} onChange={e=>setOrderTableFilter(e.target.value)} />
             <button style={s.secondary} onClick={()=>{setOrderSearch("");setOrderTypeFilter("all");setOrderStatusFilter("all");setOrderDateFrom("");setOrderDateTo("");setOrderTableFilter("");}}>مسح الفلاتر</button>
           </div>
-          <div style={s.allOrdersList}>
-            {allOrdersFiltered.map(o => {
-              const dineIn = o.order_type === "dine-in";
-              const closed = ["delivered","cancelled"].includes(o.status);
-              const typeLabel = dineIn ? "صالة" : o.order_type === "takeaway" ? "تيك أواي" : "دليفري";
-              const statusLabel = ({pending:"جديد",confirmed:"مؤكد",preparing:"قيد التحضير",delivered:"تم التسليم",cancelled:"ملغي"})[o.status] || o.status || "غير محدد";
-              const created = o.created_at ? new Date(o.created_at) : null;
-              return <article key={o.id} style={s.orderRow}>
-                <div style={s.orderMainInfo}>
-                  <strong>أوردر #{o.id}</strong>
-                  <span>فاتورة ARK-{o.id}</span>
-                  <span>{created && !Number.isNaN(created.getTime()) ? created.toLocaleDateString("ar-EG") : "—"}</span>
-                  <span>{created && !Number.isNaN(created.getTime()) ? created.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) : "—"}</span>
-                </div>
-                <div style={s.orderDetailsLine}>
-                  <span>النوع: <b>{typeLabel}</b></span>
-                  {dineIn && <span>الطاولة: <b>{o.table_number || "—"}</b></span>}
-                  {dineIn && <span>حالة الطاولة: <b style={{color:closed?"#267447":"#a66a19"}}>{closed ? "مغلقة" : "مفتوحة"}</b></span>}
-                  <span>حالة الطلب: <b>{statusLabel}</b></span>
-                  <span>الخصم: <b>{fmt(o.discount_amount)} ج.م</b></span>
-                  <strong style={s.orderAmount}>{fmt(o.total_amount)} ج.م</strong>
-                </div>
-              </article>;
-            })}
-            {!allOrdersFiltered.length && <p style={s.muted}>لا توجد طلبات مطابقة للفلاتر.</p>}
+          <div style={s.ordersTableWrap}>
+            <table style={s.ordersTable}>
+              <thead>
+                <tr>
+                  <th style={s.ordersTh}>رقم الأوردر</th>
+                  <th style={s.ordersTh}>رقم الفاتورة</th>
+                  <th style={s.ordersTh}>التاريخ</th>
+                  <th style={s.ordersTh}>الساعة</th>
+                  <th style={s.ordersTh}>النوع</th>
+                  <th style={s.ordersTh}>الطاولة</th>
+                  <th style={s.ordersTh}>حالة الطاولة</th>
+                  <th style={s.ordersTh}>حالة الطلب</th>
+                  <th style={s.ordersTh}>الخصم</th>
+                  <th style={s.ordersTh}>الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allOrdersFiltered.map(o => {
+                  const dineIn = o.order_type === "dine-in";
+                  const closed = ["delivered","cancelled"].includes(o.status);
+                  const typeLabel = dineIn ? "صالة" : o.order_type === "takeaway" ? "تيك أواي" : "دليفري";
+                  const statusLabel = ({pending:"جديد",confirmed:"مؤكد",preparing:"قيد التحضير",delivered:"تم التسليم",cancelled:"ملغي"})[o.status] || o.status || "غير محدد";
+                  const created = o.created_at ? new Date(o.created_at) : null;
+                  return <tr key={o.id}>
+                    <td style={s.ordersTd}><b>#{o.id}</b></td>
+                    <td style={s.ordersTd}>ARK-{o.id}</td>
+                    <td style={s.ordersTd}>{created && !Number.isNaN(created.getTime()) ? created.toLocaleDateString("ar-EG") : "—"}</td>
+                    <td style={s.ordersTd}>{created && !Number.isNaN(created.getTime()) ? created.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) : "—"}</td>
+                    <td style={s.ordersTd}>{typeLabel}</td>
+                    <td style={s.ordersTd}>{dineIn ? o.table_number || "—" : "—"}</td>
+                    <td style={s.ordersTd}>{dineIn ? <b style={{color:closed?"#267447":"#a66a19"}}>{closed ? "مغلقة" : "مفتوحة"}</b> : "—"}</td>
+                    <td style={s.ordersTd}>{statusLabel}</td>
+                    <td style={s.ordersTd}>{fmt(o.discount_amount)} ج.م</td>
+                    <td style={{...s.ordersTd,fontWeight:800,color:"#267447"}}>{fmt(o.total_amount)} ج.م</td>
+                  </tr>;
+                })}
+                {!allOrdersFiltered.length && <tr><td style={s.ordersTd} colSpan={10}>لا توجد طلبات مطابقة للفلاتر.</td></tr>}
+              </tbody>
+            </table>
           </div>
         </section>
       ) : mode === "dine-in" && screen === "tables" ? (
@@ -306,7 +320,11 @@ const s = {
  allOrdersPage:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:18,minWidth:0},
  allOrdersHeading:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:16},
  orderFilters:{display:"grid",gridTemplateColumns:"minmax(220px,2fr) repeat(5,minmax(130px,1fr)) auto",gap:8,marginBottom:16},
- filterInput:{minWidth:0,width:"100%",boxSizing:"border-box",padding:"10px 11px",border:"1px solid #ddd",borderRadius:8,background:"#fff",fontFamily:"inherit"},
+ filterInput:{minWidth:0,width:"100%",boxSizing:"border-box",padding:"10px 11px",border:"1px solid #cfcfcf",borderRadius:8,background:"#fff",color:"#242424",fontFamily:"inherit",fontSize:14},
+ ordersTableWrap:{width:"100%",maxHeight:"calc(100vh - 310px)",minHeight:300,overflow:"auto",border:"1px solid #e3ded5",borderRadius:10},
+ ordersTable:{width:"100%",minWidth:1050,borderCollapse:"separate",borderSpacing:0,textAlign:"right",background:"#fff",fontSize:13},
+ ordersTh:{position:"sticky",top:0,zIndex:2,background:"#29251f",color:"#fff",padding:"14px 12px",whiteSpace:"nowrap",fontWeight:800,borderBottom:"2px solid #b88946"},
+ ordersTd:{padding:"13px 12px",whiteSpace:"nowrap",borderBottom:"1px solid #eee9e1",color:"#302d29"}
  allOrdersList:{display:"grid",gap:9},
  orderRow:{display:"grid",gridTemplateColumns:"minmax(230px,0.8fr) minmax(0,2fr)",alignItems:"center",gap:14,padding:"14px 16px",border:"1px solid #eee8df",borderRadius:10,background:"#fff"},
  orderMainInfo:{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"},
