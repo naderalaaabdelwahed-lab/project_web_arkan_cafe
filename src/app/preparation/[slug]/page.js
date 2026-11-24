@@ -100,6 +100,8 @@ export default function ConfigurablePreparationScreen() {
       .channel(`prep-screen-${screen.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => loadTickets(screen.id, categoryIds))
       .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, () => loadTickets(screen.id, categoryIds))
+      .on("postgres_changes", { event: "*", schema: "public", table: "preparation_screens" }, initialize)
+      .on("postgres_changes", { event: "*", schema: "public", table: "preparation_screen_categories" }, initialize)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [allowed, screen, categoryIds, loadTickets]);
