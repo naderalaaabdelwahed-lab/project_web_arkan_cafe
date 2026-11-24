@@ -241,15 +241,23 @@ export default function PosPage() {
     const selectedDays = businessDays.filter((day) => day.business_date >= salesFrom && day.business_date <= salesTo);
     return selectedDays.reduce((summary, day) => {
       if (day.status === "closed") {
-        summary.totalSales += Number(day.total_sales || 0);
-        summary.deliverySales += Number(day.delivery_sales || 0);
-        summary.takeawaySales += Number(day.takeaway_sales || 0);
-        summary.dineInSales += Number(day.dine_in_sales || 0);
-        summary.barSales += Number(day.bar_sales || 0);
-        summary.kitchenSales += Number(day.kitchen_sales || 0);
-        summary.deliveryFees += Number(day.delivery_fees || 0);
-        summary.totalOrders += Number(day.total_orders || 0);
-        summary.cancelledOrders += Number(day.cancelled_orders || 0);
+        // Closed-day totals are stored in the daily snapshot, not as columns on business_days.
+        const saved = day.snapshot?.summary || {};
+        const snapshotOrders = Array.isArray(day.snapshot?.orders)
+          ? day.snapshot.orders.map((entry) => entry.order || entry)
+          : [];
+        const cancelled = snapshotOrders.filter((order) =>
+          ["cancelled", "canceled"].includes(String(order.status || "").toLowerCase())
+        ).length;
+        summary.totalSales += Number(saved.total_sales ?? day.total_sales ?? 0);
+        summary.deliverySales += Number(saved.delivery_sales ?? day.delivery_sales ?? 0);
+        summary.takeawaySales += Number(saved.takeaway_sales ?? day.takeaway_sales ?? 0);
+        summary.dineInSales += Number(saved.dine_in_sales ?? day.dine_in_sales ?? 0);
+        summary.barSales += Number(saved.bar_sales ?? day.bar_sales ?? 0);
+        summary.kitchenSales += Number(saved.kitchen_sales ?? day.kitchen_sales ?? 0);
+        summary.deliveryFees += Number(saved.delivery_fees ?? day.delivery_fees ?? 0);
+        summary.totalOrders += Number(saved.total_orders ?? snapshotOrders.length ?? day.total_orders ?? 0);
+        summary.cancelledOrders += Number(saved.cancelled_orders ?? cancelled ?? day.cancelled_orders ?? 0);
         return summary;
       }
       const dayOrders = orders.filter((order) => String(order.business_day_id) === String(day.id));
