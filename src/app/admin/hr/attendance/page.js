@@ -5,10 +5,10 @@ import {supabase} from "@/lib/supabase";
 const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const box={background:"#211b14",border:"1px solid #443723",borderRadius:12,padding:16};
 const field={padding:10,borderRadius:8,border:"1px solid #54452e",background:"#15120e",color:"#fff"};
-const statusLabels={present:"حاضر",absent_pending:"غياب قيد المراجعة",absent:"غياب",paid_leave:"إجازة مدفوعة",unpaid_leave:"إجازة بدون راتب",excused:"غياب بعذر",holiday:"عطلة"};
+const statusLabels={present:"حاضر",absent_pending:"غياب قيد المراجعة",absent:"غياب",unpaid_leave:"إجازة بدون راتب",excused:"غياب بعذر",holiday:"عطلة"};
 
 export default function AttendancePage(){
- const [rows,setRows]=useState([]),[employees,setEmployees]=useState([]),[registers,setRegisters]=useState([]),[leaveBalances,setLeaveBalances]=useState([]),[payrollRun,setPayrollRun]=useState(null),[payrollPreview,setPayrollPreview]=useState([]);
+ const [rows,setRows]=useState([]),[employees,setEmployees]=useState([]),[registers,setRegisters]=useState([]),[payrollRun,setPayrollRun]=useState(null),[payrollPreview,setPayrollPreview]=useState([]);
  const [employee,setEmployee]=useState(""),[month,setMonth]=useState(today.slice(0,7));
  const [loading,setLoading]=useState(true),[error,setError]=useState(""),[message,setMessage]=useState("");
 
@@ -22,7 +22,7 @@ export default function AttendancePage(){
   setLoading(true);setError("");
   try{
    const [r,payroll]=await Promise.all([call("/api/admin/hr/attendance?month="+encodeURIComponent(month)),call("/api/admin/hr/payroll?month="+encodeURIComponent(month))]);
-   setRows(r.attendance||[]);setEmployees(r.employees||[]);setRegisters(r.registers||[]);setLeaveBalances(r.leaveBalances||[]);setPayrollRun(payroll.runs?.[0]||null);setPayrollPreview(payroll.preview||[]);
+   setRows(r.attendance||[]);setEmployees(r.employees||[]);setRegisters(r.registers||[]);setPayrollRun(payroll.runs?.[0]||null);setPayrollPreview(payroll.preview||[]);
    setEmployee(current=>current&&r.employees?.some(x=>x.id===current)?current:(r.employees?.find(x=>x.employment_status==="active")||r.employees?.[0])?.id||"");
   }catch(e){setError(e.message)}finally{setLoading(false)}
  },[month]);
@@ -36,15 +36,16 @@ export default function AttendancePage(){
   const [y,m]=month.split("-").map(Number),count=new Date(Date.UTC(y,m,0)).getUTCDate();
   return Array.from({length:count},(_,i)=>new Date(Date.UTC(y,m-1,i+1)).toISOString().slice(0,10));
  },[month]);
- const summary=useMemo(()=>({
-  attended:employeeRows.filter(x=>x.attendance_status==="present"&&x.check_in_at).length,
-  worked:employeeRows.reduce((s,x)=>s+Number(x.worked_minutes||0),0),
-  overtime:employeeRows.reduce((s,x)=>s+Number(x.overtime_minutes||0),0),
-  shortage:employeeRows.reduce((s,x)=>s+Number(x.shortage_minutes||0),0),
-  absent:employeeRows.filter(x=>["absent","absent_pending","excused","unpaid_leave"].includes(x.attendance_status)).length,
-  paidLeave:employeeRows.filter(x=>x.attendance_status==="paid_leave").length
- }),[employeeRows]);
- const balance=leaveBalances.find(x=>x.employee_id===employee);
+ const summary=useMemo(()=>{
+  const completed=employeeRows.filter(x=>x.attendance_status==="present"&&x.check_in_at&&x.check_out_at);
+  return {
+   attended:completed.length,
+   worked:completed.reduce((s,x)=>s+Number(x.worked_minutes||0),0),
+   overtime:completed.reduce((s,x)=>s+Number(x.overtime_minutes||0),0),
+   shortage:completed.reduce((s,x)=>s+Number(x.shortage_minutes||0),0),
+   absent:employeeRows.filter(x=>["absent","absent_pending","excused","unpaid_leave"].includes(x.attendance_status)).length
+  };
+ },[employeeRows]);
  const payrollItem=payrollRun?.hr_payroll_items?.find(x=>x.employee_id===employee)||payrollPreview.find(x=>x.employee_id===employee);
  const payrollDetails=payrollItem?.details||{};
  const hourlyRate=Number(payrollDetails.hour_rate||0);
@@ -59,7 +60,7 @@ export default function AttendancePage(){
  async function addStatus(date,status){
   try{
    await call("/api/admin/hr/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employee_id:employee,shift_date:date,attendance_status:status,notes:"تم تسجيل الحالة بواسطة المدير"})});
-   setMessage(status==="paid_leave"?"تم تسجيل الإجازة المدفوعة.":"تم تسجيل الغياب.");await load();
+   setMessage("تم تسجيل الغياب أو الإجازة بعذر.");await load();
   }catch(e){setError(e.message)}
  }
  async function review(row,status){
@@ -115,7 +116,6 @@ export default function AttendancePage(){
      <div style={box}><strong>الإضافي</strong><div>{hours(summary.overtime)}</div></div>
      <div style={box}><strong>العجز</strong><div>{hours(summary.shortage)}</div></div>
      <div style={box}><strong>أيام الغياب</strong><div>{summary.absent} يوم</div></div>
-     <div style={box}><strong>الإجازات المدفوعة</strong><div>{summary.paidLeave} يوم</div></div>
     </div>
     <section style={{marginBottom:18,padding:14,border:"1px solid #8b6d3c",borderRadius:10}}>
      <h2 style={{margin:"0 0 12px"}}>كشف المستحقات والراتب</h2>
@@ -123,7 +123,6 @@ export default function AttendancePage(){
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10}}>
        <div style={box}><strong>الراتب الشهري</strong><div>{money(payrollDetails.contract_monthly_salary)}</div></div>
        <div style={box}><strong>أيام الحضور</strong><div>{payrollDetails.attended_days??summary.attended} يوم</div></div>
-       <div style={box}><strong>الإجازات المدفوعة</strong><div>{Number(payrollDetails.paid_leave_days??payrollItem.paid_leave_days??0).toFixed(2)} يوم</div></div>
        <div style={box}><strong>الأساسي المستحق</strong><div>{money(payrollItem.monthly_salary)}</div></div>
        <div style={box}><strong>ساعات الإضافي</strong><div>{hours(payrollDetails.overtime_minutes)}</div></div>
        <div style={box}><strong>ساعات العجز</strong><div>{hours(payrollDetails.shortage_minutes)}</div></div>
@@ -134,8 +133,8 @@ export default function AttendancePage(){
        <div style={box}><strong>الحوافز والإضافات</strong><div>{money(payrollItem.additions)}</div></div>
        <div style={box}><strong>سعر الساعة</strong><div>{money(hourlyRate)}</div></div>
        <div style={box}><strong>أجر اليوم</strong><div>{money(Number(payrollDetails.contract_monthly_salary||0)/30)}</div></div>
-       <div style={box}><strong>أيام مدة الاستحقاق</strong><div>{payrollDetails.eligible_days??0} يوم</div></div>
-       <div style={box}><strong>إجمالي الأيام المدفوعة</strong><div>{Number(payrollDetails.paid_days_total??0).toFixed(2)} يوم</div></div>
+       <div style={box}><strong>الإجازة الأسبوعية المدفوعة</strong><div>{payrollDetails.weekly_paid_rest_days??0} يوم</div></div>
+       <div style={box}><strong>إجمالي أيام الاستحقاق</strong><div>{Number(payrollDetails.paid_days_total??0).toFixed(0)} يوم</div></div>
        <div style={{...box,gridColumn:"span 2"}}><strong>صافي الراتب بعد الإضافي والعجز والخصومات والحوافز</strong><div style={{fontSize:22,fontWeight:800}}>{money(payrollItem.net_salary)}</div></div>
        <div style={box}><strong>فترة الاستحقاق</strong><div>{payrollDetails.eligible_start||month+"-01"} إلى {payrollDetails.eligible_end||month+"-"+new Date(Date.UTC(Number(month.slice(0,4)),Number(month.slice(5,7)),0)).getUTCDate()}</div></div>
       </div>
@@ -172,14 +171,10 @@ export default function AttendancePage(){
        <td style={td}>{date}</td><td style={td}>{fmt(row?.check_in_at)}</td><td style={td}>{fmt(row?.check_out_at)}</td>
        <td style={td}>{row?hours(row.worked_minutes):"—"}</td><td style={td}>{row?hours(row.overtime_minutes):"—"}</td><td style={td}>{row?hours(row.shortage_minutes):"—"}</td>
        <td style={td}>{row?<select style={field} value={row.attendance_status} onChange={e=>review(row,e.target.value)}>{Object.entries(statusLabels).filter(([k])=>k!=="absent_pending").map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>:beforeHire?"قبل التعيين":future?"لم يحن بعد":"لا يوجد تسجيل"}</td>
-       <td style={td}>{row?<button onClick={()=>editTimes(row)}>تعديل الوقت</button>:!beforeHire&&!future?<span style={{display:"flex",gap:6}}><button onClick={()=>addStatus(date,"absent")}>غياب</button><button onClick={()=>addStatus(date,"paid_leave")}>إجازة</button></span>:"—"}</td>
+       <td style={td}>{row?<button onClick={()=>editTimes(row)}>تعديل الوقت</button>:!beforeHire&&!future?<span style={{display:"flex",gap:6}}><button onClick={()=>addStatus(date,"absent")}>غياب / إجازة بعذر</button></span>:"—"}</td>
       </tr>;
      })}
     </tbody></table></div>
-   </section>
-   <section className="attendance-no-print" style={box}>
-    <h2>رصيد الإجازات المدفوعة — {month.slice(0,4)}</h2>
-    <p>المستخدم: {balance?.used_days||0} يوم | المخصص: {balance?.allocated_days??selected.paid_leave_days??0} يوم | المتبقي: {Math.max(0,Number(balance?.allocated_days??selected.paid_leave_days??0)-Number(balance?.used_days||0))} يوم</p>
    </section>
   </>}
   {!selected&&!loading&&<section style={box}>لا يوجد موظفون لعرض كشفهم.</section>}
