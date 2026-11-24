@@ -478,14 +478,14 @@ export default function PosPage() {
       </header>
       {error && <p style={s.error}>{error}</p>}
       {message && <p style={s.success}>{message}</p>}
-      <nav style={s.tabs}>{tabs.map((t) => <button key={t.id} style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
+      <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       {tab === "all" && screen !== "order" ? (
         <section style={s.allOrdersPage}>
-          <div style={s.allOrdersHeading}>
+          <div className="allOrdersHeading" style={s.allOrdersHeading}>
             <div><h2 style={{margin:"0 0 5px"}}>كل الطلبات</h2><small style={s.muted}>عرض شامل لكل الطلبات المسجلة، وليس يوم العمل الحالي فقط</small></div>
             <b>{allOrdersFiltered.length} / {orders.length} طلب</b>
           </div>
-          <div style={s.orderFilters}>
+          <div className="orderFilters" style={s.orderFilters}>
             <input className="pos-filter-control" style={s.filterInput} placeholder="بحث برقم الأوردر أو الفاتورة أو العميل أو الطاولة" value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} />
             <select className="pos-filter-control" style={s.filterInput} value={orderTypeFilter} onChange={e=>setOrderTypeFilter(e.target.value)}><option value="all">كل الأنواع</option><option value="dine-in">الصالة</option><option value="takeaway">تيك أواي</option><option value="delivery">دليفري</option></select>
             <select className="pos-filter-control" style={s.filterInput} value={orderStatusFilter} onChange={e=>setOrderStatusFilter(e.target.value)}><option value="all">كل الحالات</option><option value="pending">جديد</option><option value="confirmed">مؤكد</option><option value="preparing">قيد التحضير</option><option value="delivered">تم التسليم / مغلق</option><option value="cancelled">ملغي</option></select>
@@ -494,21 +494,21 @@ export default function PosPage() {
             <input className="pos-filter-control" style={s.filterInput} type="number" min="1" placeholder="رقم الطاولة" value={orderTableFilter} onChange={e=>setOrderTableFilter(e.target.value)} />
             <button style={s.secondary} onClick={()=>{setOrderSearch("");setOrderTypeFilter("all");setOrderStatusFilter("all");setOrderDateFrom("");setOrderDateTo("");setOrderTableFilter("");}}>مسح الفلاتر</button>
           </div>
-          <div style={s.ordersTableWrap}>
-            <table style={s.ordersTable}>
+          <div className="ordersTableWrap" style={s.ordersTableWrap}>
+            <table className="ordersTable" style={s.ordersTable}>
               <thead>
                 <tr>
-                  <th style={s.ordersTh}>رقم الأوردر</th>
-                  <th style={s.ordersTh}>رقم الفاتورة</th>
-                  <th style={s.ordersTh}>التاريخ</th>
-                  <th style={s.ordersTh}>الساعة</th>
-                  <th style={s.ordersTh}>النوع</th>
-                  <th style={s.ordersTh}>الطاولة</th>
-                  <th style={s.ordersTh}>حالة الطاولة</th>
-                  <th style={s.ordersTh}>حالة الطلب</th>
-                  <th style={s.ordersTh}>الخصم</th>
-                  <th style={s.ordersTh}>الإجمالي</th>
-                  <th style={s.ordersTh}>إجراء</th>
+                  <th className="ordersTh" style={s.ordersTh}>رقم الأوردر</th>
+                  <th className="ordersTh" style={s.ordersTh}>رقم الفاتورة</th>
+                  <th className="ordersTh" style={s.ordersTh}>التاريخ</th>
+                  <th className="ordersTh" style={s.ordersTh}>الساعة</th>
+                  <th className="ordersTh" style={s.ordersTh}>النوع</th>
+                  <th className="ordersTh" style={s.ordersTh}>الطاولة</th>
+                  <th className="ordersTh" style={s.ordersTh}>حالة الطاولة</th>
+                  <th className="ordersTh" style={s.ordersTh}>حالة الطلب</th>
+                  <th className="ordersTh" style={s.ordersTh}>الخصم</th>
+                  <th className="ordersTh" style={s.ordersTh}>الإجمالي</th>
+                  <th className="ordersTh" style={s.ordersTh}>إجراء</th>
                 </tr>
               </thead>
               <tbody>
@@ -519,17 +519,17 @@ export default function PosPage() {
                   const statusLabel = ({pending:"جديد",confirmed:"مؤكد",preparing:"قيد التحضير",delivered:"تم التسليم",cancelled:"ملغي"})[o.status] || o.status || "غير محدد";
                   const created = o.created_at ? new Date(o.created_at) : null;
                   return <tr key={o.id} onClick={() => openOrderFromAll(o)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOrderFromAll(o); } }} tabIndex={0} role="button" title="اضغط لفتح تفاصيل الأوردر وإضافة أصناف" style={{cursor:"pointer"}}>
-                    <td style={s.ordersTd}><b>#{o.id}</b></td>
-                    <td style={s.ordersTd}>ARK-{o.id}</td>
-                    <td style={s.ordersTd}>{created && !Number.isNaN(created.getTime()) ? created.toLocaleDateString("ar-EG") : "—"}</td>
-                    <td style={s.ordersTd}>{created && !Number.isNaN(created.getTime()) ? created.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) : "—"}</td>
-                    <td style={s.ordersTd}>{typeLabel}</td>
-                    <td style={s.ordersTd}>{dineIn ? o.table_number || "—" : "—"}</td>
-                    <td style={s.ordersTd}>{dineIn ? <b style={{color:closed?"#267447":"#a66a19"}}>{closed ? "مغلقة" : "مفتوحة"}</b> : "—"}</td>
-                    <td style={s.ordersTd}>{statusLabel}</td>
-                    <td style={s.ordersTd}>{fmt(Number(o.discount_amount ?? 0))} ج.م</td>
+                    <td className="ordersTd" style={s.ordersTd}><b>#{o.id}</b></td>
+                    <td className="ordersTd" style={s.ordersTd}>ARK-{o.id}</td>
+                    <td className="ordersTd" style={s.ordersTd}>{created && !Number.isNaN(created.getTime()) ? created.toLocaleDateString("ar-EG") : "—"}</td>
+                    <td className="ordersTd" style={s.ordersTd}>{created && !Number.isNaN(created.getTime()) ? created.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}) : "—"}</td>
+                    <td className="ordersTd" style={s.ordersTd}>{typeLabel}</td>
+                    <td className="ordersTd" style={s.ordersTd}>{dineIn ? o.table_number || "—" : "—"}</td>
+                    <td className="ordersTd" style={s.ordersTd}>{dineIn ? <b style={{color:closed?"#267447":"#a66a19"}}>{closed ? "مغلقة" : "مفتوحة"}</b> : "—"}</td>
+                    <td className="ordersTd" style={s.ordersTd}>{statusLabel}</td>
+                    <td className="ordersTd" style={s.ordersTd}>{fmt(Number(o.discount_amount ?? 0))} ج.م</td>
                     <td style={{...s.ordersTd,fontWeight:800,color:"#267447"}}>{fmt(o.total_amount)} ج.م</td>
-                    <td style={s.ordersTd}><button type="button" style={s.secondary} onClick={e => { e.stopPropagation(); openOrderFromAll(o); }}>فتح الأوردر وإضافة أصناف</button></td>
+                    <td className="ordersTd" style={s.ordersTd}><button type="button" style={s.secondary} onClick={e => { e.stopPropagation(); openOrderFromAll(o); }}>فتح الأوردر وإضافة أصناف</button></td>
                   </tr>;
                 })}
                 {!allOrdersFiltered.length && <tr><td style={s.ordersTd} colSpan={11}>لا توجد طلبات مطابقة للفلاتر.</td></tr>}
@@ -554,7 +554,7 @@ export default function PosPage() {
                 <small>الإجمالي: {fmt(selectedTableOrder.total_amount)} ج.م</small>
                 <small>المدفوع: {fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</small>
                 <small>المتبقي: {fmt(selectedDue)} ج.م</small>
-                <button style={s.submit} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>إضافة أصناف / فتح الأوردر</button>
+                <button className="submit" style={s.submit} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>إضافة أصناف / فتح الأوردر</button>
                 <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"remove-items")}>فتح الأصناف وحذف المتاح</button>
                 <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"discount")}>فتح الخصم على الفاتورة</button>
                 <button style={s.secondary} onClick={()=>{setCashReceived("");setShowCashModal(true);}}>السداد النقدي وإغلاق الأوردر</button>
@@ -585,7 +585,7 @@ export default function PosPage() {
                   const o=activeTables.find(x=>x.table_number===n&&x.table_area===a);
                   const reserved=reservations.some(r=>r.table_number===n&&(r.seating_area||"indoor")===a);
                   const key=a+":"+n;
-                  return <button key={key} onClick={()=>selectTable(n,a)} onDoubleClick={()=>openTable(n,a)} style={{...s.tableTile,...(o?s.occupiedTile:{}),...(o?.receipt_printed_at?s.printedTile:{}),...(reserved&&!o?s.reservedTile:{}),...(selectedTableKey===key?s.tableSelected:{})}}>
+                  return <button key={key} className="tableTile" onClick={()=>selectTable(n,a)} onDoubleClick={()=>openTable(n,a)} style={{...s.tableTile,...(o?s.occupiedTile:{}),...(o?.receipt_printed_at?s.printedTile:{}),...(reserved&&!o?s.reservedTile:{}),...(selectedTableKey===key?s.tableSelected:{})}}>
                     <b>{n}</b><small>{o?"مشغولة — "+fmt(o.total_amount)+" ج.م":reserved?"محجوزة":"متاحة"}</small>
                   </button>;
                 })}
@@ -600,7 +600,7 @@ export default function PosPage() {
                 <div>قيمة الفاتورة: <b>{fmt(selectedTableOrder.total_amount)} ج.م</b></div>
                 <div>المدفوع: <b>{fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</b></div>
                 <div>المتبقي: <b>{fmt(selectedDue)} ج.م</b></div>
-                <button style={s.submit} disabled={selectedDue<=0} onClick={()=>{setCashReceived("");setShowCashModal(true);}}>استلام نقدية وإغلاق الطاولة</button></>
+                <button className="submit" style={s.submit} disabled={selectedDue<=0} onClick={()=>{setCashReceived("");setShowCashModal(true);}}>استلام نقدية وإغلاق الطاولة</button></>
                 :<p style={s.muted}>حدد طاولة مشغولة لعرض المبلغ المستحق.</p>}
             </div>
             <div style={s.floorOtherActions}><h3>عمليات أخرى</h3>
@@ -626,7 +626,7 @@ export default function PosPage() {
             <option value="">اختار طاولة فارغة</option>
             {availableTransferTargets.map(t=><option key={t.area+":"+t.number} value={t.area+":"+t.number}>{t.area==="indoor"?"داخلية":"خارجية"} — طاولة {t.number}</option>)}
           </select>
-          <button style={s.submit} disabled={saving||!transferTarget} onClick={()=>transferTable(selectedTableOrder.id)}>تأكيد النقل</button>
+          <button className="submit" style={s.submit} disabled={saving||!transferTarget} onClick={()=>transferTable(selectedTableOrder.id)}>تأكيد النقل</button>
           <button style={s.secondary} onClick={()=>setShowTransfer(false)}>إلغاء</button>
         </div>}
         {showCashModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowCashModal(false)}>
@@ -638,14 +638,14 @@ export default function PosPage() {
             <div>الباقي للعميل: <b>{fmt(Math.max(0,Number(cashReceived||0)-selectedDue))} ج.م</b></div>
             <small style={s.floorHint}>المبلغ المستلم لازم يكون مساويًا للمتبقي أو أكبر منه.</small>
             <div style={{display:"flex",gap:8,marginTop:12}}>
-              <button style={s.submit} disabled={saving||!Number.isFinite(Number(cashReceived))||Number(cashReceived)<selectedDue} onClick={()=>recordCashPayment(selectedTableOrder.id)}>{saving?"جاري السداد...":"سداد وإغلاق الأوردر"}</button>
+              <button className="submit" style={s.submit} disabled={saving||!Number.isFinite(Number(cashReceived))||Number(cashReceived)<selectedDue} onClick={()=>recordCashPayment(selectedTableOrder.id)}>{saving?"جاري السداد...":"سداد وإغلاق الأوردر"}</button>
               <button style={s.secondary} disabled={saving} onClick={()=>setShowCashModal(false)}>إلغاء</button>
             </div>
           </div>
         </div>}
         </>
       ) : (
-        <div style={s.orderWorkspace}>
+        <div className="orderWorkspace" style={s.orderWorkspace}>
           <aside style={s.menuSidebar}>
             <div style={s.menuSidebarHead}>
               <div><h2>المنيو</h2><small style={s.muted}>اضغط على الصنف لإضافته</small></div>
@@ -655,8 +655,8 @@ export default function PosPage() {
               <button style={s.category} onClick={() => setCategory("all")}>الكل</button>
               {categories.map(c => <button key={c.id} style={s.category} onClick={() => setCategory(String(c.id))}>{c.name}</button>)}
             </div>
-            <div style={s.products}>
-              {productsShown.map(p => <button key={p.id} style={s.product} disabled={editingOrderClosed} onClick={() => add(p)}>
+            <div className="products" style={s.products}>
+              {productsShown.map(p => <button key={p.id} className="product" style={s.product} disabled={editingOrderClosed} onClick={() => add(p)}>
                 {p.image_url ? <img src={p.image_url} alt="" style={s.image} /> : <span style={s.imageBlank}>＋</span>}
                 <b>{p.name}</b><small>{fmt(p.price)} ج.م</small>
               </button>)}
@@ -683,7 +683,7 @@ export default function PosPage() {
                   {target.area === "indoor" ? "داخلية" : "خارجية"} — طاولة {target.number}
                 </option>)}
               </select>
-              <button style={s.submit} disabled={saving || !transferTarget} onClick={transferTable}>{saving ? "جاري النقل..." : "تأكيد النقل"}</button>
+              <button className="submit" style={s.submit} disabled={saving || !transferTarget} onClick={transferTable}>{saving ? "جاري النقل..." : "تأكيد النقل"}</button>
               <button style={s.secondary} disabled={saving} onClick={() => { setShowTransfer(false); setTransferTarget(""); }}>إلغاء</button>
               {!availableTransferTargets.length && <small style={{ gridColumn: "1 / -1", color: "#8b681b" }}>لا توجد طاولات متاحة للنقل حاليًا.</small>}
             </div>}
@@ -711,15 +711,15 @@ export default function PosPage() {
                 ))}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button style={s.submit} disabled={saving || !transferTarget || !Object.values(transferQuantities).some((q) => Number(q) > 0)} onClick={transferSelectedItems}>{saving ? "جاري نقل الأصناف..." : "تأكيد نقل الأصناف"}</button>
+                <button className="submit" style={s.submit} disabled={saving || !transferTarget || !Object.values(transferQuantities).some((q) => Number(q) > 0)} onClick={transferSelectedItems}>{saving ? "جاري نقل الأصناف..." : "تأكيد نقل الأصناف"}</button>
                 <button style={s.secondary} disabled={saving} onClick={() => { setShowItemTransfer(false); setTransferQuantities({}); setTransferTarget(""); }}>إلغاء</button>
               </div>
               {!transferTargets.length && <small style={{ color: "#8b681b" }}>لا توجد طاولات أخرى متاحة للنقل حاليًا.</small>}
             </div>}
             {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
-            <div data-pos-cart style={s.cart}>{cart.map(x => <div key={x.cartKey} style={s.cartItem}>
+            <div className="cart" data-pos-cart style={s.cart}>{cart.map(x => <div key={x.cartKey} className="cartItem" style={s.cartItem}>
               <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><div style={{display:"flex",gap:8,alignItems:"center"}}><b>{fmt(x.price*x.quantity)} ج.م</b>{x.existing&&x.preparationStatus==="pending"&&editingOrderId&&!editingOrderClosed&&<button type="button" style={s.clear} disabled={saving} onClick={()=>removePendingItem(x.orderItemId)}>حذف الصنف</button>}</div></div>
-              <div style={s.head}><div style={s.qty}><button disabled={x.existing || x.quantity <= 1} onClick={() => qty(x.cartKey,-1)}>−</button><b>{x.quantity}</b><button disabled={x.existing} onClick={() => qty(x.cartKey,1)}>+</button></div><input style={s.note} placeholder="ملاحظة للصنف" value={x.note} disabled={x.existing} onChange={e => setCart(old => old.map(i => i.cartKey === x.cartKey ? {...i,note:e.target.value} : i))} /></div>
+              <div style={s.head}><div style={s.qty}><button disabled={x.existing || x.quantity <= 1} onClick={() => qty(x.cartKey,-1)}>−</button><b>{x.quantity}</b><button disabled={x.existing} onClick={() => qty(x.cartKey,1)}>+</button></div><input className="note" style={s.note} placeholder="ملاحظة للصنف" value={x.note} disabled={x.existing} onChange={e => setCart(old => old.map(i => i.cartKey === x.cartKey ? {...i,note:e.target.value} : i))} /></div>
             </div>)}{!cart.length && <p style={s.empty}>السلة فارغة — اختار أصناف من المنيو.</p>}</div>
             <div style={s.fields}>
               <input style={s.field} placeholder="اسم العميل (اختياري)" value={customer} disabled={Boolean(editingOrderId)} onChange={e=>setCustomer(e.target.value)} />
@@ -727,10 +727,10 @@ export default function PosPage() {
               <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} disabled={Boolean(editingOrderId)} onChange={e=>setNotes(e.target.value)} />
             </div>
             <div data-pos-discount style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input className="pos-filter-control" aria-label="قيمة الخصم" style={{...s.discountInput,color:"#000",WebkitTextFillColor:"#000",opacity:1}} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>
-            {editingOrderId && <button style={s.submit} disabled={saving || editingOrderClosed || newItemsSubtotal > 0} onClick={applyOrderDiscount}>{saving ? "جاري تطبيق الخصم..." : "تطبيق الخصم على الأوردر"}</button>}
-            {editingOrderId ? <div style={s.totals}><div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div><div><span>قيمة الإضافات</span><b>{fmt(newItemsSubtotal)} ج.م</b></div><div style={s.grand}><b>الإجمالي بعد الإضافة</b><b>{fmt(Number(editingOrderTotal || 0) + newItemsSubtotal)} ج.م</b></div></div> : <><div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div><div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div></>}
-            {editingOrderId && mode === "dine-in" && !editingOrderClosed && <div style={s.discountBox}><b>السداد النقدي</b><div>إجمالي الفاتورة: {fmt(editingOrderTotal)} ج.م</div><div>المدفوع: {fmt(paymentSummary[editingOrderId] || 0)} ج.م</div><div>المتبقي: {fmt(Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)))} ج.م</div><input className="pos-filter-control" style={s.discountInput} type="number" min="0" step="0.01" placeholder="المبلغ المستلم من العميل" value={cashReceived} onChange={e=>setCashReceived(e.target.value)} /><div>الباقي للعميل: {fmt(Math.max(0, Number(cashReceived || 0) - Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0))))} ج.م</div><button style={s.submit} disabled={saving || newItemsSubtotal > 0 || Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)) <= 0 || Number(cashReceived) <= 0} onClick={recordCashPayment}>{saving ? "جاري تسجيل السداد..." : "تسجيل السداد النقدي"}</button></div>}
-            {!editingOrderClosed && <button style={s.submit} disabled={saving || (editingOrderId ? newItemsSubtotal <= 0 : !cart.length) || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : editingOrderId ? "حفظ الإضافات على نفس الأوردر" : "تأكيد الطلب وإرساله للتجهيز"}</button>}
+            {editingOrderId && <button className="submit" style={s.submit} disabled={saving || editingOrderClosed || newItemsSubtotal > 0} onClick={applyOrderDiscount}>{saving ? "جاري تطبيق الخصم..." : "تطبيق الخصم على الأوردر"}</button>}
+            {editingOrderId ? <div className="totals" style={s.totals}><div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div><div><span>قيمة الإضافات</span><b>{fmt(newItemsSubtotal)} ج.م</b></div><div style={s.grand}><b>الإجمالي بعد الإضافة</b><b>{fmt(Number(editingOrderTotal || 0) + newItemsSubtotal)} ج.م</b></div></div> : <><div className="totals" style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div><div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div></>}
+            {editingOrderId && mode === "dine-in" && !editingOrderClosed && <div className="discountBox" style={s.discountBox}><b>السداد النقدي</b><div>إجمالي الفاتورة: {fmt(editingOrderTotal)} ج.م</div><div>المدفوع: {fmt(paymentSummary[editingOrderId] || 0)} ج.م</div><div>المتبقي: {fmt(Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)))} ج.م</div><input className="pos-filter-control" style={s.discountInput} type="number" min="0" step="0.01" placeholder="المبلغ المستلم من العميل" value={cashReceived} onChange={e=>setCashReceived(e.target.value)} /><div>الباقي للعميل: {fmt(Math.max(0, Number(cashReceived || 0) - Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0))))} ج.م</div><button className="submit" style={s.submit} disabled={saving || newItemsSubtotal > 0 || Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)) <= 0 || Number(cashReceived) <= 0} onClick={recordCashPayment}>{saving ? "جاري تسجيل السداد..." : "تسجيل السداد النقدي"}</button></div>}
+            {!editingOrderClosed && <button className="submit" style={s.submit} disabled={saving || (editingOrderId ? newItemsSubtotal <= 0 : !cart.length) || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : editingOrderId ? "حفظ الإضافات على نفس الأوردر" : "تأكيد الطلب وإرساله للتجهيز"}</button>}
           </section>
         </div>
       )}
