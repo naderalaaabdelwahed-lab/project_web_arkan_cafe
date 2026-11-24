@@ -164,12 +164,12 @@ export default function PosPage() {
     } finally { setSaving(false); }
   }
 
-  if (loading) return <main dir="rtl" style={s.page}>جاري تحميل ARKAN POS...</main>;
+  if (loading) return <main dir="rtl" className="arkan-pos-page" style={s.page}>جاري تحميل ARKAN POS...</main>;
   if (!allowed) return <main dir="rtl" style={s.page}><h2>شاشة الكاشير</h2><p>ليس لديك صلاحية pos.use. اطلب من المدير تفعيلها لحسابك.</p></main>;
 
   return (
     <main dir="rtl" style={s.page}>
-      <style jsx global>{`.pos-filter-control{color:#000!important;-webkit-text-fill-color:#000!important;opacity:1!important;font-weight:600}.pos-filter-control::placeholder{color:#000!important;-webkit-text-fill-color:#000!important;opacity:1!important}.pos-filter-control option{color:#000!important;background:#fff!important}.pos-filter-control::-webkit-calendar-picker-indicator{opacity:1}`}</style>
+      <style jsx global>{`.arkan-pos-page input,.arkan-pos-page textarea,.arkan-pos-page select{color:#000!important;-webkit-text-fill-color:#000!important;background-color:#fff!important;caret-color:#000!important;opacity:1!important}.arkan-pos-page input::placeholder,.arkan-pos-page textarea::placeholder{color:#555!important;-webkit-text-fill-color:#555!important;opacity:1!important}.arkan-pos-page select option{color:#000!important;background:#fff!important}.arkan-pos-page input:-webkit-autofill,.arkan-pos-page input:-webkit-autofill:hover,.arkan-pos-page input:-webkit-autofill:focus{ -webkit-text-fill-color:#000!important;box-shadow:0 0 0 1000px #fff inset!important;caret-color:#000!important}.arkan-pos-page .pos-filter-control{font-weight:600}.arkan-pos-page input::-webkit-calendar-picker-indicator{opacity:1}`}</style>
       <header style={s.header}>
         <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
         <button style={s.secondary} onClick={load}>تحديث البيانات</button>
