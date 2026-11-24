@@ -386,6 +386,32 @@ export default function PosPage() {
     }
   }
 
+  async function removePendingItem(itemId) {
+    if (!editingOrderId || editingOrderClosed) return setError("لا يمكن تعديل أوردر مغلق.");
+    if (!window.confirm("هل تريد حذف هذا الصنف من الأوردر؟")) return;
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result=await supabase.rpc("pos_remove_pending_order_item",{p_order_item_id:itemId});
+      if(result.error) throw result.error;
+      setMessage(result.data.order_closed?"تم حذف آخر صنف وإغلاق الأوردر وإخلاء الطاولة.":"تم حذف الصنف وتحديث إجمالي الأوردر.");
+      reset(); setScreen("tables"); await load();
+    } catch(e){setError("تعذر حذف الصنف: "+e.message);}
+    finally{setSaving(false);}
+  }
+
+  async function emptySelectedTable() {
+    if(!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
+    if(!window.confirm("تأكيد إفراغ الطاولة؟ سيتم إلغاء الأوردر وحذف أصنافه، بشرط عدم وجود دفعات أو أصناف بدأ تجهيزها.")) return;
+    setSaving(true);setError("");setMessage("");
+    try{
+      const result=await supabase.rpc("pos_empty_table_order",{p_order_id:selectedTableOrder.id,p_reason:"تم إفراغ الطاولة من شاشة الصالة"});
+      if(result.error) throw result.error;
+      setMessage("تم إلغاء الأوردر وإفراغ الطاولة رقم "+selectedTableOrder.table_number+".");
+      setSelectedTableKey(""); await load();
+    }catch(e){setError("تعذر إفراغ الطاولة: "+e.message);}
+    finally{setSaving(false);}
+  }
+
   async function mergeSelectedTable() {
     if (!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
     if (!mergeTargetId) return setError("اختار الطاولة المستقبِلة.");
@@ -404,14 +430,14 @@ export default function PosPage() {
     finally { setSaving(false); }
   }
 
-  async function transferTable() {
-    if (!editingOrderId) return;
+  async function transferTable(orderId = editingOrderId) {
+    if (!orderId) return;
     if (!transferTarget) return setError("اختار الطاولة الجديدة.");
     const [targetArea, targetNumber] = transferTarget.split(":");
     setSaving(true); setError(""); setMessage("");
     try {
       const result = await supabase.rpc("move_pos_order_between_tables", {
-        p_order_id: editingOrderId,
+        p_order_id: orderId,
         p_target_table_number: Number(targetNumber),
         p_target_table_area: targetArea,
       });
@@ -528,7 +554,8 @@ export default function PosPage() {
                   </select>
                   <button style={s.secondary} disabled={saving||!mergeTargetId} onClick={mergeSelectedTable}>دمج الأوردر وإخلاء الطاولة المصدر</button>
                 </div>
-                <button style={s.secondary} onClick={startItemTransfer}>نقل أصناف من الطلب</button>
+                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>نقل أصناف من الطلب</button>
+                <button style={s.clear} disabled={saving} onClick={emptySelectedTable}>إفراغ الطاولة وإنهاء الطلب</button>
                 <small style={s.floorHint}>الدمج ينقل الأصناف والخصم وكل الدفعات، ويقفل أوردر المصدر. الأوردر المقفول لا يقبل أي تعديل.</small>
               </> : <>
                 <p style={s.muted}>اضغط مرة على طاولة لتحديدها، واضغط مرتين لفتح الأوردر.</p>
@@ -567,7 +594,8 @@ export default function PosPage() {
               <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>selectedTableOrder&&printReceipt(selectedTableOrder)}>طباعة الفاتورة</button>
               <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>selectedTableOrder&&openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>فتح تفاصيل الأوردر</button>
               <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>{setShowTransfer(true);setTransferTarget("");}}>نقل الطاولة</button>
-              <button style={s.secondary} disabled={!selectedTableOrder} onClick={startItemTransfer}>نقل أصناف</button>
+              <button style={s.secondary} disabled={!selectedTableOrder} onClick={()=>selectedTableOrder&&openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>نقل أصناف</button>
+              <button style={s.clear} disabled={!selectedTableOrder||saving} onClick={emptySelectedTable}>إفراغ الطاولة</button>
             </div>
           </aside>
           <div style={s.floorDetails}><b>تفاصيل الطاولة المحددة</b>
@@ -585,7 +613,7 @@ export default function PosPage() {
             <option value="">اختار طاولة فارغة</option>
             {availableTransferTargets.map(t=><option key={t.area+":"+t.number} value={t.area+":"+t.number}>{t.area==="indoor"?"داخلية":"خارجية"} — طاولة {t.number}</option>)}
           </select>
-          <button style={s.submit} disabled={saving||!transferTarget} onClick={transferTable}>تأكيد النقل</button>
+          <button style={s.submit} disabled={saving||!transferTarget} onClick={()=>transferTable(selectedTableOrder.id)}>تأكيد النقل</button>
           <button style={s.secondary} onClick={()=>setShowTransfer(false)}>إلغاء</button>
         </div>}
         {showCashModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowCashModal(false)}>
@@ -676,7 +704,7 @@ export default function PosPage() {
             </div>}
             {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
             <div style={s.cart}>{cart.map(x => <div key={x.cartKey} style={s.cartItem}>
-              <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><b>{fmt(x.price*x.quantity)} ج.م</b></div>
+              <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><div style={{display:"flex",gap:8,alignItems:"center"}}><b>{fmt(x.price*x.quantity)} ج.م</b>{x.existing&&x.preparationStatus==="pending"&&editingOrderId&&!editingOrderClosed&&<button type="button" style={s.clear} disabled={saving} onClick={()=>removePendingItem(x.orderItemId)}>حذف الصنف</button>}</div></div>
               <div style={s.head}><div style={s.qty}><button disabled={x.existing || x.quantity <= 1} onClick={() => qty(x.cartKey,-1)}>−</button><b>{x.quantity}</b><button disabled={x.existing} onClick={() => qty(x.cartKey,1)}>+</button></div><input style={s.note} placeholder="ملاحظة للصنف" value={x.note} disabled={x.existing} onChange={e => setCart(old => old.map(i => i.cartKey === x.cartKey ? {...i,note:e.target.value} : i))} /></div>
             </div>)}{!cart.length && <p style={s.empty}>السلة فارغة — اختار أصناف من المنيو.</p>}</div>
             <div style={s.fields}>
