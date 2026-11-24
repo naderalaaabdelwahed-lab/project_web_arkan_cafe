@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { authorizeAdminPermission } from "@/lib/server/admin-permissions";
 
 function serviceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -8,20 +9,8 @@ function serviceClient() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
-async function authorize(request) {
-  const token = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!token) return { response: NextResponse.json({ error: "سجل دخول المدير أولاً." }, { status: 401 }) };
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) throw new Error("Supabase auth configuration is missing.");
-  const auth = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { data, error } = await auth.auth.getUser(token);
-  if (error || !data?.user) return { response: NextResponse.json({ error: "جلسة الدخول غير صالحة." }, { status: 401 }) };
-  if (data.user.app_metadata?.account_type === "hr_employee") return { response: NextResponse.json({ error: "حساب HR مخصص للحضور والانصراف الشخصي فقط." }, { status: 403 }) };
-  const db = serviceClient();
-  const { data: admin, error: adminError } = await db.from("admin_users").select("user_id").eq("user_id", data.user.id).maybeSingle();
-  if (adminError || !admin) return { response: NextResponse.json({ error: "غير مسموح." }, { status: 403 }) };
-  return { db };
+async function authorize(request, permission) {
+  return authorizeAdminPermission(request, permission);
 }
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -29,7 +18,7 @@ const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request) {
   try {
-    const auth = await authorize(request);
+    const auth = await authorize(request, "hr.shifts.view");
     if (auth.response) return auth.response;
     const [shifts, employees, assignments] = await Promise.all([
       auth.db.from("hr_shifts").select("*").order("created_at", { ascending: false }),
@@ -46,7 +35,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const auth = await authorize(request);
+    const auth = await authorize(request, "hr.shifts.manage");
     if (auth.response) return auth.response;
     const body = await request.json();
     if (body.action === "assign") {
@@ -100,7 +89,7 @@ export async function POST(request) {
 
 export async function PATCH(request) {
   try {
-    const auth = await authorize(request);
+    const auth = await authorize(request, "hr.shifts.manage");
     if (auth.response) return auth.response;
     const body = await request.json();
     const id = String(body.id || "");
@@ -130,7 +119,7 @@ export async function PATCH(request) {
  
 export async function DELETE(request) {
   try {
-    const auth = await authorize(request);
+    const auth = await authorize(request, "hr.shifts.manage");
     if (auth.response) return auth.response;
     const body = await request.json();
     const id = String(body.id || "");
