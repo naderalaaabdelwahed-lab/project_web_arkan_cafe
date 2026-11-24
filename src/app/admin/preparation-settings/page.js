@@ -14,13 +14,19 @@ export default function PreparationSettingsPage() {
   useEffect(() => {
     async function initialize() {
       try {
-        const [{ data: admin, error: adminError }, { data: permitted, error: permissionError }] = await Promise.all([
+        const [
+          { data: admin, error: adminError },
+          { data: canView, error: viewError },
+          { data: canUpdate, error: updateError },
+        ] = await Promise.all([
           supabase.rpc("is_admin"),
+          supabase.rpc("has_permission", { requested_permission: "menu.view" }),
           supabase.rpc("has_permission", { requested_permission: "menu.update" }),
         ]);
         if (adminError) throw adminError;
-        if (permissionError) throw permissionError;
-        const canEdit = Boolean(admin || permitted);
+        if (viewError) throw viewError;
+        if (updateError) throw updateError;
+        const canEdit = Boolean(admin || (canView && canUpdate));
         setAllowed(canEdit);
         if (!canEdit) return;
 
