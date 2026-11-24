@@ -26,7 +26,7 @@ export default function PreparationScreensManager() {
     if (categoryError) throw categoryError;
     setScreens((screenRows || []).map((screen) => ({
       ...screen,
-      category_ids: (screen.preparation_screen_categories || []).map((row) => row.category_id),
+      category_ids: (screen.preparation_screen_categories || []).map((row) => row.category_id),\n      category_names: (screen.preparation_screen_categories || []).map((row) => categoryRows.find((category) => category.id === row.category_id)?.name || "قسم غير متاح"),
     })));
     setCategories(categoryRows || []);
   }, []);
@@ -225,7 +225,7 @@ function ScreenCard({ screen, onEdit, onDelete }) {
       </div>
       <p style={styles.link}>{url}</p>
       <div style={styles.tags}>
-        {screen.category_ids.map((id) => <span key={id} style={styles.tag}>قسم #{id}</span>)}
+        {(screen.category_names || []).map((name, index) => <span key={`${screen.id}-${index}`} style={styles.tag}>{name}</span>)}
       </div>
       <div style={styles.cardActions}>
         <a href={url} target="_blank" rel="noreferrer" style={styles.openLink}>فتح الشاشة ↗</a>
