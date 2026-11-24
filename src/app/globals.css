@@ -3448,3 +3448,33 @@ input:focus, textarea:focus, select:focus { border-color: var(--arkan-accent) !i
 }
 .arkan-pos-page { --pos-ink:#29251F; --pos-muted:#746958; --pos-border:#E8E0D4; --pos-surface:#FFFFFF; --pos-bg:#F6F4F0; --pos-gold:#B58B4D; --pos-gold-light:#F5EFE4; }
 .arkan-floor-dashboard { background: #F6F4F0; color: #29251F; border-color: #E8E0D4; }
+
+
+/* ===== HIGH-CONTRAST TYPOGRAPHY: dark readable text on light surfaces ===== */
+html body * {
+  color: #29251F !important;
+}
+html body input::placeholder,
+html body textarea::placeholder {
+  color: #746958 !important;
+  opacity: 1;
+}
+html body button,
+html body [role="button"] {
+  color: #29251F !important;
+}
+html body .success-icon,
+html body .nav-btn,
+html body .primary-btn,
+html body .primary-button,
+html body .menu-add-btn,
+html body .menu-save-btn,
+html body .menu-category-add,
+html body .menu-category-form button:not([type="button"]),
+html body .food-footer button,
+html body .reservation-submit,
+html body .submit-order,
+html body .hr-action,
+html body .menu-category-nav button.active {
+  color: #29251F !important;
+}
