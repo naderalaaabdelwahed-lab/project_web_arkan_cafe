@@ -678,13 +678,6 @@ export default function PosPage() {
             </div>
           </aside>
           <div style={s.floorTables}>
-            <div style={{display:"grid",gap:12}}>
-              <div className="floor-status-strip" style={s.floorStatusStrip}>
-                <div style={{...s.floorStatusCard,borderColor:"#bfe0c8"}}><b style={{color:"#267447"}}>{floorAvailableCount}</b><small>متاحة</small></div>
-                <div style={{...s.floorStatusCard,borderColor:"#efc1c1"}}><b style={{color:"#a12c2c"}}>{floorOccupiedCount}</b><small>مشغولة</small></div>
-                <div style={{...s.floorStatusCard,borderColor:"#e9cb7a"}}><b style={{color:"#8b681b"}}>{floorReservedCount}</b><small>محجوزة</small></div>
-              </div>
-            </div>
             {["indoor","outdoor"].map((a)=> <div key={a} style={s.tableSection}>
               <h3>{a==="indoor"?"الطاولات الداخلية":"الطاولات الخارجية"} ({Number(a==="indoor"?settings.indoor_tables:settings.outdoor_tables)||0})</h3>
               <div className="floor-table-grid" style={s.fullTableGrid}>
