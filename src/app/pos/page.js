@@ -111,9 +111,9 @@ export default function PosPage() {
     setCart([]); setCustomer(""); setPhone(""); setAddress(""); setNotes("");
     setDiscountValue("0"); setTable(null); setReservationId(null);
   }
-  function chooseTable(n) {
+  function chooseTable(n, selectedArea = area) {
     setTable(n);
-    const booking = reservations.find((r) => r.table_number === n && (r.seating_area || "indoor") === area);
+    const booking = reservations.find((r) => r.table_number === n && (r.seating_area || "indoor") === selectedArea);
     setReservationId(booking ? booking.id : null);
     if (booking) { setCustomer(booking.customer_name || ""); setPhone(booking.phone || ""); }
   }
@@ -177,7 +177,7 @@ export default function PosPage() {
               {Array.from({length:Number(settings.indoor_tables)||0},(_,i)=>i+1).map(n => {
                 const occupied = activeTables.some(o => o.table_number === n && o.table_area === "indoor");
                 const reserved = reservations.some(r => r.table_number === n && (r.seating_area || "indoor") === "indoor");
-                return <button key={"indoor-"+n} onClick={() => { setArea("indoor"); chooseTable(n); setScreen("order"); }} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
+                return <button key={"indoor-"+n} disabled={activeTables.some(o => o.table_number === n && o.table_area === "indoor")} onClick={() => { setArea("indoor"); chooseTable(n, "indoor"); setScreen("order"); }} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
                   <b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
                 </button>;
               })}
@@ -190,7 +190,7 @@ export default function PosPage() {
               {Array.from({length:Number(settings.outdoor_tables)||0},(_,i)=>i+1).map(n => {
                 const occupied = activeTables.some(o => o.table_number === n && o.table_area === "outdoor");
                 const reserved = reservations.some(r => r.table_number === n && r.seating_area === "outdoor");
-                return <button key={"outdoor-"+n} onClick={() => { setArea("outdoor"); chooseTable(n); setScreen("order"); }} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
+                return <button key={"outdoor-"+n} disabled={activeTables.some(o => o.table_number === n && o.table_area === "outdoor")} onClick={() => { setArea("outdoor"); chooseTable(n, "outdoor"); setScreen("order"); }} style={{...s.tableTile,...(occupied?s.occupiedTile:{}),...(reserved&&!occupied?s.reservedTile:{})}}>
                   <b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small>
                 </button>;
               })}
