@@ -875,3 +875,32 @@
     font-size: 17px !important;
   }
 }
+
+
+/* Readability: enlarge text in the All Orders table only */
+.arkan-pos-page .ordersTable th {
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+  padding: 15px 11px !important;
+}
+.arkan-pos-page .ordersTable td {
+  font-size: 16px !important;
+  line-height: 1.65 !important;
+  padding: 14px 11px !important;
+}
+.arkan-pos-page .ordersTable td b {
+  font-size: 17px !important;
+  font-weight: 850 !important;
+}
+.arkan-pos-page .ordersTable td button {
+  font-size: 15px !important;
+  padding: 10px 12px !important;
+}
+@media (max-width: 600px) {
+  .arkan-pos-page .ordersTable th,
+  .arkan-pos-page .ordersTable td {
+    font-size: 15px !important;
+    padding: 11px 9px !important;
+  }
+  .arkan-pos-page .ordersTable td b { font-size: 16px !important; }
+}
