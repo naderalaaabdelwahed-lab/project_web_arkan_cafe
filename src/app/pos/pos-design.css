@@ -1049,3 +1049,15 @@
   .arkan-pos-page .pos-sales-grid { grid-template-columns: minmax(0,1fr); }
   .arkan-pos-page > .tabs .tab { padding: 9px 3px !important; font-size: 12px !important; }
 }
+
+/* Match POS cashier screens to the unified ARKAN floor palette */
+.arkan-pos-page {
+  --pos-ink:#29251F;
+  --pos-muted:#746958;
+  --pos-border:#E8E0D4;
+  --pos-surface:#FFFFFF;
+  --pos-bg:#F6F4F0;
+  --pos-gold:#B58B4D;
+  --pos-gold-light:#F5EFE4;
+}
+.arkan-pos-page { background:var(--pos-bg)!important; color:var(--pos-ink)!important; }
