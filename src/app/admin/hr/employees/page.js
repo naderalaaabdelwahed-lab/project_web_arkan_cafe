@@ -110,7 +110,7 @@ export default function HrEmployeesPage() {
         <h2 style={{margin:"0 0 16px",fontSize:20}}>قائمة الموظفين ({employees.length})</h2>
         {loading?<p>جارٍ تحميل الموظفين...</p>:employees.length===0?<p style={{color:"#62594F"}}>لسه مفيش موظفين مضافين.</p>:
           <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",minWidth:800}}>
-            <thead><tr>{["الموظف","الوظيفة / القسم","الهاتف","الراتب","آخر يوم عمل","الحالة","كود الحضور","إجراءات"].map(x=><th key={x} style={{textAlign:"right",padding:12,borderBottom:"1px solid #54452e",color:"#79552E"}}>{x}</th>)}</tr></thead>
+            <thead><tr>{["الموظف","الوظيفة / القسم","الهاتف","الراتب","آخر يوم عمل","الحالة","كود الحضور","إجراءات"].map(x=><th key={x} style={{textAlign:"right",padding:12,borderBottom:"1px solid #E8E0D4",color:"#79552E"}}>{x}</th>)}</tr></thead>
             <tbody>{employees.map(emp=><tr key={emp.id}>
               <td style={{padding:12,borderBottom:"1px solid #E8E0D4"}}><div style={{display:"flex",alignItems:"center",gap:10}}>{emp.photo_url?<img src={emp.photo_url} alt="" style={{width:42,height:42,borderRadius:"50%",objectFit:"cover"}}/>:<span style={{width:42,height:42,borderRadius:"50%",background:"#F1E9DC",display:"grid",placeItems:"center"}}>👤</span>}<span>{emp.full_name}</span></div></td>
               <td style={{padding:12,borderBottom:"1px solid #E8E0D4"}}>{[emp.job_title,emp.department].filter(Boolean).join(" — ")||"—"}</td>
