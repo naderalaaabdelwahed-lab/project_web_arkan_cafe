@@ -213,3 +213,33 @@ $$;
 revoke all on function public.create_pos_order(text,jsonb,integer,text,text,text,text,text,bigint,text,numeric,jsonb) from public;
 revoke all on function public.create_pos_order(text,jsonb,integer,text,text,text,text,text,bigint,text,numeric,jsonb) from anon;
 grant execute on function public.create_pos_order(text,jsonb,integer,text,text,text,text,text,bigint,text,numeric,jsonb) to authenticated;
+
+
+-- POS employees can read the operational records needed by the cashier screen.
+drop policy if exists "POS users view orders" on public.orders;
+create policy "POS users view orders" on public.orders
+for select to authenticated
+using (public.is_admin() or public.has_permission('pos.use'));
+
+drop policy if exists "POS users view order items" on public.order_items;
+create policy "POS users view order items" on public.order_items
+for select to authenticated
+using (public.is_admin() or public.has_permission('pos.use'));
+
+drop policy if exists "POS users view reservations" on public.reservations;
+create policy "POS users view reservations" on public.reservations
+for select to authenticated
+using (public.is_admin() or public.has_permission('pos.use'));
+
+grant select on public.orders, public.order_items, public.reservations, public.pos_payments, public.pos_audit_logs to authenticated;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname='supabase_realtime' and schemaname='public' and tablename='reservations'
+  ) then
+    alter publication supabase_realtime add table public.reservations;
+  end if;
+end;
+$$;
