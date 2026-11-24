@@ -82,6 +82,13 @@ export async function POST(request){
  try{
   const a=await admin(request);if(a.response)return a.response;
   const b=await request.json();
+  if(b.action==="refresh_draft"){
+   const runId=String(b.id||"");
+   if(!/^[0-9a-f-]{36}$/i.test(runId))return NextResponse.json({error:"كشف الرواتب غير صحيح."},{status:400});
+   const {data,error}=await a.db.rpc("hr_refresh_draft_payroll_run",{p_run_id:runId});
+   if(error){const status=error.code==="P0002"?404:error.code==="55000"?409:400;return NextResponse.json({error:error.message||"تعذر تحديث مسودة الرواتب."},{status});}
+   return NextResponse.json({run:data.run,items:data.items||[],item_count:data.item_count||0});
+  }
   if(b.action==="adjustment"){
    const employee_id=String(b.employee_id||""),adjustment_date=String(b.adjustment_date||""),amount=Number(b.amount),adjustment_type=String(b.adjustment_type||""),reason=String(b.reason||"").trim();
    if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^(\d{4})-(\d{2})-(\d{2})$/.test(adjustment_date)||!Number.isFinite(amount)||amount<=0||!["addition","deduction"].includes(adjustment_type)||reason.length<2)
