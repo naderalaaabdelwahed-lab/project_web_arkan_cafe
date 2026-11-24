@@ -90,7 +90,7 @@ export default function PosPage() {
       if (day.error) throw day.error;
       if (sellable.error) throw sellable.error;
       const sellableProductIds = new Set((sellable.data || []).map((row) => Number(row.product_id)));
-      setProducts((p.data || []).filter((product) => sellableProductIds.has(Number(product.id)));
+      setProducts((p.data || []).filter((product) => sellableProductIds.has(Number(product.id))));
       setCategories(c.data || []);
       setSettings(st.data || { indoor_tables: 0, outdoor_tables: 0 });
       setCurrentBusinessDayId(day.data?.id ?? null);
