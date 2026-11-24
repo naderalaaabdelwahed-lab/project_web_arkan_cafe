@@ -789,6 +789,9 @@ export default function PosPage() {
                 <button type="button" disabled={!selectedTableOrder || mergeTargets.length === 0 || saving} onClick={() => { setShowMergePanel(true); setShowTransfer(false); setShowDiscountPanel(false); setMergeTargetId(""); }}>
                   <span className="pos-action-icon">🧩</span><b>دمج طاولة في طاولة</b>
                 </button>
+                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => openTable(selectedTableOrder.table_number, selectedTableOrder.table_area)}>
+                  <span className="pos-action-icon">➕</span><b>إضافة منتج</b>
+                </button>
               </div>
             </section>
             <section className="pos-floor-order-preview">
