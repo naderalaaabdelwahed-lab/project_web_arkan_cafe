@@ -34,7 +34,6 @@ const todayISO = () => {
   const now = new Date();
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
-const monthStart = () => `${todayISO().slice(0, 7)}-01`;
 
 async function fetchAll(table, columns = "*") {
   const pageSize = 1000;
@@ -80,8 +79,9 @@ export default function InventoryReportsPage() {
   const [purchaseItems, setPurchaseItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [activeReport, setActiveReport] = useState("movement");
-  const [dateFrom, setDateFrom] = useState(monthStart());
-  const [dateTo, setDateTo] = useState(todayISO());
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [todayDate, setTodayDate] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -115,6 +115,13 @@ export default function InventoryReportsPage() {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    const today = todayISO();
+    setTodayDate(today);
+    setDateFrom(`${today.slice(0, 7)}-01`);
+    setDateTo(today);
+  }, []);
 
   const itemMap = useMemo(() => new Map(items.map((item) => [Number(item.id), item])), [items]);
   const unitMap = useMemo(() => new Map(units.map((unit) => [Number(unit.id), unit])), [units]);
@@ -352,7 +359,7 @@ export default function InventoryReportsPage() {
       {error && <div className="error"><strong>تعذر تحميل التقارير من قاعدة البيانات</strong><span>{error}</span><small>تأكد من تسجيل الدخول وامتلاك صلاحية قراءة المخزن أو التقارير.</small></div>}
 
       <section className="filters">
-        <label>من تاريخ<input type="date" value={dateFrom} max={dateTo || todayISO()} onChange={(event) => setDateFrom(event.target.value)} /></label>
+        <label>من تاريخ<input type="date" value={dateFrom} max={dateTo || todayDate} onChange={(event) => setDateFrom(event.target.value)} /></label>
         <label>إلى تاريخ<input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} /></label>
         <label className="search">بحث<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث عن صنف أو فاتورة..." /></label>
         <button onClick={() => { setDateFrom(""); setDateTo(""); setSearch(""); }}>كل الفترات</button>
