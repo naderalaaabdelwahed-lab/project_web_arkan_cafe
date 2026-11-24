@@ -39,7 +39,10 @@ alter table public.order_items
 
 -- Snapshot the routing on each item so changing a product's station won't move old tickets.
 update public.order_items oi
-set preparation_station = coalesce(p.preparation_station, 'kitchen'),
+set preparation_station = coalesce(
+      (select p.preparation_station from public.products p where p.id = oi.product_id),
+      'kitchen'
+    ),
     preparation_started_at = coalesce(oi.preparation_started_at, o.created_at, now()),
     preparation_status = case
       when o.status in ('delivered', 'cancelled') then 'ready'
@@ -50,15 +53,14 @@ set preparation_station = coalesce(p.preparation_station, 'kitchen'),
       else oi.prepared_at
     end
 from public.orders o
-left join public.products p on p.id = oi.product_id
 where o.id = oi.order_id;
 
 create or replace function public.pos_snapshot_item_station()
 returns trigger
 language plpgsql
-security invoker
+security definer
 set search_path = ''
-as $$
+as $
 declare
   v_station text;
 begin
@@ -77,6 +79,10 @@ begin
 end;
 $$;
 
+revoke all on function public.pos_snapshot_item_station() from public;
+revoke all on function public.pos_snapshot_item_station() from anon;
+revoke all on function public.pos_snapshot_item_station() from authenticated;
+
 drop trigger if exists trg_pos_snapshot_item_station on public.order_items;
 create trigger trg_pos_snapshot_item_station
 before insert on public.order_items
@@ -87,8 +93,8 @@ create policy "Kitchen and bar employees view orders"
 on public.orders for select to authenticated
 using (
   public.is_admin()
-  or public.has_permission('kitchen.view')
-  or public.has_permission('bar.view')
+  or (preparation_station = 'kitchen' and public.has_permission('kitchen.view'))
+  or (preparation_station = 'bar' and public.has_permission('bar.view'))
 );
 
 drop policy if exists "Kitchen and bar employees view order items" on public.order_items;
@@ -96,8 +102,8 @@ create policy "Kitchen and bar employees view order items"
 on public.order_items for select to authenticated
 using (
   public.is_admin()
-  or public.has_permission('kitchen.view')
-  or public.has_permission('bar.view')
+  or (preparation_station = 'kitchen' and public.has_permission('kitchen.view'))
+  or (preparation_station = 'bar' and public.has_permission('bar.view'))
 );
 
 create or replace function public.complete_station_order(
