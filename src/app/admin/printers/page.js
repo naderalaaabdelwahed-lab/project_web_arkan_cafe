@@ -240,7 +240,7 @@ export default function PrintersSettingsPage() {
               <article key={printer.id} style={{ background: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 12, padding: 20 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
                   <div><span style={{ color: "#79552E", fontSize: 12 }}>{TYPE_LABELS[printer.printer_type] || TYPE_LABELS.custom}</span><h2 style={{ margin: "7px 0", fontSize: 19 }}>{printer.name}</h2></div>
-                  <span style={{ color: printer.is_active ? "#65d995" : "#e6b86b", background: printer.is_active ? "#173d29" : "#44351e", padding: "5px 9px", borderRadius: 20, fontSize: 12 }}>{printer.is_active ? "مفعّلة" : "غير مفعّلة"}</span>
+                  <span style={{ color: printer.is_active ? "#27613B" : "#79552E", background: printer.is_active ? "#E6F2E8" : "#F1E9DC", padding: "5px 9px", borderRadius: 20, fontSize: 12 }}>{printer.is_active ? "مفعّلة" : "غير مفعّلة"}</span>
                 </div>
                 <div style={{ color: "#62594F", fontSize: 13, lineHeight: 1.9, margin: "12px 0" }}>
                   <div>الاتصال: {CONNECTION_LABELS[printer.connection_type]}</div>
@@ -259,7 +259,7 @@ export default function PrintersSettingsPage() {
         )}
 
         {showForm && (
-          <div onClick={closeForm} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,.78)", display: "grid", placeItems: "center", padding: 16 }}>
+          <div onClick={closeForm} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(41,37,31,.48)", display: "grid", placeItems: "center", padding: 16 }}>
             <form onSubmit={savePrinter} onClick={(event) => event.stopPropagation()} style={{ width: "min(650px, 100%)", maxHeight: "90vh", overflowY: "auto", background: "#FFFFFF", border: "1px solid #E8E0D4", borderRadius: 14, padding: 24 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}><h2 style={{ color: "#79552E", margin: 0 }}>{editingId ? "تعديل الطابعة" : "إضافة طابعة جديدة"}</h2><button type="button" onClick={closeForm} style={{ background: "#F1E9DC", color: "#51483E", border: 0, borderRadius: 7, padding: "6px 11px", cursor: "pointer" }}>×</button></div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14 }}>
@@ -275,7 +275,7 @@ export default function PrintersSettingsPage() {
             </form>
           </div>
         )}
-        <p style={{ color: "#888", fontSize: 12, marginTop: 24, lineHeight: 1.8 }}>ملاحظة: حفظ بيانات الطابعة وتوزيع المنتجات عليها لا يعني بدء الطباعة الفعلية تلقائيًا؛ تشغيل الطباعة المباشرة يحتاج توصيل الطابعة وإعداد خدمة الطباعة على جهاز الكاشير.</p>
+        <p style={{ color: "#62594F", fontSize: 12, marginTop: 24, lineHeight: 1.8 }}>ملاحظة: حفظ بيانات الطابعة وتوزيع المنتجات عليها لا يعني بدء الطباعة الفعلية تلقائيًا؛ تشغيل الطباعة المباشرة يحتاج توصيل الطابعة وإعداد خدمة الطباعة على جهاز الكاشير.</p>
       </div>
     </main>
   );
