@@ -344,7 +344,7 @@ export default function PosPage() {
               </div>
             </div>
             {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
-            <div style={s.cart}>{cart.map(x => <div key={x.id} style={s.cartItem}>
+            <div style={s.cart}>{cart.map(x => <div key={x.cartKey} style={s.cartItem}>
               <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><b>{fmt(x.price*x.quantity)} ج.م</b></div>
               <div style={s.head}><div style={s.qty}><button disabled={x.existing && x.quantity <= x.originalQuantity} onClick={() => qty(x.cartKey,-1)}>−</button><b>{x.quantity}</b><button onClick={() => qty(x.cartKey,1)}>+</button></div><input style={s.note} placeholder="ملاحظة للصنف" value={x.note} disabled={x.existing} onChange={e => setCart(old => old.map(i => i.cartKey === x.cartKey ? {...i,note:e.target.value} : i))} /></div>
             </div>)}{!cart.length && <p style={s.empty}>السلة فارغة — اختار أصناف من المنيو.</p>}</div>
