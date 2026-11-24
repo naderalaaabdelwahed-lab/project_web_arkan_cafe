@@ -584,6 +584,31 @@ export default function PosPage() {
         <>
         <style jsx>{`
           .arkan-floor-dashboard { gap: 16px !important; }
+          .arkan-floor-dashboard > aside:first-child,
+          .arkan-floor-dashboard > aside:first-child .floorTools {
+            background: #fff !important;
+          }
+          .arkan-floor-dashboard > aside:first-child .floorTools {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            gap: 10px;
+          }
+          .arkan-floor-dashboard > aside:first-child .floorTools > :not(button) {
+            width: 100%;
+          }
+          .arkan-floor-dashboard > aside:first-child .floorTools > button {
+            width: calc(50% - 5px);
+            min-height: 124px;
+            aspect-ratio: 1 / 1;
+            box-sizing: border-box;
+            padding: 10px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            white-space: normal;
+            line-height: 1.5;
+          }
           .arkan-floor-dashboard button { min-height: 40px; font-weight: 700; transition: transform .15s ease, box-shadow .15s ease; }
           .arkan-floor-dashboard button:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,35,22,.10); }
           .arkan-floor-dashboard button:focus-visible { outline: 3px solid #d28c2c; outline-offset: 2px; }
