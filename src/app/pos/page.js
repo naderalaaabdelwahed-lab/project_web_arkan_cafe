@@ -784,6 +784,216 @@ export default function PosPage() {
   .arkan-floor-dashboard > aside:nth-of-type(2) button { min-height: 27px !important; padding: 4px 6px !important; }
   .arkan-floor-dashboard button[style*="min-height: 112px"] { min-height: 54px !important; }
 }
+
+/* ===== RESPONSIVE FLOOR LAYOUT: viewport-aware, not fixed-size ===== */
+.arkan-pos-page,
+.arkan-pos-page * { box-sizing: border-box; }
+.arkan-pos-page { width:100%; max-width:100%; min-width:0; }
+.arkan-floor-dashboard { width:100%; min-width:0; }
+.arkan-floor-dashboard > * { min-width:0; }
+
+/* Large workstations: use the viewport only when both dimensions allow it. */
+@media (min-width: 1200px) and (min-height: 820px) {
+  html:has(.arkan-floor-dashboard), body:has(.arkan-floor-dashboard) {
+    height:100%;
+    overflow:hidden;
+  }
+  body:has(.arkan-floor-dashboard) .arkan-pos-page {
+    height:100dvh !important;
+    min-height:0 !important;
+    max-height:100dvh;
+    overflow:hidden !important;
+    padding:clamp(6px, .7vw, 12px) clamp(10px, 1vw, 18px) !important;
+    gap:clamp(5px, .55vw, 9px) !important;
+  }
+  .arkan-pos-page > header { flex:0 0 auto; min-height:clamp(38px,5vh,54px); }
+  .arkan-pos-page > nav { flex:0 0 auto; }
+  .arkan-pos-page > .arkan-floor-dashboard {
+    flex:1 1 auto;
+    min-height:0 !important;
+    height:auto !important;
+    grid-template-columns:minmax(235px,.95fr) minmax(0,2.05fr) minmax(245px,.98fr) !important;
+    grid-template-rows:minmax(0,1fr) auto;
+    gap:clamp(8px,.8vw,14px) !important;
+    overflow:hidden;
+    align-items:stretch !important;
+  }
+  .arkan-floor-dashboard > aside:first-child,
+  .arkan-floor-dashboard > aside:nth-of-type(2) { min-height:0; }
+  .arkan-floor-dashboard > div:nth-child(2) { min-height:0; overflow:auto; }
+  .arkan-floor-dashboard .floorDetailRow {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(125px,1fr));
+  }
+}
+
+/* Laptops and medium screens: retain the dashboard hierarchy, allow page scrolling. */
+@media (min-width: 760px) and (max-width: 1199px), (min-width: 760px) and (max-height: 819px) {
+  html:has(.arkan-floor-dashboard), body:has(.arkan-floor-dashboard) {
+    height:auto !important;
+    min-height:100%;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+  }
+  body:has(.arkan-floor-dashboard) .arkan-pos-page {
+    height:auto !important;
+    min-height:100dvh !important;
+    max-height:none !important;
+    overflow:visible !important;
+    padding:clamp(8px,1.2vw,16px) !important;
+    gap:10px !important;
+  }
+  .arkan-pos-page > header { min-height:42px; }
+  .arkan-pos-page > .arkan-floor-dashboard {
+    flex:none;
+    height:auto !important;
+    min-height:0 !important;
+    overflow:visible !important;
+    grid-template-columns:minmax(205px,.78fr) minmax(0,1.55fr) !important;
+    grid-template-rows:auto auto auto;
+    gap:10px !important;
+    align-items:stretch !important;
+  }
+  .arkan-floor-dashboard > aside:first-child { grid-column:1; grid-row:1; }
+  .arkan-floor-dashboard > div:nth-child(2) { grid-column:2; grid-row:1; min-height:390px; overflow:visible; }
+  .arkan-floor-dashboard > aside:nth-of-type(2) {
+    grid-column:1 / -1;
+    grid-row:2;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    grid-template-rows:auto !important;
+  }
+  .arkan-floor-dashboard > .floorDetails { grid-column:1 / -1; grid-row:3; }
+  .arkan-floor-dashboard .floorDetailRow {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(135px,1fr));
+  }
+}
+
+/* Tablets and phones: stack sections, keep controls touch-friendly and prevent clipping. */
+@media (max-width: 759px) {
+  html:has(.arkan-floor-dashboard), body:has(.arkan-floor-dashboard) {
+    height:auto !important;
+    min-height:100%;
+    overflow-x:hidden !important;
+    overflow-y:auto !important;
+  }
+  body:has(.arkan-floor-dashboard) .arkan-pos-page {
+    width:100%;
+    height:auto !important;
+    min-height:100dvh !important;
+    max-height:none !important;
+    overflow:visible !important;
+    padding:10px !important;
+    gap:10px !important;
+  }
+  .arkan-pos-page > header {
+    min-height:0 !important;
+    height:auto !important;
+    gap:8px;
+    flex-wrap:wrap;
+    margin:0 !important;
+  }
+  .arkan-pos-page > header h1 { font-size:clamp(19px,5vw,24px) !important; }
+  .arkan-pos-page > header > button { min-height:40px; }
+  .arkan-pos-page > nav {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:7px !important;
+    margin:0 !important;
+  }
+  .arkan-pos-page > nav button {
+    min-width:0;
+    min-height:42px !important;
+    padding:8px 6px !important;
+    font-size:14px !important;
+  }
+  .arkan-pos-page > .arkan-floor-dashboard {
+    display:grid !important;
+    grid-template-columns:minmax(0,1fr) !important;
+    grid-template-rows:auto !important;
+    gap:10px !important;
+    height:auto !important;
+    min-height:0 !important;
+    padding:0 !important;
+    overflow:visible !important;
+  }
+  .arkan-floor-dashboard > aside:first-child,
+  .arkan-floor-dashboard > div:nth-child(2),
+  .arkan-floor-dashboard > aside:nth-of-type(2),
+  .arkan-floor-dashboard > .floorDetails {
+    grid-column:1 !important;
+    grid-row:auto !important;
+    min-width:0;
+    min-height:0 !important;
+    overflow:visible !important;
+  }
+  .arkan-floor-dashboard > aside:first-child { grid-template-rows:auto auto !important; }
+  .arkan-floor-dashboard > aside:first-child > div,
+  .arkan-floor-dashboard > div:nth-child(2),
+  .arkan-floor-dashboard > aside:nth-of-type(2) > div,
+  .arkan-floor-dashboard > .floorDetails {
+    padding:12px !important;
+  }
+  .arkan-floor-dashboard > aside:nth-of-type(2) {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    grid-template-rows:auto !important;
+    gap:9px !important;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) > div[style*="grid"] {
+    grid-template-columns:repeat(auto-fill,minmax(88px,1fr)) !important;
+    gap:8px !important;
+  }
+  .arkan-floor-dashboard button[style*="min-height: 112px"] {
+    min-height:76px !important;
+    padding:8px !important;
+  }
+  .arkan-floor-dashboard .floorDetailRow {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:7px !important;
+  }
+  .arkan-floor-dashboard .floorDetailRow span {
+    min-width:0;
+    min-height:42px;
+    white-space:normal !important;
+    overflow-wrap:anywhere;
+    text-align:center;
+    font-size:12px !important;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) > div:last-child {
+    margin-top:12px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px !important;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) > div:last-child span {
+    min-height:36px;
+    white-space:normal;
+    font-size:12px !important;
+  }
+  .arkan-floor-dashboard .floorInlineModal {
+    position:fixed;
+    z-index:1000;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:min(620px,calc(100vw - 24px));
+    max-height:calc(100dvh - 24px);
+    overflow:auto;
+  }
+}
+
+/* Very narrow phones: put paired action cards into one column. */
+@media (max-width: 420px) {
+  body:has(.arkan-floor-dashboard) .arkan-pos-page { padding:8px !important; }
+  .arkan-floor-dashboard > aside:nth-of-type(2) { grid-template-columns:minmax(0,1fr) !important; }
+  .arkan-floor-dashboard .floorDetailRow { grid-template-columns:minmax(0,1fr) !important; }
+  .arkan-floor-dashboard > div:nth-child(2) > div[style*="grid"] {
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+}
+
 `}</style>
       <header style={s.header}>
         <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
