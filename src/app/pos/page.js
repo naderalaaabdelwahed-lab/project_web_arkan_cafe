@@ -460,7 +460,186 @@ export default function PosPage() {
 
   return (
     <main dir="rtl" className="arkan-pos-page" style={s.page}>
-      <style jsx global>{`.arkan-floor-dashboard{min-width:0}@media(max-width:1100px){.arkan-floor-dashboard{grid-template-columns:1fr!important}.arkan-floor-dashboard .floorDetails{grid-column:1!important}}.arkan-pos-page input,.arkan-pos-page textarea,.arkan-pos-page select{color:#000!important;-webkit-text-fill-color:#000!important;background-color:#fff!important;caret-color:#000!important;opacity:1!important}.arkan-pos-page input::placeholder,.arkan-pos-page textarea::placeholder{color:#555!important;-webkit-text-fill-color:#555!important;opacity:1!important}.arkan-pos-page select option{color:#000!important;background:#fff!important}.arkan-pos-page input:-webkit-autofill,.arkan-pos-page input:-webkit-autofill:hover,.arkan-pos-page input:-webkit-autofill:focus{ -webkit-text-fill-color:#000!important;box-shadow:0 0 0 1000px #fff inset!important;caret-color:#000!important}.arkan-pos-page .pos-filter-control{font-weight:600}.arkan-pos-page input::-webkit-calendar-picker-indicator{opacity:1}`}</style>
+      <style jsx global>{`.arkan-floor-dashboard{min-width:0}@media(max-width:1100px){.arkan-floor-dashboard{grid-template-columns:1fr!important}.arkan-floor-dashboard .floorDetails{grid-column:1!important}}.arkan-pos-page input,.arkan-pos-page textarea,.arkan-pos-page select{color:#000!important;-webkit-text-fill-color:#000!important;background-color:#fff!important;caret-color:#000!important;opacity:1!important}.arkan-pos-page input::placeholder,.arkan-pos-page textarea::placeholder{color:#555!important;-webkit-text-fill-color:#555!important;opacity:1!important}.arkan-pos-page select option{color:#000!important;background:#fff!important}.arkan-pos-page input:-webkit-autofill,.arkan-pos-page input:-webkit-autofill:hover,.arkan-pos-page input:-webkit-autofill:focus{ -webkit-text-fill-color:#000!important;box-shadow:0 0 0 1000px #fff inset!important;caret-color:#000!important}.arkan-pos-page .pos-filter-control{font-weight:600}.arkan-pos-page input::-webkit-calendar-picker-indicator{opacity:1}
+/* ===== POS FLOOR: FULL-VIEWPORT DESKTOP LAYOUT ===== */
+@media (min-width: 901px) {
+  html:has(.arkan-floor-dashboard), body:has(.arkan-floor-dashboard) {
+    height: 100%;
+    overflow: hidden;
+  }
+  body:has(.arkan-floor-dashboard) .arkan-pos-page {
+    height: 100dvh !important;
+    min-height: 0 !important;
+    max-height: 100dvh;
+    box-sizing: border-box;
+    padding: 10px 16px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden !important;
+  }
+  .arkan-pos-page > header {
+    flex: 0 0 auto;
+    min-height: 48px;
+    margin: 0 2px 2px !important;
+    align-items: center;
+  }
+  .arkan-pos-page > header h1 { font-size: 25px; }
+  .arkan-pos-page > header > div > small:last-child { font-size: 11px; }
+  .arkan-pos-page > nav {
+    flex: 0 0 auto;
+    margin: 0 0 2px !important;
+    gap: 7px;
+  }
+  .arkan-pos-page > nav button {
+    padding: 8px 20px !important;
+    min-height: 36px;
+  }
+  .arkan-pos-page > .arkan-floor-dashboard {
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    height: auto !important;
+    grid-template-columns: minmax(205px,.78fr) minmax(0,2.2fr) minmax(205px,.82fr) !important;
+    grid-template-rows: minmax(0,1fr) auto;
+    gap: 10px !important;
+    padding: 10px !important;
+    overflow: hidden;
+    align-items: stretch !important;
+  }
+  .arkan-floor-dashboard > aside:first-child {
+    min-height: 0;
+    grid-template-rows: auto minmax(0,1fr);
+    gap: 9px !important;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:first-child {
+    padding: 12px 15px !important;
+    gap: 5px !important;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:first-child strong {
+    font-size: 27px !important;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:first-child button {
+    min-height: 30px;
+    padding: 5px 8px !important;
+    font-size: 11px;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) {
+    min-height: 0;
+    padding: 11px !important;
+    gap: 6px !important;
+    align-content: start;
+    overflow: hidden;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) h3,
+  .arkan-floor-dashboard > aside:nth-of-type(2) h3 {
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) small,
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) b {
+    font-size: 11px;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) button,
+  .arkan-floor-dashboard > aside:nth-of-type(2) button {
+    min-height: 31px !important;
+    padding: 6px 8px !important;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) select {
+    padding: 7px !important;
+    font-size: 11px !important;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) {
+    min-height: 0;
+    padding: 13px !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) > .head {
+    flex: 0 0 auto;
+    padding-bottom: 8px;
+    margin-bottom: 2px;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) > .head h2 { font-size: 19px; }
+  .arkan-floor-dashboard > div:nth-child(2) h3 {
+    margin: 7px 0 6px !important;
+    font-size: 13px;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) > div[style*="grid"] {
+    gap: 7px !important;
+    grid-template-columns: repeat(auto-fill,minmax(82px,1fr)) !important;
+  }
+  .arkan-floor-dashboard button[style*="min-height: 112px"] {
+    min-height: clamp(58px,8vh,76px) !important;
+    padding: 6px !important;
+    gap: 3px !important;
+    border-radius: 11px !important;
+  }
+  .arkan-floor-dashboard button[style*="min-height: 112px"] b { font-size: 21px; }
+  .arkan-floor-dashboard button[style*="min-height: 112px"] small { font-size: 9px; }
+  .arkan-floor-dashboard > div:nth-child(2) > div:last-child {
+    margin-top: auto;
+    padding-top: 7px;
+    gap: 5px 9px !important;
+  }
+  .arkan-floor-dashboard > div:nth-child(2) > div:last-child span {
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+  .arkan-floor-dashboard > aside:nth-of-type(2) {
+    min-height: 0;
+    grid-template-rows: minmax(0,1fr) minmax(0,1fr);
+    gap: 9px !important;
+  }
+  .arkan-floor-dashboard > aside:nth-of-type(2) > div {
+    min-height: 0;
+    padding: 12px !important;
+    gap: 6px !important;
+    align-content: start;
+  }
+  .arkan-floor-dashboard > aside:nth-of-type(2) > div:first-child > div {
+    padding: 4px 0;
+    font-size: 11px;
+  }
+  .arkan-floor-dashboard > .floorDetails {
+    grid-column: 1 / -1;
+    padding: 9px 13px !important;
+    gap: 6px !important;
+  }
+  .arkan-floor-dashboard > .floorDetails > b { font-size: 12px; }
+  .arkan-floor-dashboard .floorDetailRow {
+    grid-template-columns: repeat(7,minmax(0,1fr));
+    gap: 6px !important;
+  }
+  .arkan-floor-dashboard .floorDetailRow span {
+    padding: 6px 8px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .arkan-floor-dashboard .floorInlineModal {
+    position: fixed;
+    z-index: 30;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    width: min(620px,calc(100vw - 40px));
+    box-shadow: 0 20px 70px rgba(0,0,0,.22);
+  }
+}
+@media (min-width: 901px) and (max-height: 760px) {
+  body:has(.arkan-floor-dashboard) .arkan-pos-page { padding-top: 6px !important; padding-bottom: 6px !important; gap: 5px; }
+  .arkan-pos-page > header { min-height: 40px; }
+  .arkan-pos-page > header h1 { font-size: 21px; }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2),
+  .arkan-floor-dashboard > aside:nth-of-type(2) > div { padding: 8px !important; gap: 4px !important; }
+  .arkan-floor-dashboard > aside:first-child > div:nth-child(2) button,
+  .arkan-floor-dashboard > aside:nth-of-type(2) button { min-height: 27px !important; padding: 4px 6px !important; }
+  .arkan-floor-dashboard button[style*="min-height: 112px"] { min-height: 54px !important; }
+}
+`}</style>
       <header style={s.header}>
         <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
         <button style={s.secondary} onClick={load}>تحديث البيانات</button>
