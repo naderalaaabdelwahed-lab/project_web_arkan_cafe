@@ -146,6 +146,10 @@ export default function PosPage() {
   const activeTables = orders.filter((o) => o.order_type === "dine-in" && !["delivered","cancelled"].includes(o.status));
   const selectedTableOrder = activeTables.find((o) => selectedTableKey === (o.table_area + ":" + o.table_number)) || null;
   const floorTotal = activeTables.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+  const floorOccupiedCount = activeTables.length;
+  const floorReservedCount = reservations.filter((r) => !activeTables.some((o) => o.table_number === r.table_number && o.table_area === (r.seating_area || "indoor"))).length;
+  const floorTableCount = Number(settings.indoor_tables || 0) + Number(settings.outdoor_tables || 0);
+  const floorAvailableCount = Math.max(0, floorTableCount - floorOccupiedCount - floorReservedCount);
   const selectedDue = selectedTableOrder ? Math.max(0, Number(selectedTableOrder.total_amount || 0) - Number(paymentSummary[selectedTableOrder.id] || 0)) : 0;
   const cashReceivedNumber = cashReceived.trim() === "" ? NaN : Number(cashReceived);
   const cashShortfall = Number.isFinite(cashReceivedNumber) ? Math.max(0, selectedDue - cashReceivedNumber) : 0;
@@ -578,9 +582,30 @@ export default function PosPage() {
         </section>
       ) : mode === "dine-in" && screen === "tables" ? (
         <>
+        <style jsx>{`
+          .arkan-floor-dashboard { gap: 16px !important; }
+          .arkan-floor-dashboard button { min-height: 40px; font-weight: 700; transition: transform .15s ease, box-shadow .15s ease; }
+          .arkan-floor-dashboard button:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,35,22,.10); }
+          .arkan-floor-dashboard button:focus-visible { outline: 3px solid #d28c2c; outline-offset: 2px; }
+          .arkan-floor-dashboard .floor-table-tile { min-height: 124px; padding: 12px 8px; border-radius: 14px; box-shadow: 0 2px 7px rgba(45,35,22,.05); }
+          .arkan-floor-dashboard .floor-table-tile small { font-size: 12px; line-height: 1.5; }
+          .arkan-floor-dashboard .floor-table-tile .table-amount { font-size: 12px; font-weight: 800; }
+          .arkan-floor-dashboard .floor-action-card { box-shadow: 0 3px 12px rgba(45,35,22,.05); }
+          @media (max-width: 1250px) {
+            .arkan-floor-dashboard { grid-template-columns: minmax(220px,.7fr) minmax(0,1.3fr) !important; }
+            .arkan-floor-dashboard > :last-child { grid-column: 1 / -1; position: static !important; }
+          }
+          @media (max-width: 760px) {
+            .arkan-floor-dashboard { grid-template-columns: minmax(0,1fr) !important; }
+            .arkan-floor-dashboard > * { grid-column: 1 / -1; position: static !important; }
+            .arkan-floor-dashboard .floor-table-grid { grid-template-columns: repeat(auto-fill,minmax(105px,1fr)); }
+            .arkan-floor-dashboard .floor-preview-wrap { overflow-x: auto; }
+            .arkan-floor-dashboard .floor-legend { gap: 10px 16px; }
+          }
+        `}</style>
         <section className="arkan-floor-dashboard" style={s.floorDashboard}>
           <aside style={s.floorSidebar}>
-            <div style={s.floorTools}>
+            <div className="floor-action-card" style={s.floorTools}>
               <h3 style={{margin:"0 0 4px"}}>عمليات الطاولة</h3>
               {selectedTableOrder ? <>
                 <b>{selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية"} — طاولة {selectedTableOrder.table_number}</b>
@@ -612,31 +637,38 @@ export default function PosPage() {
             </div>
           </aside>
           <div style={s.floorTables}>
-            <div style={s.head}><div><h2>صالة المطعم</h2><small style={s.muted}>ضغطة واحدة لعرض الأوردر — ضغطتان لفتح الأوردر</small></div><b>{Number(settings.indoor_tables||0)+Number(settings.outdoor_tables||0)} طاولة</b></div>
+            <div style={{display:"grid",gap:12}}>
+              <div style={s.head}><div><h2 style={{margin:"0 0 5px"}}>صالة المطعم</h2><small style={s.muted}>اضغط مرة لاختيار الطاولة وعرض أوردرها — اضغط مرتين لفتحها</small></div><b style={{...s.floorCountPill}}>{floorTableCount} طاولة</b></div>
+              <div className="floor-status-strip" style={s.floorStatusStrip}>
+                <div style={{...s.floorStatusCard,borderColor:"#bfe0c8"}}><b style={{color:"#267447"}}>{floorAvailableCount}</b><small>متاحة</small></div>
+                <div style={{...s.floorStatusCard,borderColor:"#efc1c1"}}><b style={{color:"#a12c2c"}}>{floorOccupiedCount}</b><small>مشغولة</small></div>
+                <div style={{...s.floorStatusCard,borderColor:"#e9cb7a"}}><b style={{color:"#8b681b"}}>{floorReservedCount}</b><small>محجوزة</small></div>
+              </div>
+            </div>
             {["indoor","outdoor"].map((a)=> <div key={a} style={s.tableSection}>
               <h3>{a==="indoor"?"الطاولات الداخلية":"الطاولات الخارجية"} ({Number(a==="indoor"?settings.indoor_tables:settings.outdoor_tables)||0})</h3>
-              <div style={s.fullTableGrid}>
+              <div className="floor-table-grid" style={s.fullTableGrid}>
                 {Array.from({length:Number(a==="indoor"?settings.indoor_tables:settings.outdoor_tables)||0},(_,i)=>i+1).map(n=>{
                   const o=activeTables.find(x=>x.table_number===n&&x.table_area===a);
                   const reserved=reservations.some(r=>r.table_number===n&&(r.seating_area||"indoor")===a);
                   const key=a+":"+n;
-                  return <button key={key} className="tableTile" onClick={()=>selectTable(n,a)} onDoubleClick={()=>openTable(n,a)} style={{...s.tableTile,...(o?s.occupiedTile:{}),...(o?.receipt_printed_at?s.printedTile:{}),...(reserved&&!o?s.reservedTile:{}),...(selectedTableKey===key?s.tableSelected:{})}}>
-                    <b>{n}</b><small>{o?"مشغولة — "+fmt(o.total_amount)+" ج.م":reserved?"محجوزة":"متاحة"}</small>
+                  return <button key={key} className="tableTile floor-table-tile" onClick={()=>selectTable(n,a)} onDoubleClick={()=>openTable(n,a)} style={{...s.tableTile,...(o?s.occupiedTile:{}),...(o?.receipt_printed_at?s.printedTile:{}),...(reserved&&!o?s.reservedTile:{}),...(selectedTableKey===key?s.tableSelected:{})}}>
+                    <b style={{fontSize:24}}>{n}</b><small>{o?"مشغولة":reserved?"محجوزة":"متاحة"}</small>{o&&<span className="table-amount">{fmt(o.total_amount)} ج.م</span>}
                   </button>;
                 })}
               </div>
             </div>)}
-            <div style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🔵 تمت طباعة الفاتورة</span><span>🟡 محجوزة</span><span>🟠 محددة</span></div>
+            <div className="floor-legend" style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🔵 تمت طباعة الفاتورة</span><span>🟡 محجوزة</span><span>🟠 محددة</span></div>
 
           </div>
           <aside style={s.floorOrderSidebar}>
-            <div style={s.floorTotal}>
+            <div className="floor-action-card" style={s.floorTotal}>
               <small>إجمالي أوردرات الصالة المفتوحة</small>
               <strong style={{fontSize:28}}>{fmt(floorTotal)} ج.م</strong>
               <small>{activeTables.length} أوردر نشط</small>
               <button style={s.secondary} onClick={load} disabled={loading}>↻ تحديث البيانات</button>
             </div>
-            <section style={{...s.floorOrderPreview,marginTop:12}}>
+            <section className="floor-action-card" style={{...s.floorOrderPreview,marginTop:12}}>
               <div style={s.head}>
                 <div><h2 style={{margin:0}}>أوردر الطاولة المحددة</h2><small style={s.muted}>{selectedTableOrder ? "ARK-"+selectedTableOrder.id+" — "+(selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية")+" — طاولة "+selectedTableOrder.table_number : "اختار طاولة مشغولة بكليك واحد لعرض الأصناف"}</small></div>
                 {selectedTableOrder&&<b style={{color:"#8b622e"}}>{fmt(selectedTableOrder.total_amount)} ج.م</b>}
@@ -647,7 +679,7 @@ export default function PosPage() {
                   <span>المتبقي: {fmt(selectedDue)} ج.م</span>
                   <span>{selectedTableOrder.status==="pending"?"قيد الانتظار":"قيد التنفيذ"}</span>
                 </div>
-                <div style={s.floorPreviewTableWrap}>
+                <div className="floor-preview-wrap" style={s.floorPreviewTableWrap}>
                   <table style={s.floorPreviewTable}>
                     <thead><tr><th style={s.cartTh}>الصنف</th><th style={s.cartTh}>الكمية</th><th style={s.cartTh}>سعر الوحدة</th><th style={s.cartTh}>الإجمالي</th><th style={s.cartTh}>الكومنت</th></tr></thead>
                     <tbody>
@@ -860,6 +892,7 @@ const s = {
  floorDashboard:{display:"grid",gridTemplateColumns:"260px minmax(320px,1fr) minmax(330px,0.95fr)",gap:12,alignItems:"start",direction:"ltr"},
  floorSidebar:{display:"grid",gap:12,minWidth:0,direction:"rtl",position:"sticky",top:12},
  floorTotal:{display:"grid",gap:10,padding:16,background:"#29251f",color:"#fff",borderRadius:13},
+ floorStatusStrip:{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8},floorStatusCard:{display:"grid",gap:4,justifyItems:"center",padding:"10px 6px",background:"#fff",border:"1px solid #e9e4dc",borderRadius:10},floorCountPill:{padding:"8px 12px",background:"#f7f0e5",color:"#805a2a",borderRadius:20,fontSize:13,whiteSpace:"nowrap"},
  floorTools:{display:"grid",gap:9,padding:14,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,minWidth:0},
  floorTables:{padding:16,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,minWidth:0,direction:"rtl",display:"grid",gap:12},
  floorOrderSidebar:{minWidth:0,direction:"rtl",position:"sticky",top:12},
