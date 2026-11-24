@@ -38,6 +38,11 @@ const links = [
     permission: "menu.update",
   },
   {
+    href: "/admin/printers",
+    label: "🖨️ إعدادات الطابعات",
+    permission: "menu.update",
+  },
+  {
     href: "/admin/hall",
     label: "▥ إدارة الصالة",
     permission: "hall.view",
