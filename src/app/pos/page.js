@@ -145,6 +145,9 @@ export default function PosPage() {
   const selectedTableOrder = activeTables.find((o) => selectedTableKey === (o.table_area + ":" + o.table_number)) || null;
   const floorTotal = activeTables.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
   const selectedDue = selectedTableOrder ? Math.max(0, Number(selectedTableOrder.total_amount || 0) - Number(paymentSummary[selectedTableOrder.id] || 0)) : 0;
+  const cashReceivedNumber = cashReceived.trim() === "" ? NaN : Number(cashReceived);
+  const cashShortfall = Number.isFinite(cashReceivedNumber) ? Math.max(0, selectedDue - cashReceivedNumber) : 0;
+  const editingOrderDue = editingOrderId ? Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)) : 0;
   const mergeTargets = activeTables.filter((o) => o.id !== selectedTableOrder?.id);
   const transferTargets = [
     ...Array.from({ length: Number(settings.indoor_tables) || 0 }, (_, i) => ({ area: "indoor", number: i + 1 })),
@@ -342,6 +345,9 @@ export default function PosPage() {
     if (!orderId) return;
     const received = Number(cashReceived);
     if (!Number.isFinite(received) || received <= 0) return setError("اكتب المبلغ النقدي المستلم.");
+    const orderToSettle = orders.find((order) => Number(order.id) === Number(orderId));
+    const amountDue = Math.max(0, Number(orderToSettle?.total_amount ?? editingOrderTotal ?? 0) - Number(paymentSummary[orderId] || 0));
+    if (received < amountDue) return setError("المبلغ المستلم أقل من المبلغ المطلوب بـ " + fmt(amountDue - received) + " ج.م. لا يمكن إغلاق الأوردر قبل استكمال المبلغ.");
     setSaving(true); setError(""); setMessage("");
     try {
       const result = await supabase.rpc("pos_settle_and_close_cash", { p_order_id: orderId, p_received: received });
@@ -631,15 +637,17 @@ export default function PosPage() {
         </div>}
         {showCashModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowCashModal(false)}>
           <div className="cashModal" style={s.cashModal} onClick={e=>e.stopPropagation()}>
-            <h2>سداد الأوردر وإغلاق الطاولة</h2><small>ARK-{selectedTableOrder.id} — طاولة {selectedTableOrder.table_number}</small>
-            <div style={s.modalAmount}>المتبقي: {fmt(selectedDue)} ج.م</div>
-            <label style={s.floorLabel}>المبلغ المستلم من العميل</label>
-            <input autoFocus type="number" min={selectedDue} step="0.01" style={s.discountInput} value={cashReceived} onChange={e=>setCashReceived(e.target.value)} placeholder="اكتب المبلغ المستلم"/>
-            <div>الباقي للعميل: <b>{fmt(Math.max(0,Number(cashReceived||0)-selectedDue))} ج.م</b></div>
-            <small style={s.floorHint}>المبلغ المستلم لازم يكون مساويًا للمتبقي أو أكبر منه.</small>
-            <div style={{display:"flex",gap:8,marginTop:12}}>
-              <button className="submit" style={s.submit} disabled={saving||!Number.isFinite(Number(cashReceived))||Number(cashReceived)<selectedDue} onClick={()=>recordCashPayment(selectedTableOrder.id)}>{saving?"جاري السداد...":"سداد وإغلاق الأوردر"}</button>
-              <button style={s.secondary} disabled={saving} onClick={()=>setShowCashModal(false)}>إلغاء</button>
+            <h2 style={{fontSize:26,margin:"0 0 4px"}}>سداد الأوردر وإغلاق الطاولة</h2>
+            <small style={{fontSize:15}}>ARK-{selectedTableOrder.id} — طاولة {selectedTableOrder.table_number}</small>
+            <div style={s.modalAmount}>المبلغ المطلوب: {fmt(selectedDue)} ج.م</div>
+            <label style={{...s.floorLabel,fontSize:17}}>المبلغ المستلم من العميل</label>
+            <input autoFocus type="number" min={selectedDue} step="0.01" style={s.cashInput} value={cashReceived} onChange={e=>setCashReceived(e.target.value)} placeholder="اكتب المبلغ المستلم"/>
+            {cashReceived.trim() !== "" && cashShortfall > 0 ? <div role="alert" style={s.cashWarning}>المبلغ المستلم أقل من المطلوب بـ {fmt(cashShortfall)} ج.م. استكمل المبلغ قبل السداد.</div> : null}
+            <div style={s.cashChange}>الباقي للعميل: <b>{fmt(Number.isFinite(cashReceivedNumber) ? Math.max(0,cashReceivedNumber-selectedDue) : 0)} ج.م</b></div>
+            <small style={{...s.floorHint,fontSize:14}}>لن يتم تسجيل السداد أو إغلاق الأوردر إلا بعد استلام المبلغ المطلوب كاملًا.</small>
+            <div style={{display:"flex",gap:10,marginTop:12}}>
+              <button className="submit" style={s.cashSubmit} disabled={saving||!Number.isFinite(cashReceivedNumber)||cashReceivedNumber<selectedDue||selectedDue<=0} onClick={()=>recordCashPayment(selectedTableOrder.id)}>{saving?"جاري السداد...":"تأكيد السداد وإغلاق الطاولة"}</button>
+              <button style={{...s.secondary,padding:"14px 20px",fontSize:16}} disabled={saving} onClick={()=>setShowCashModal(false)}>إلغاء</button>
             </div>
           </div>
         </div>}
@@ -729,7 +737,7 @@ export default function PosPage() {
             <div data-pos-discount style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input className="pos-filter-control" aria-label="قيمة الخصم" style={{...s.discountInput,color:"#000",WebkitTextFillColor:"#000",opacity:1}} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>
             {editingOrderId && <button className="submit" style={s.submit} disabled={saving || editingOrderClosed || newItemsSubtotal > 0} onClick={applyOrderDiscount}>{saving ? "جاري تطبيق الخصم..." : "تطبيق الخصم على الأوردر"}</button>}
             {editingOrderId ? <div className="totals" style={s.totals}><div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div><div><span>قيمة الإضافات</span><b>{fmt(newItemsSubtotal)} ج.م</b></div><div style={s.grand}><b>الإجمالي بعد الإضافة</b><b>{fmt(Number(editingOrderTotal || 0) + newItemsSubtotal)} ج.م</b></div></div> : <><div className="totals" style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div><div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div></>}
-            {editingOrderId && mode === "dine-in" && !editingOrderClosed && <div className="discountBox" style={s.discountBox}><b>السداد النقدي</b><div>إجمالي الفاتورة: {fmt(editingOrderTotal)} ج.م</div><div>المدفوع: {fmt(paymentSummary[editingOrderId] || 0)} ج.م</div><div>المتبقي: {fmt(Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)))} ج.م</div><input className="pos-filter-control" style={s.discountInput} type="number" min="0" step="0.01" placeholder="المبلغ المستلم من العميل" value={cashReceived} onChange={e=>setCashReceived(e.target.value)} /><div>الباقي للعميل: {fmt(Math.max(0, Number(cashReceived || 0) - Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0))))} ج.م</div><button className="submit" style={s.submit} disabled={saving || newItemsSubtotal > 0 || Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)) <= 0 || Number(cashReceived) <= 0} onClick={recordCashPayment}>{saving ? "جاري تسجيل السداد..." : "تسجيل السداد النقدي"}</button></div>}
+            {editingOrderId && mode === "dine-in" && !editingOrderClosed && <div className="discountBox" style={s.discountBox}><b style={{fontSize:18}}>السداد النقدي</b><div>إجمالي الفاتورة: {fmt(editingOrderTotal)} ج.م</div><div>المدفوع: {fmt(paymentSummary[editingOrderId] || 0)} ج.م</div><div>المتبقي: {fmt(editingOrderDue)} ج.م</div><input className="pos-filter-control" style={s.cashInput} type="number" min={editingOrderDue} step="0.01" placeholder="المبلغ المستلم من العميل" value={cashReceived} onChange={e=>setCashReceived(e.target.value)} />{cashReceived.trim() !== "" && Number.isFinite(cashReceivedNumber) && cashReceivedNumber < editingOrderDue && <div role="alert" style={s.cashWarning}>المبلغ أقل من المطلوب بـ {fmt(editingOrderDue-cashReceivedNumber)} ج.م.</div>}<div style={s.cashChange}>الباقي للعميل: {fmt(Number.isFinite(cashReceivedNumber) ? Math.max(0,cashReceivedNumber-editingOrderDue) : 0)} ج.م</div><button className="submit" style={s.cashSubmit} disabled={saving || newItemsSubtotal > 0 || editingOrderDue <= 0 || !Number.isFinite(cashReceivedNumber) || cashReceivedNumber < editingOrderDue} onClick={recordCashPayment}>{saving ? "جاري تسجيل السداد..." : "تسجيل السداد النقدي"}</button></div>}
             {!editingOrderClosed && <button className="submit" style={s.submit} disabled={saving || (editingOrderId ? newItemsSubtotal <= 0 : !cart.length) || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : editingOrderId ? "حفظ الإضافات على نفس الأوردر" : "تأكيد الطلب وإرساله للتجهيز"}</button>}
           </section>
         </div>
@@ -777,8 +785,12 @@ const s = {
  tableSelected:{outline:"3px solid #d28c2c",boxShadow:"0 0 0 3px #fff2dc"},
  floorInlineModal:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:14,marginTop:10,background:"#fffaf1",border:"1px solid #e5d3b8",borderRadius:10},
  modalBackdrop:{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,.48)",display:"grid",placeItems:"center",padding:16},
- cashModal:{width:"min(440px,100%)",display:"grid",gap:12,padding:22,background:"#fff",borderRadius:14,boxShadow:"0 18px 60px rgba(0,0,0,.25)"},
- modalAmount:{fontSize:22,fontWeight:800,color:"#8b622e",padding:"10px 0"},
+ cashModal:{width:"min(640px,96vw)",maxHeight:"90vh",overflowY:"auto",display:"grid",gap:18,padding:"32px clamp(20px,4vw,42px)",background:"#fff",borderRadius:18,boxShadow:"0 18px 60px rgba(0,0,0,.25)"},
+ modalAmount:{fontSize:30,fontWeight:900,color:"#8b622e",padding:"14px 0",borderBottom:"1px solid #eee5d8"},
+ cashInput:{width:"100%",minWidth:0,boxSizing:"border-box",padding:"18px 16px",border:"2px solid #c9a36d",borderRadius:12,background:"#fff",color:"#242424",fontSize:24,fontWeight:800,fontFamily:"inherit"},
+ cashWarning:{padding:"14px 16px",border:"1px solid #e6a6a6",borderRadius:10,background:"#fff0f0",color:"#a12c2c",fontSize:16,fontWeight:800,lineHeight:1.7},
+ cashChange:{padding:"14px 16px",borderRadius:10,background:"#f3f8f3",fontSize:19,fontWeight:700},
+ cashSubmit:{width:"100%",padding:"17px 18px",border:0,borderRadius:10,background:"#b88946",color:"#fff",fontSize:18,fontWeight:900,cursor:"pointer"},
  tableSection:{marginTop:18},fullTableGrid:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:12},tableTile:{minHeight:112,display:"grid",placeContent:"center",gap:8,border:"1px solid #cde5d4",background:"#eaf7ee",color:"#246c45",borderRadius:12,cursor:"pointer",fontSize:18},printedTile:{background:"#e3f0ff",borderColor:"#8bb9e8",color:"#1e5b94"},occupiedTile:{background:"#fdeaea",borderColor:"#efc1c1",color:"#a12c2c"},reservedTile:{background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"},legend:{display:"flex",gap:18,marginTop:18,color:"#666",fontSize:13},clear:{border:0,background:"none",color:"#a12c2c",cursor:"pointer"},tableBox:{padding:10,background:"#faf8f5",borderRadius:9,marginBottom:10},switch:{display:"flex",gap:7,marginBottom:9},tableGrid:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6},table:{padding:8,display:"grid",gap:4,border:"1px solid #cde5d4",background:"#eaf7ee",color:"#246c45",borderRadius:7,cursor:"pointer"},chosen:{outline:"2px solid #b88946"},occupied:{background:"#fdeaea",borderColor:"#efc1c1",color:"#a12c2c"},reserved:{background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"},
  cart:{maxHeight:280,overflowY:"auto"},cartItem:{padding:"10px 0",borderBottom:"1px solid #eee"},qty:{display:"flex",alignItems:"center",gap:9},note:{width:"55%",padding:7,border:"1px solid #eee",borderRadius:6,fontSize:12},empty:{textAlign:"center",padding:18,color:"#888"},fields:{display:"grid",gap:7,marginTop:10},field:{padding:9,border:"1px solid #e4dfd7",borderRadius:7,width:"100%",boxSizing:"border-box",fontFamily:"inherit"},
  select:{flex:1,padding:10,border:"1px solid #cfcfcf",borderRadius:7,background:"#fff",color:"#242424",fontSize:14},discount:{width:90,padding:8,border:"1px solid #ddd",borderRadius:7},discountBox:{display:"grid",gap:8,marginTop:14,padding:12,border:"2px solid #b88946",borderRadius:10,background:"#fffaf1"},discountInput:{width:"100%",minWidth:0,boxSizing:"border-box",padding:10,border:"1px solid #cfcfcf",borderRadius:7,background:"#fff",color:"#242424",fontSize:14},totals:{display:"grid",gap:7,padding:"12px 0"},grand:{display:"flex",justifyContent:"space-between",fontSize:18,color:"#8b622e",paddingTop:7},pay:{display:"flex",gap:8,alignItems:"center",marginBottom:10},submit:{width:"100%",padding:13,border:0,borderRadius:8,background:"#b88946",color:"#fff",fontWeight:800,cursor:"pointer"},
