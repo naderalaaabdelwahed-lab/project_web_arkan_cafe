@@ -595,6 +595,7 @@ export default function PosPage() {
                 <small>المتبقي: {fmt(selectedDue)} ج.م</small>
                 <button className="submit" style={s.submit} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area)}>إضافة أصناف / فتح الأوردر</button>
                 <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"remove-items")}>حذف صنف / تعديل الكمية</button>
+                <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"discount")}>فتح الخصم على الفاتورة</button>
                 <button style={s.secondary} onClick={()=>openTable(selectedTableOrder.table_number,selectedTableOrder.table_area,"transfer-items")}>نقل صنف لطاولة أخرى</button>
                 <button style={s.secondary} onClick={()=>{setShowTransfer(true);setTransferTarget("");}}>نقل الطاولة بالكامل</button>
                 <div style={{display:"grid",gap:7}}>
@@ -610,13 +611,13 @@ export default function PosPage() {
                 <button style={s.clear} disabled={saving} onClick={emptySelectedTable}>إفراغ الطاولة وإنهاء الطلب</button>
                 <small style={s.floorHint}>العمليات متاحة للطاولة المشغولة المحددة فقط. الصالة لا تسجل الدفع إلا عند مغادرة العميل.</small>
               </> : <>
-                <p style={s.muted}>مرّر المؤشر على طاولة مشغولة لعرض أوردرها هنا وعلى اليمين. اضغط مرتين لفتح الأوردر.</p>
+                <p style={s.muted}>اضغط مرة واحدة على الطاولة لعرض أوردرها في السايد بار اليمين. اضغط مرتين لفتح الأوردر.</p>
                 <button style={s.secondary} disabled={!selectedTableKey} onClick={()=>{const [a,n]=selectedTableKey.split(":");openTable(Number(n),a);}}>فتح الطاولة المحددة</button>
               </>}
             </div>
           </aside>
           <div style={s.floorTables}>
-            <div style={s.head}><div><h2>صالة المطعم</h2><small style={s.muted}>مرّر المؤشر لعرض الأوردر — ضغطة واحدة للتحديد — ضغطتان للفتح</small></div><b>{Number(settings.indoor_tables||0)+Number(settings.outdoor_tables||0)} طاولة</b></div>
+            <div style={s.head}><div><h2>صالة المطعم</h2><small style={s.muted}>ضغطة واحدة لعرض الأوردر — ضغطتان لفتح الأوردر</small></div><b>{Number(settings.indoor_tables||0)+Number(settings.outdoor_tables||0)} طاولة</b></div>
             {["indoor","outdoor"].map((a)=> <div key={a} style={s.tableSection}>
               <h3>{a==="indoor"?"الطاولات الداخلية":"الطاولات الخارجية"} ({Number(a==="indoor"?settings.indoor_tables:settings.outdoor_tables)||0})</h3>
               <div style={s.fullTableGrid}>
@@ -624,16 +625,19 @@ export default function PosPage() {
                   const o=activeTables.find(x=>x.table_number===n&&x.table_area===a);
                   const reserved=reservations.some(r=>r.table_number===n&&(r.seating_area||"indoor")===a);
                   const key=a+":"+n;
-                  return <button key={key} className="tableTile" onMouseEnter={()=>selectTable(n,a)} onFocus={()=>selectTable(n,a)} onClick={()=>selectTable(n,a)} onDoubleClick={()=>openTable(n,a)} style={{...s.tableTile,...(o?s.occupiedTile:{}),...(o?.receipt_printed_at?s.printedTile:{}),...(reserved&&!o?s.reservedTile:{}),...(selectedTableKey===key?s.tableSelected:{})}}>
+                  return <button key={key} className="tableTile" onClick={()=>selectTable(n,a)} onDoubleClick={()=>openTable(n,a)} style={{...s.tableTile,...(o?s.occupiedTile:{}),...(o?.receipt_printed_at?s.printedTile:{}),...(reserved&&!o?s.reservedTile:{}),...(selectedTableKey===key?s.tableSelected:{})}}>
                     <b>{n}</b><small>{o?"مشغولة — "+fmt(o.total_amount)+" ج.م":reserved?"محجوزة":"متاحة"}</small>
                   </button>;
                 })}
               </div>
             </div>)}
             <div style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🔵 تمت طباعة الفاتورة</span><span>🟡 محجوزة</span><span>🟠 محددة</span></div>
+
+          </div>
+          <aside style={s.floorOrderSidebar}>
             <section style={s.floorOrderPreview}>
               <div style={s.head}>
-                <div><h2 style={{margin:0}}>أوردر الطاولة المحددة</h2><small style={s.muted}>{selectedTableOrder ? "ARK-"+selectedTableOrder.id+" — "+(selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية")+" — طاولة "+selectedTableOrder.table_number : "اختار أو مرّر المؤشر على طاولة مشغولة لعرض الأصناف"}</small></div>
+                <div><h2 style={{margin:0}}>أوردر الطاولة المحددة</h2><small style={s.muted}>{selectedTableOrder ? "ARK-"+selectedTableOrder.id+" — "+(selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية")+" — طاولة "+selectedTableOrder.table_number : "اختار طاولة مشغولة بكليك واحد لعرض الأصناف"}</small></div>
                 {selectedTableOrder&&<b style={{color:"#8b622e"}}>{fmt(selectedTableOrder.total_amount)} ج.م</b>}
               </div>
               {selectedTableOrder ? <>
@@ -659,7 +663,7 @@ export default function PosPage() {
                 </div>
               </> : <p style={s.muted}>لا يوجد أوردر مفتوح على الطاولة المحددة.</p>}
             </section>
-          </div>
+          </aside>
         </section>
         {showTransfer&&selectedTableOrder&&<div className="floorInlineModal" style={s.floorInlineModal}>
           <b>نقل الطاولة بالكامل — ARK-{selectedTableOrder.id}</b>
@@ -852,12 +856,13 @@ const s = {
  panel:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:16,minWidth:0},head:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:9,marginBottom:12},search:{padding:10,border:"1px solid #ddd",borderRadius:8,width:"40%"},
  categories:{display:"flex",gap:7,overflowX:"auto",paddingBottom:12},category:{padding:"8px 12px",border:"1px solid #e5dfd6",borderRadius:20,background:"#fff",whiteSpace:"nowrap",cursor:"pointer"},
  products:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(125px,1fr))",gap:9},product:{display:"grid",gap:6,textAlign:"right",padding:9,border:"1px solid #eee8df",borderRadius:10,background:"#fff",cursor:"pointer"},image:{width:"100%",height:78,objectFit:"cover",borderRadius:7},imageBlank:{height:78,display:"grid",placeItems:"center",background:"#f6f1e9",borderRadius:7,fontSize:24,color:"#a7793d"},
- floorDashboard:{display:"grid",gridTemplateColumns:"280px minmax(0,1fr)",gap:12,alignItems:"start",direction:"ltr"},
+ floorDashboard:{display:"grid",gridTemplateColumns:"260px minmax(320px,1fr) minmax(330px,0.95fr)",gap:12,alignItems:"start",direction:"ltr"},
  floorSidebar:{display:"grid",gap:12,minWidth:0,direction:"rtl",position:"sticky",top:12},
  floorTotal:{display:"grid",gap:10,padding:16,background:"#29251f",color:"#fff",borderRadius:13},
  floorTools:{display:"grid",gap:9,padding:14,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,minWidth:0},
  floorTables:{padding:16,background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,minWidth:0,direction:"rtl",display:"grid",gap:12},
- floorOrderPreview:{display:"grid",gap:10,padding:14,background:"#fff",border:"1px solid #e9e4dc",borderRadius:12,minWidth:0},
+ floorOrderSidebar:{minWidth:0,direction:"rtl",position:"sticky",top:12},
+ floorOrderPreview:{display:"grid",gap:10,padding:14,background:"#fff",border:"1px solid #e9e4dc",borderRadius:12,minWidth:0,minHeight:260},
  floorPreviewTableWrap:{width:"100%",maxHeight:300,overflow:"auto",border:"1px solid #e7dfd3",borderRadius:9},
  floorPreviewTable:{width:"100%",minWidth:620,borderCollapse:"collapse",textAlign:"right",fontSize:13,background:"#fff"},
  floorActions:{display:"grid",gap:12,minWidth:0},
