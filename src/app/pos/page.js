@@ -701,41 +701,13 @@ export default function PosPage() {
             <div className="floor-legend" style={s.legend}><span>🟢 متاحة</span><span>🔴 مشغولة</span><span>🔵 تمت طباعة الفاتورة</span><span>🟡 محجوزة</span><span>🟠 محددة</span></div>
 
           </div>
-          <aside style={s.floorOrderSidebar}>
-            <div className="floor-action-card" style={s.floorTotal}>
-              <small>إجمالي أوردرات الصالة المفتوحة</small>
-              <strong style={{fontSize:28}}>{fmt(floorTotal)} ج.م</strong>
-              <small>{activeTables.length} أوردر نشط</small>
-              <button style={s.secondary} onClick={load} disabled={loading}>↻ تحديث البيانات</button>
+          <aside className="pos-floor-summary-sidebar" style={s.floorOrderSidebar}>
+            <div className="floor-action-card pos-floor-total-card" style={s.floorTotal}>
+              <small>إجمالي الطاولات</small>
+              <strong style={{fontSize:22}}>{fmt(floorTotal)} ج.م</strong>
+              <small>{activeTables.length} طاولة مفتوحة</small>
             </div>
-            <section className="floor-action-card" style={{...s.floorOrderPreview,marginTop:12}}>
-              <div style={s.head}>
-                <div><h2 style={{margin:0}}>أوردر الطاولة المحددة</h2><small style={s.muted}>{selectedTableOrder ? "ARK-"+selectedTableOrder.id+" — "+(selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية")+" — طاولة "+selectedTableOrder.table_number : "اختار طاولة مشغولة بكليك واحد لعرض الأصناف"}</small></div>
-                {selectedTableOrder&&<b style={{color:"#8b622e"}}>{fmt(selectedTableOrder.total_amount)} ج.م</b>}
-              </div>
-              {selectedTableOrder ? <>
-                <div style={s.floorDetailRow}>
-                  <span>المدفوع: {fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</span>
-                  <span>المتبقي: {fmt(selectedDue)} ج.م</span>
-                  <span>{selectedTableOrder.status==="pending"?"قيد الانتظار":"قيد التنفيذ"}</span>
-                </div>
-                <div className="floor-preview-wrap" style={s.floorPreviewTableWrap}>
-                  <table style={s.floorPreviewTable}>
-                    <thead><tr><th style={s.cartTh}>الصنف</th><th style={s.cartTh}>الكمية</th><th style={s.cartTh}>سعر الوحدة</th><th style={s.cartTh}>الإجمالي</th><th style={s.cartTh}>الكومنت</th></tr></thead>
-                    <tbody>
-                      {(selectedTableOrder.order_items||[]).map(item=><tr key={item.id}>
-                        <td style={s.cartTd}><b>{item.product_name}</b></td>
-                        <td style={s.cartTd}>{fmt(item.quantity)}</td>
-                        <td style={s.cartTd}>{fmt(item.unit_price)} ج.م</td>
-                        <td style={s.cartTd}>{fmt(Number(item.quantity||0)*Number(item.unit_price||0))} ج.م</td>
-                        <td style={s.cartTd}>{item.item_note||"—"}</td>
-                      </tr>)}
-                      {!(selectedTableOrder.order_items||[]).length&&<tr><td style={s.cartEmpty} colSpan={5}>لا توجد أصناف في الأوردر.</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              </> : <p style={s.muted}>لا يوجد أوردر مفتوح على الطاولة المحددة.</p>}
-            </section>
+            <button className="pos-floor-refresh" type="button" style={s.secondary} onClick={load} disabled={loading}>↻ تحديث البيانات</button>
           </aside>
         </section>
         {showTransfer&&selectedTableOrder&&<div className="floorInlineModal" style={s.floorInlineModal}>
