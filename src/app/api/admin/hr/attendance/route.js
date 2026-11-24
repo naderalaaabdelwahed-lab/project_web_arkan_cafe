@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { authorizeAdminPermission } from "@/lib/server/admin-permissions";
 function service(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}})}
-async function admin(request){
- const token=(request.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
- if(!token)return {response:NextResponse.json({error:"سجل دخول المدير أولاً."},{status:401})};
- const auth=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:false,persistSession:false}});
- const {data,error}=await auth.auth.getUser(token);if(error||!data?.user)return {response:NextResponse.json({error:"جلسة غير صالحة."},{status:401})};if(data.user.app_metadata?.account_type==="hr_employee")return {response:NextResponse.json({error:"حساب HR مخصص للحضور والانصراف الشخصي فقط."},{status:403})};
- const db=service(),{data:row}=await db.from("admin_users").select("user_id").eq("user_id",data.user.id).maybeSingle();
- return row?{db,user:data.user}:{response:NextResponse.json({error:"غير مسموح."},{status:403})};
+async function admin(request, permission) {
+  return authorizeAdminPermission(request, permission);
 }
+
 function cairoToUtc(date,time){const [y,m,d]=date.split("-").map(Number),[h,mi]=String(time).slice(0,5).split(":").map(Number),target=Date.UTC(y,m-1,d,h,mi);let g=target;for(let i=0;i<3;i++){const p=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(g)).map(x=>[x.type,x.value]));g+=target-Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute)}return new Date(g)}
 function dateAdd(s,n){const d=new Date(s+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 export async function GET(request){
  try{
-  const a=await admin(request);if(a.response)return a.response;const db=a.db;
+  const a=await admin(request,"hr.attendance.view");if(a.response)return a.response;const db=a.db;
   const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   const requestedMonth=new URL(request.url).searchParams.get("month")||today.slice(0,7);
   if(!/^\d{4}-\d{2}$/.test(requestedMonth))return NextResponse.json({error:"اختار شهرًا صحيحًا."},{status:400});
@@ -39,8 +36,8 @@ export async function GET(request){
 }
 export async function PATCH(request){
  try{
-  const a=await admin(request);if(a.response)return a.response;
   const b=await request.json(),id=String(b.id||"");
+  const a=await admin(request,"hr.attendance.manage");if(a.response)return a.response;
   if(!/^[0-9a-f-]{36}$/i.test(id))return NextResponse.json({error:"سجل غير صحيح."},{status:400});
   const allowed=["present","absent","unpaid_leave","excused","holiday"];
   const {data:current,error:readError}=await a.db.from("hr_attendance").select("*").eq("id",id).maybeSingle();
@@ -90,8 +87,8 @@ export async function PATCH(request){
 }
 export async function POST(request){
  try{
-  const a=await admin(request);if(a.response)return a.response;
   const b=await request.json(),employee_id=String(b.employee_id||""),shift_date=String(b.shift_date||"");
+  const a=await admin(request,"hr.attendance.manage");if(a.response)return a.response;
   if(!/^[0-9a-f-]{36}$/i.test(employee_id)||!/^(\d{4})-(\d{2})-(\d{2})$/.test(shift_date))
    return NextResponse.json({error:"اختار الموظف والتاريخ."},{status:400});
   const status="absent";
