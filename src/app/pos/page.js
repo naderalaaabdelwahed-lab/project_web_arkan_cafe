@@ -889,7 +889,6 @@ export default function PosPage() {
               })}
               {!(selectedTableOrder.order_items || []).some(item => item.preparation_status === "pending") && <p style={{textAlign:"center"}}>لا توجد أصناف متاحة للحذف في هذا الأوردر.</p>}
             </div>
-            {#if false}{/if}
             {removeItemId && (() => {
               const chosenItem = (selectedTableOrder.order_items || []).find(item => String(item.id) === String(removeItemId));
               return chosenItem ? <div style={{display:"grid",gap:8}}>
