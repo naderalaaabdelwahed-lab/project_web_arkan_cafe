@@ -638,7 +638,7 @@ export default function PosPage() {
                   : selected
                     ? {background:"#fff0d8",borderColor:"#b88946",color:"#805a2a",outline:"3px solid #d28c2c"}
                     : {background:"#eaf7ee",borderColor:"#cde5d4",color:"#246c45"};
-              return <button key={key} type="button" disabled={disabled} onClick={() => setTransferTarget(key)} style={{minHeight:92,padding:10,border:"2px solid",borderRadius:11,display:"grid",placeContent:"center",gap:5,fontFamily:"inherit",fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity:disabled?.88:1,...tileStyle}}>
+              return <button key={key} type="button" disabled={disabled} onClick={() => setTransferTarget(key)} style={{minHeight:92,padding:10,border:"2px solid",borderRadius:11,display:"grid",placeContent:"center",gap:5,fontFamily:"inherit",fontWeight:800,cursor:disabled?"not-allowed":"pointer",opacity: disabled ? 0.88 : 1,...tileStyle}}>
                 <span>{target.area==="indoor"?"داخلية":"خارجية"}</span>
                 <strong style={{fontSize:18}}>طاولة {target.number}</strong>
                 <small>{occupied ? "مشغولة — ARK-"+occupied.id : reserved ? "محجوزة" : selected ? "تم الاختيار" : "متاحة"}</small>
