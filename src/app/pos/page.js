@@ -341,9 +341,9 @@ export default function PosPage() {
     finally { setSaving(false); }
   }
 
-  async function recordCashPayment(orderId = editingOrderId) {
+  async function recordCashPayment(orderId = editingOrderId, receivedOverride = null) {
     if (!orderId) return;
-    const received = Number(cashReceived);
+    const received = receivedOverride === null ? Number(cashReceived) : Number(receivedOverride);
     if (!Number.isFinite(received) || received <= 0) return setError("اكتب المبلغ النقدي المستلم.");
     const orderToSettle = orders.find((order) => Number(order.id) === Number(orderId));
     const amountDue = Math.max(0, Number(orderToSettle?.total_amount ?? editingOrderTotal ?? 0) - Number(paymentSummary[orderId] || 0));
@@ -637,13 +637,13 @@ export default function PosPage() {
         </div>}
         {showCashModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowCashModal(false)}>
           <div className="cashModal" style={s.cashModal} onClick={e=>e.stopPropagation()}>
-            <h2 style={{fontSize:26,margin:"0 0 4px"}}>سداد الأوردر وإغلاق الطاولة</h2>
+            <h2 style={{fontSize:32,margin:"0 0 4px",lineHeight:1.4}}>سداد الأوردر وإغلاق الطاولة</h2>
             <small style={{fontSize:15}}>ARK-{selectedTableOrder.id} — طاولة {selectedTableOrder.table_number}</small>
             <div style={s.modalAmount}>المبلغ المطلوب: {fmt(selectedDue)} ج.م</div>
             <label style={{...s.floorLabel,fontSize:17}}>المبلغ المستلم من العميل</label>
             <input autoFocus type="number" min={selectedDue} step="0.01" style={s.cashInput} value={cashReceived} onChange={e=>setCashReceived(e.target.value)} placeholder="اكتب المبلغ المستلم"/>
             {cashReceived.trim() !== "" && cashShortfall > 0 ? <div role="alert" style={s.cashWarning}>المبلغ المستلم أقل من المطلوب بـ {fmt(cashShortfall)} ج.م. استكمل المبلغ قبل السداد.</div> : null}
-            <div style={s.cashChange}>الباقي للعميل: <b>{fmt(Number.isFinite(cashReceivedNumber) ? Math.max(0,cashReceivedNumber-selectedDue) : 0)} ج.م</b></div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}><div style={s.cashChange}>الباقي للعميل: <b>{fmt(Number.isFinite(cashReceivedNumber) ? Math.max(0,cashReceivedNumber-selectedDue) : 0)} ج.م</b></div><button type="button" style={{...s.secondary,padding:"14px 20px",fontSize:17,fontWeight:800}} disabled={saving||selectedDue<=0} onClick={()=>recordCashPayment(selectedTableOrder.id,selectedDue)}>سداد المبلغ بالضبط</button></div>
             <small style={{...s.floorHint,fontSize:14}}>لن يتم تسجيل السداد أو إغلاق الأوردر إلا بعد استلام المبلغ المطلوب كاملًا.</small>
             <div style={{display:"flex",gap:10,marginTop:12}}>
               <button className="submit" style={s.cashSubmit} disabled={saving||!Number.isFinite(cashReceivedNumber)||cashReceivedNumber<selectedDue||selectedDue<=0} onClick={()=>recordCashPayment(selectedTableOrder.id)}>{saving?"جاري السداد...":"تأكيد السداد وإغلاق الطاولة"}</button>
@@ -785,9 +785,9 @@ const s = {
  tableSelected:{outline:"3px solid #d28c2c",boxShadow:"0 0 0 3px #fff2dc"},
  floorInlineModal:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:14,marginTop:10,background:"#fffaf1",border:"1px solid #e5d3b8",borderRadius:10},
  modalBackdrop:{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,.48)",display:"grid",placeItems:"center",padding:16},
- cashModal:{width:"min(640px,96vw)",maxHeight:"90vh",overflowY:"auto",display:"grid",gap:18,padding:"32px clamp(20px,4vw,42px)",background:"#fff",borderRadius:18,boxShadow:"0 18px 60px rgba(0,0,0,.25)"},
- modalAmount:{fontSize:30,fontWeight:900,color:"#8b622e",padding:"14px 0",borderBottom:"1px solid #eee5d8"},
- cashInput:{width:"100%",minWidth:0,boxSizing:"border-box",padding:"18px 16px",border:"2px solid #c9a36d",borderRadius:12,background:"#fff",color:"#242424",fontSize:24,fontWeight:800,fontFamily:"inherit"},
+ cashModal:{width:"min(820px,96vw)",maxHeight:"calc(100dvh - 32px)",overflowY:"auto",display:"grid",gap:22,padding:"clamp(26px,4vw,48px)",background:"#fff",borderRadius:22,boxShadow:"0 24px 80px rgba(0,0,0,.3)"},
+ modalAmount:{fontSize:clamp(34px,4vw,44px),fontWeight:900,color:"#8b622e",padding:"20px 0",borderBottom:"1px solid #eee5d8"},
+ cashInput:{width:"100%",minWidth:0,boxSizing:"border-box",padding:"22px 18px",border:"2px solid #c9a36d",borderRadius:14,background:"#fff",color:"#242424",fontSize:32,fontWeight:900,fontFamily:"inherit"},
  cashWarning:{padding:"14px 16px",border:"1px solid #e6a6a6",borderRadius:10,background:"#fff0f0",color:"#a12c2c",fontSize:16,fontWeight:800,lineHeight:1.7},
  cashChange:{padding:"14px 16px",borderRadius:10,background:"#f3f8f3",fontSize:19,fontWeight:700},
  cashSubmit:{width:"100%",padding:"17px 18px",border:0,borderRadius:10,background:"#b88946",color:"#fff",fontSize:18,fontWeight:900,cursor:"pointer"},
