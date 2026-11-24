@@ -256,8 +256,8 @@ export default function PosPage() {
         summary.barSales += Number(saved.bar_sales ?? day.bar_sales ?? 0);
         summary.kitchenSales += Number(saved.kitchen_sales ?? day.kitchen_sales ?? 0);
         summary.deliveryFees += Number(saved.delivery_fees ?? day.delivery_fees ?? 0);
-        summary.totalOrders += Number(saved.total_orders ?? snapshotOrders.length ?? day.total_orders ?? 0);
-        summary.cancelledOrders += Number(saved.cancelled_orders ?? cancelled ?? day.cancelled_orders ?? 0);
+        summary.totalOrders += Number(saved.total_orders ?? (snapshotOrders.length || day.total_orders || 0));
+        summary.cancelledOrders += Number(saved.cancelled_orders ?? (snapshotOrders.length ? cancelled : (day.cancelled_orders || 0)));
         return summary;
       }
       const dayOrders = orders.filter((order) => String(order.business_day_id) === String(day.id));
