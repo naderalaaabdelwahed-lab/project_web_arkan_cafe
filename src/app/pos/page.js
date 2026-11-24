@@ -45,8 +45,8 @@ export default function PosPage() {
     orderFinish: false,
     receiptPrint: false,
   });
-  const [salesFrom, setSalesFrom] = useState(() => todayISO());
-  const [salesTo, setSalesTo] = useState(() => todayISO());
+  const [salesFrom, setSalesFrom] = useState("");
+  const [salesTo, setSalesTo] = useState("");
   const salesRangeTouched = useRef(false);
   const [showCloseDayModal, setShowCloseDayModal] = useState(false);
   const [showSwitchUserModal, setShowSwitchUserModal] = useState(false);
