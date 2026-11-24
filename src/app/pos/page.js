@@ -26,6 +26,7 @@ export default function PosPage() {
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [currentBusinessDayId, setCurrentBusinessDayId] = useState(null);
   const [orderSearch, setOrderSearch] = useState("");
   const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -74,19 +75,22 @@ export default function PosPage() {
       setAllowed(canUse);
       if (!canUse) return;
 
-      const [p, c, st, r] = await Promise.all([
+      const [p, c, st, r, day] = await Promise.all([
         supabase.from("products").select("id,name,price,image_url,category_id,is_available").eq("is_available", true).order("name"),
         supabase.from("categories").select("id,name,display_order").eq("is_active", true).order("display_order"),
         supabase.from("restaurant_settings").select("indoor_tables,outdoor_tables").eq("id", 1).single(),
         supabase.from("reservations").select("id,customer_name,phone,reservation_date,reservation_time,status,seating_area,table_number").in("status", ["pending","confirmed"]),
+        supabase.from("business_days").select("id").eq("status", "open").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
       ]);
       if (p.error) throw p.error;
       if (c.error) throw c.error;
       if (st.error) throw st.error;
       if (r.error) throw r.error;
+      if (day.error) throw day.error;
       setProducts(p.data || []);
       setCategories(c.data || []);
       setSettings(st.data || { indoor_tables: 0, outdoor_tables: 0 });
+      setCurrentBusinessDayId(day.data?.id ?? null);
       const today = new Date().toLocaleDateString("en-CA");
       setReservations((r.data || []).filter((x) => x.reservation_date === today));
       const allOrders = [];
@@ -143,7 +147,7 @@ export default function PosPage() {
     const matchesTable = !orderTableFilter || (o.order_type === "dine-in" && String(o.table_number || "") === orderTableFilter.trim());
     return matchesSearch && matchesType && matchesStatus && matchesFrom && matchesTo && matchesTable;
   });
-  const activeTables = orders.filter((o) => o.order_type === "dine-in" && !["delivered","cancelled"].includes(o.status));
+  const activeTables = orders.filter((o) => String(o.business_day_id) === String(currentBusinessDayId) && o.order_type === "dine-in" && !["delivered","cancelled"].includes(o.status));
   const selectedTableOrder = activeTables.find((o) => selectedTableKey === (o.table_area + ":" + o.table_number)) || null;
   const floorTotal = activeTables.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
   const floorOccupiedCount = activeTables.length;
