@@ -485,3 +485,25 @@
     align-items: stretch;
   }
 }
+
+
+/* Remove the left open-tables sidebar and let the floor area use the freed space */
+.arkan-pos-page .pos-open-tables-sidebar {
+  display: none !important;
+}
+.arkan-pos-page .arkan-floor-dashboard {
+  grid-template-columns: minmax(0, 1fr) 168px !important;
+}
+@media (max-width: 1350px) {
+  .arkan-pos-page .arkan-floor-dashboard {
+    grid-template-columns: minmax(0, 1fr) 168px !important;
+  }
+}
+@media (max-width: 920px) {
+  .arkan-pos-page .arkan-floor-dashboard {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .arkan-pos-page .pos-floor-summary-sidebar {
+    width: 100%;
+  }
+}
