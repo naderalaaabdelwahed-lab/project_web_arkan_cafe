@@ -3448,18 +3448,3 @@ input:focus, textarea:focus, select:focus { border-color: var(--arkan-accent) !i
 }
 .arkan-pos-page { --pos-ink:#29251F; --pos-muted:#746958; --pos-border:#E8E0D4; --pos-surface:#FFFFFF; --pos-bg:#F6F4F0; --pos-gold:#B58B4D; --pos-gold-light:#F5EFE4; }
 .arkan-floor-dashboard { background: #F6F4F0; color: #29251F; border-color: #E8E0D4; }
-
-/* Typography-only contrast: keep component backgrounds, borders, icons and states unchanged */
-html body :is(h1,h2,h3,h4,h5,h6,p,label,legend,th,td,li,small,strong,b,em) {
-  color: #29251F;
-}
-html body input,
-html body textarea,
-html body select {
-  color: #29251F;
-}
-html body input::placeholder,
-html body textarea::placeholder {
-  color: #746958;
-  opacity: 1;
-}
