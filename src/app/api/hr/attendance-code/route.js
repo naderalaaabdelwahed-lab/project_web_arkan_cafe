@@ -185,7 +185,7 @@ export async function POST(request) {
     const { data: open, error: openError } = await db.from("hr_attendance")
       .select("id,shift_date,check_in_at").eq("employee_id", employee.id)
       .eq("shift_date", checkoutShiftDate)
-      .not("check_in_at", "is", null).is("check_out_at", "is", null).is("checkout_skipped_at", "is", null).maybeSingle();
+      .not("check_in_at", "is", null).is("check_out_at", null).is("checkout_skipped_at", null).maybeSingle();
     if (openError) throw openError;
     if (!open) {
       return NextResponse.json({
