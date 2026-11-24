@@ -403,16 +403,30 @@ export default function PosPage() {
     }
   }
 
-  async function removePendingItem(itemId) {
+  async function removePendingItem(itemId, quantityToRemove = null) {
     if (!editingOrderId || editingOrderClosed) return setError("لا يمكن تعديل أوردر مغلق.");
-    if (!window.confirm("هل تريد حذف هذا الصنف من الأوردر؟")) return;
+    const item = cart.find((entry) => Number(entry.orderItemId) === Number(itemId));
+    if (!item) return setError("الصنف غير موجود في الأوردر الحالي.");
+    const removeQuantity = quantityToRemove ?? item.quantity;
+    if (!Number.isInteger(removeQuantity) || removeQuantity < 1 || removeQuantity > item.quantity) return setError("الكمية المطلوب حذفها غير صحيحة.");
+    const prompt = removeQuantity === item.quantity
+      ? "هل تريد حذف الصنف بالكامل من الأوردر؟"
+      : "تأكيد حذف وحدة واحدة من " + item.name + "؟ ستتبقى كمية " + (item.quantity - removeQuantity) + ".";
+    if (!window.confirm(prompt)) return;
     setSaving(true); setError(""); setMessage("");
     try {
-      const result=await supabase.rpc("pos_remove_pending_order_item",{p_order_item_id:itemId});
-      if(result.error) throw result.error;
-      setMessage(result.data.order_closed?"تم حذف آخر صنف وإغلاق الأوردر وإخلاء الطاولة.":"تم حذف الصنف وتحديث إجمالي الأوردر.");
+      const result = await supabase.rpc("pos_remove_pending_order_item_quantity", {
+        p_order_item_id: itemId,
+        p_quantity_to_remove: removeQuantity,
+      });
+      if (result.error) throw result.error;
+      setMessage(result.data.order_closed
+        ? "تم حذف آخر صنف وإغلاق الأوردر وإخلاء الطاولة."
+        : removeQuantity === item.quantity
+          ? "تم حذف الصنف بالكامل وتحديث إجمالي الأوردر."
+          : "تم حذف " + removeQuantity + " من " + item.name + "، والمتبقي " + result.data.quantity_remaining + " وتحديث الإجمالي.");
       reset(); setScreen("tables"); await load();
-    } catch(e){setError("تعذر حذف الصنف: "+e.message);}
+    } catch(e){setError("تعذر تعديل كمية الصنف: "+e.message);}
     finally{setSaving(false);}
   }
 
@@ -726,7 +740,7 @@ export default function PosPage() {
             </div>}
             {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
             <div className="cart" data-pos-cart style={s.cart}>{cart.map(x => <div key={x.cartKey} className="cartItem" style={s.cartItem}>
-              <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><div style={{display:"flex",gap:8,alignItems:"center"}}><b>{fmt(x.price*x.quantity)} ج.م</b>{x.existing&&x.preparationStatus==="pending"&&editingOrderId&&!editingOrderClosed&&<button type="button" style={s.clear} disabled={saving} onClick={()=>removePendingItem(x.orderItemId)}>حذف الصنف</button>}</div></div>
+              <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><div style={{display:"flex",gap:8,alignItems:"center"}}><b>{fmt(x.price*x.quantity)} ج.م</b>{x.existing&&x.preparationStatus==="pending"&&editingOrderId&&!editingOrderClosed&&<div style={{display:"flex",gap:6,alignItems:"center"}}>{x.quantity>1&&<button type="button" style={s.secondary} disabled={saving} onClick={()=>removePendingItem(x.orderItemId,1)}>− حذف 1</button>}<button type="button" style={s.clear} disabled={saving} onClick={()=>removePendingItem(x.orderItemId)}>حذف الكل</button></div>}</div></div>
               <div style={s.head}><div style={s.qty}><button disabled={x.existing || x.quantity <= 1} onClick={() => qty(x.cartKey,-1)}>−</button><b>{x.quantity}</b><button disabled={x.existing} onClick={() => qty(x.cartKey,1)}>+</button></div><input className="note" style={s.note} placeholder="ملاحظة للصنف" value={x.note} disabled={x.existing} onChange={e => setCart(old => old.map(i => i.cartKey === x.cartKey ? {...i,note:e.target.value} : i))} /></div>
             </div>)}{!cart.length && <p style={s.empty}>السلة فارغة — اختار أصناف من المنيو.</p>}</div>
             <div style={s.fields}>
