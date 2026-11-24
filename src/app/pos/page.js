@@ -1,0 +1,225 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+const tabs = [
+  { id: "dine-in", label: "الصالة" },
+  { id: "takeaway", label: "تيك أواي" },
+  { id: "delivery", label: "دليفري" },
+  { id: "all", label: "الكل" },
+];
+const fmt = (n) => Number(n || 0).toLocaleString("ar-EG", { maximumFractionDigits: 2 });
+
+export default function PosPage() {
+  const [allowed, setAllowed] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [tab, setTab] = useState("dine-in");
+  const [mode, setMode] = useState("dine-in");
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [category, setCategory] = useState("all");
+  const [search, setSearch] = useState("");
+  const [cart, setCart] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [settings, setSettings] = useState({ indoor_tables: 0, outdoor_tables: 0 });
+  const [area, setArea] = useState("indoor");
+  const [table, setTable] = useState(null);
+  const [reservationId, setReservationId] = useState(null);
+  const [customer, setCustomer] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [discountType, setDiscountType] = useState("amount");
+  const [discountValue, setDiscountValue] = useState("0");
+  const [payment, setPayment] = useState("cash");
+
+  const load = useCallback(async () => {
+    setError("");
+    try {
+      const [adminResult, permissionResult] = await Promise.all([
+        supabase.rpc("is_admin"),
+        supabase.rpc("has_permission", { requested_permission: "pos.use" }),
+      ]);
+      if (adminResult.error) throw adminResult.error;
+      if (permissionResult.error) throw permissionResult.error;
+      const canUse = Boolean(adminResult.data || permissionResult.data);
+      setAllowed(canUse);
+      if (!canUse) return;
+
+      const [p, c, st, day, r] = await Promise.all([
+        supabase.from("products").select("id,name,price,image_url,category_id,is_available").eq("is_available", true).order("name"),
+        supabase.from("categories").select("id,name,display_order").eq("is_active", true).order("display_order"),
+        supabase.from("restaurant_settings").select("indoor_tables,outdoor_tables").eq("id", 1).single(),
+        supabase.from("business_days").select("id").eq("status", "open").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("reservations").select("id,customer_name,phone,reservation_date,reservation_time,status,seating_area,table_number").in("status", ["pending","confirmed"]),
+      ]);
+      if (p.error) throw p.error;
+      if (c.error) throw c.error;
+      if (st.error) throw st.error;
+      if (r.error) throw r.error;
+      setProducts(p.data || []);
+      setCategories(c.data || []);
+      setSettings(st.data || { indoor_tables: 0, outdoor_tables: 0 });
+      const today = new Date().toLocaleDateString("en-CA");
+      setReservations((r.data || []).filter((x) => x.reservation_date === today));
+      if (day.error) throw day.error;
+      if (day.data) {
+        const result = await supabase.from("orders").select("*,order_items(*)").eq("business_day_id", day.data.id).order("created_at", { ascending: false }).limit(100);
+        if (result.error) throw result.error;
+        setOrders(result.data || []);
+      } else setOrders([]);
+    } catch (e) {
+      setError("تعذر تحميل شاشة الكاشير: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    const channel = supabase.channel("arkan-pos")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reservations" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [load]);
+
+  const subtotal = useMemo(() => cart.reduce((sum, x) => sum + x.price * x.quantity, 0), [cart]);
+  const discount = Math.min(subtotal, discountType === "percent" ? subtotal * Math.min(100, Math.max(0, Number(discountValue) || 0)) / 100 : Math.max(0, Number(discountValue) || 0));
+  const total = Math.max(0, subtotal - discount);
+  const productsShown = products.filter((p) => (category === "all" || String(p.category_id) === category) && p.name.toLowerCase().includes(search.toLowerCase()));
+  const ordersShown = orders.filter((o) => tab === "all" || o.order_type === tab);
+  const activeTables = orders.filter((o) => o.order_type === "dine-in" && !["delivered","cancelled"].includes(o.status));
+  const tableCount = Number(area === "indoor" ? settings.indoor_tables : settings.outdoor_tables) || 0;
+
+  function add(p) {
+    setCart((old) => {
+      const found = old.find((x) => x.id === p.id);
+      return found ? old.map((x) => x.id === p.id ? { ...x, quantity: x.quantity + 1 } : x) : [...old, { id: p.id, name: p.name, price: Number(p.price), quantity: 1, note: "" }];
+    });
+  }
+  function qty(id, delta) {
+    setCart((old) => old.map((x) => x.id === id ? { ...x, quantity: x.quantity + delta } : x).filter((x) => x.quantity > 0));
+  }
+  function reset() {
+    setCart([]); setCustomer(""); setPhone(""); setAddress(""); setNotes("");
+    setDiscountValue("0"); setTable(null); setReservationId(null);
+  }
+  function chooseTable(n) {
+    setTable(n);
+    const booking = reservations.find((r) => r.table_number === n && (r.seating_area || "indoor") === area);
+    setReservationId(booking ? booking.id : null);
+    if (booking) { setCustomer(booking.customer_name || ""); setPhone(booking.phone || ""); }
+  }
+  async function checkout() {
+    if (!cart.length) return setError("اختار أصناف الأول.");
+    if (mode === "dine-in" && !table) return setError("اختار الطاولة الأول.");
+    if (mode === "delivery" && !address.trim()) return setError("اكتب عنوان التوصيل.");
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await supabase.rpc("create_pos_order", {
+        p_order_type: mode,
+        p_items: cart.map((x) => ({ product_id: x.id, quantity: x.quantity, note: x.note })),
+        p_table_number: mode === "dine-in" ? table : null,
+        p_table_area: mode === "dine-in" ? area : null,
+        p_customer_name: customer || null,
+        p_phone: phone || null,
+        p_address: address || null,
+        p_notes: notes || null,
+        p_reservation_id: reservationId,
+        p_discount_type: discountType,
+        p_discount_value: Number(discountValue) || 0,
+        p_payments: total > 0 ? [{ method: payment, amount: Number(total.toFixed(2)) }] : [],
+      });
+      if (result.error) throw result.error;
+      setMessage("تم إنشاء الطلب رقم ARK-" + result.data + " وإرساله للتجهيز.");
+      reset();
+      await load();
+    } catch (e) {
+      setError("فشل إنشاء الطلب: " + e.message);
+    } finally { setSaving(false); }
+  }
+
+  if (loading) return <main dir="rtl" style={s.page}>جاري تحميل ARKAN POS...</main>;
+  if (!allowed) return <main dir="rtl" style={s.page}><h2>شاشة الكاشير</h2><p>ليس لديك صلاحية pos.use. اطلب من المدير تفعيلها لحسابك.</p></main>;
+
+  return (
+    <main dir="rtl" style={s.page}>
+      <header style={s.header}>
+        <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
+        <button style={s.secondary} onClick={load}>تحديث البيانات</button>
+      </header>
+      {error && <p style={s.error}>{error}</p>}
+      {message && <p style={s.success}>{message}</p>}
+      <nav style={s.tabs}>{tabs.map((t) => <button key={t.id} style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id !== "all") setMode(t.id); }}>{t.label}</button>)}</nav>
+      <div style={s.stats}>
+        <div style={s.stat}><small>طلبات اليوم</small><b>{orders.length}</b></div>
+        <div style={s.stat}><small>طلبات نشطة</small><b>{orders.filter(o => !["delivered","cancelled"].includes(o.status)).length}</b></div>
+        <div style={s.stat}><small>مبيعات اليوم</small><b>{fmt(orders.filter(o => o.status !== "cancelled").reduce((a,o) => a + Number(o.total_amount || 0),0))} ج.م</b></div>
+        <div style={s.stat}><small>عدد الطاولات</small><b>{Number(settings.indoor_tables || 0) + Number(settings.outdoor_tables || 0)}</b></div>
+      </div>
+      <div style={s.workspace}>
+        <section style={s.panel}>
+          <div style={s.head}><div><h2>المنيو</h2><small style={s.muted}>اضغط على الصنف لإضافته</small></div><input style={s.search} placeholder="بحث..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+          <div style={s.categories}><button style={s.category} onClick={() => setCategory("all")}>الكل</button>{categories.map(c => <button key={c.id} style={s.category} onClick={() => setCategory(String(c.id))}>{c.name}</button>)}</div>
+          <div style={s.products}>{productsShown.map(p => <button key={p.id} style={s.product} onClick={() => add(p)}>{p.image_url ? <img src={p.image_url} alt="" style={s.image} /> : <span style={s.imageBlank}>＋</span>}<b>{p.name}</b><small>{fmt(p.price)} ج.م</small></button>)}{!productsShown.length && <p>لا توجد أصناف.</p>}</div>
+        </section>
+        <aside style={s.panel}>
+          <div style={s.head}><div><h2>الطلب الحالي</h2><small style={s.muted}>{mode === "dine-in" ? "الصالة" : mode === "takeaway" ? "تيك أواي" : "دليفري"}</small></div><button style={s.clear} onClick={reset}>مسح الطلب</button></div>
+          {mode === "dine-in" && <div style={s.tableBox}>
+            <div style={s.switch}>{["indoor","outdoor"].map((a) => <button key={a} style={s.secondary} onClick={() => {setArea(a);setTable(null);setReservationId(null);}}>{a === "indoor" ? "داخلي" : "خارجي"}</button>)}</div>
+            <div style={s.tableGrid}>{Array.from({length: tableCount},(_,i)=>i+1).map(n => {
+              const occupied = activeTables.some(o => o.table_number === n && o.table_area === area);
+              const reserved = reservations.some(r => r.table_number === n && (r.seating_area || "indoor") === area);
+              return <button key={n} disabled={occupied && table !== n} onClick={() => chooseTable(n)} style={{ ...s.table, ...(table === n ? s.chosen : {}), ...(occupied ? s.occupied : {}), ...(reserved ? s.reserved : {}) }}><b>{n}</b><small>{occupied ? "مشغولة" : reserved ? "محجوزة" : "متاحة"}</small></button>;
+            })}</div>
+            <small style={s.muted}>الأخضر متاحة · الأحمر مشغولة · الأصفر محجوزة</small>
+            {reservationId && <small>تم ربط الحجز بالطاولة.</small>}
+          </div>}
+          <div style={s.cart}>{cart.map(x => <div key={x.id} style={s.cartItem}>
+            <div style={s.head}><div><b>{x.name}</b><small style={s.muted}> {fmt(x.price)} ج.م</small></div><b>{fmt(x.price*x.quantity)} ج.م</b></div>
+            <div style={s.head}><div style={s.qty}><button onClick={() => qty(x.id,-1)}>−</button><b>{x.quantity}</b><button onClick={() => qty(x.id,1)}>+</button></div><input style={s.note} placeholder="ملاحظة للصنف" value={x.note} onChange={e => setCart(old => old.map(i => i.id === x.id ? {...i,note:e.target.value} : i))} /></div>
+          </div>)}{!cart.length && <p style={s.empty}>السلة فارغة</p>}</div>
+          <div style={s.fields}>
+            <input style={s.field} placeholder="اسم العميل (اختياري)" value={customer} onChange={e=>setCustomer(e.target.value)} />
+            <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} onChange={e=>setPhone(e.target.value)} />
+            {mode === "delivery" && <input style={s.field} placeholder="عنوان التوصيل *" value={address} onChange={e=>setAddress(e.target.value)} />}
+            <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} onChange={e=>setNotes(e.target.value)} />
+          </div>
+          <div style={s.head}><select style={s.select} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ</option><option value="percent">خصم نسبة %</option></select><input style={s.discount} type="number" min="0" value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div>
+          <div style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div>
+          <div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div>
+          <button style={s.submit} disabled={saving || !cart.length} onClick={checkout}>{saving ? "جاري الحفظ..." : "تأكيد الطلب وإرساله للتجهيز"}</button>
+        </aside>
+      </div>
+      <section style={{ ...s.panel, marginTop: 18 }}>
+        <div style={s.head}><div><h2>طلبات اليوم</h2><small style={s.muted}>طلبات يوم العمل المفتوح</small></div><b>{ordersShown.length} طلب</b></div>
+        <div style={s.orders}>{ordersShown.map(o => <article key={o.id} style={s.order}>
+          <b>ARK-{o.id}</b><b>{o.order_type === "dine-in" ? "الصالة" : o.order_type === "takeaway" ? "تيك أواي" : "دليفري"} {o.table_number ? " · طاولة " + o.table_number : ""}</b>
+          <small>{o.customer_name || "عميل نقدي"} · {(o.order_items || []).length} أصناف</small><strong>{fmt(o.total_amount)} ج.م</strong><small>{new Date(o.created_at).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"})}</small>
+        </article>)}{!ordersShown.length && <p style={s.muted}>لا توجد طلبات في هذا القسم.</p>}</div>
+      </section>
+    </main>
+  );
+}
+
+const s = {
+ page:{minHeight:"100vh",padding:24,background:"#f4f2ee",color:"#242424"},
+ header:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18},eyebrow:{color:"#a7793d",fontWeight:800,letterSpacing:2},muted:{color:"#777",fontSize:12},
+ secondary:{padding:"9px 13px",border:"1px solid #ddd",borderRadius:8,background:"#fff",cursor:"pointer"},
+ error:{padding:12,background:"#ffeded",color:"#a12c2c",borderRadius:9},success:{padding:12,background:"#e9f7ee",color:"#246c45",borderRadius:9},
+ tabs:{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"},tab:{padding:"12px 24px",border:"1px solid #ddd",borderRadius:9,background:"#fff",cursor:"pointer",fontWeight:700},selectedTab:{background:"#2c2823",color:"#fff"},
+ stats:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:15},stat:{background:"#fff",padding:15,border:"1px solid #e9e4dc",borderRadius:10,display:"grid",gap:7},workspace:{display:"grid",gridTemplateColumns:"minmax(0,1.5fr) minmax(320px,0.9fr)",gap:14,alignItems:"start"},
+ panel:{background:"#fff",border:"1px solid #e9e4dc",borderRadius:13,padding:16,minWidth:0},head:{display:"flex",justifyContent:"space-between",alignItems:"center",gap:9,marginBottom:12},search:{padding:10,border:"1px solid #ddd",borderRadius:8,width:"40%"},
+ categories:{display:"flex",gap:7,overflowX:"auto",paddingBottom:12},category:{padding:"8px 12px",border:"1px solid #e5dfd6",borderRadius:20,background:"#fff",whiteSpace:"nowrap",cursor:"pointer"},
+ products:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(125px,1fr))",gap:9},product:{display:"grid",gap:6,textAlign:"right",padding:9,border:"1px solid #eee8df",borderRadius:10,background:"#fff",cursor:"pointer"},image:{width:"100%",height:78,objectFit:"cover",borderRadius:7},imageBlank:{height:78,display:"grid",placeItems:"center",background:"#f6f1e9",borderRadius:7,fontSize:24,color:"#a7793d"},
+ clear:{border:0,background:"none",color:"#a12c2c",cursor:"pointer"},tableBox:{padding:10,background:"#faf8f5",borderRadius:9,marginBottom:10},switch:{display:"flex",gap:7,marginBottom:9},tableGrid:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6},table:{padding:8,display:"grid",gap:4,border:"1px solid #cde5d4",background:"#eaf7ee",color:"#246c45",borderRadius:7,cursor:"pointer"},chosen:{outline:"2px solid #b88946"},occupied:{background:"#fdeaea",borderColor:"#efc1c1",color:"#a12c2c"},reserved:{background:"#fff4d9",borderColor:"#e9cb7a",color:"#8b681b"},
+ cart:{maxHeight:280,overflowY:"auto"},cartItem:{padding:"10px 0",borderBottom:"1px solid #eee"},qty:{display:"flex",alignItems:"center",gap:9},note:{width:"55%",padding:7,border:"1px solid #eee",borderRadius:6,fontSize:12},empty:{textAlign:"center",padding:18,color:"#888"},fields:{display:"grid",gap:7,marginTop:10},field:{padding:9,border:"1px solid #e4dfd7",borderRadius:7,width:"100%",boxSizing:"border-box",fontFamily:"inherit"},
+ select:{flex:1,padding:8,border:"1px solid #ddd",borderRadius:7},discount:{width:90,padding:8,border:"1px solid #ddd",borderRadius:7},totals:{display:"grid",gap:7,padding:"12px 0"},grand:{display:"flex",justifyContent:"space-between",fontSize:18,color:"#8b622e",paddingTop:7},pay:{display:"flex",gap:8,alignItems:"center",marginBottom:10},submit:{width:"100%",padding:13,border:0,borderRadius:8,background:"#b88946",color:"#fff",fontWeight:800,cursor:"pointer"},
+ orders:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:9},order:{display:"grid",gap:6,padding:12,border:"1px solid #eee8df",borderRadius:9}
+};
