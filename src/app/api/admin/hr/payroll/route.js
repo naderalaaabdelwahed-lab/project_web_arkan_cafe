@@ -16,7 +16,7 @@ export async function GET(request){
   const [{data:runs,error},{data:employees,error:ee},{data:adjustments,error:ae}]=await Promise.all([
    runQuery,
    a.db.from("hr_employees").select("id,full_name,employment_status,termination_date").is("archived_at",null).order("full_name"),
-   a.db.from("hr_payroll_adjustments").select("id,employee_id,adjustment_date,amount,adjustment_type,reason").order("adjustment_date",{ascending:false}).limit(100)
+   a.db.from("hr_payroll_adjustments").select("id,employee_id,adjustment_date,amount,adjustment_type,reason,payroll_run_id").order("adjustment_date",{ascending:false}).limit(100)
   ]);
   if(error)throw error;if(ee)throw ee;if(ae)throw ae;
 
@@ -107,3 +107,17 @@ export async function POST(request){
  }catch(e){console.error("HR payroll POST",e);return NextResponse.json({error:e.message||"تعذر إنشاء كشف الرواتب."},{status:400})}
 }
 export async function PATCH(request){try{const a=await admin(request);if(a.response)return a.response;const b=await request.json();if(!/^[0-9a-f-]{36}$/i.test(String(b.id||"")))return NextResponse.json({error:"كشف غير صحيح."},{status:400});const {data,error}=await a.db.from("hr_payroll_runs").update({status:"finalized",finalized_by:a.user.id,finalized_at:new Date().toISOString()}).eq("id",b.id).eq("status","draft").select("*").single();if(error)throw error;return NextResponse.json({run:data})}catch(e){return NextResponse.json({error:e.message||"تعذر اعتماد الكشف."},{status:400})}}
+export async function DELETE(request){
+ try{
+  const a=await admin(request);if(a.response)return a.response;
+  const b=await request.json();
+  if(!/^[0-9a-f-]{36}$/i.test(String(b.id||"")))
+   return NextResponse.json({error:"الخصم أو الإضافة غير صحيح."},{status:400});
+  const {data,error}=await a.db.rpc("hr_delete_payroll_adjustment",{p_adjustment_id:b.id});
+  if(error){
+   const status=error.code==="P0002"?404:error.code==="55000"?409:400;
+   return NextResponse.json({error:error.message||"تعذر حذف التعديل."},{status});
+  }
+  return NextResponse.json({result:data});
+ }catch(e){return NextResponse.json({error:e.message||"تعذر حذف التعديل."},{status:400})}
+}
