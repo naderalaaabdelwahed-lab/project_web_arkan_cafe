@@ -3269,3 +3269,73 @@ body .arkan-pos-page input:-webkit-autofill:focus {
   .arkan-floor-dashboard .legend { gap: 6px 10px !important; }
   .arkan-floor-dashboard .floorInlineModal { display: grid !important; }
 }
+
+
+/* ===== ARKAN POS ACCESSIBILITY + NORMAL PAGE SCROLL ===== */
+.arkan-pos-page {
+  min-height: 100vh; height: auto; overflow: visible;
+  padding: 24px clamp(16px, 2.5vw, 36px) 40px !important;
+  font-size: 16px; line-height: 1.65; color: #242424;
+}
+.arkan-pos-page h1 { font-size: clamp(28px, 2.4vw, 36px); line-height: 1.3; }
+.arkan-pos-page h2 { font-size: clamp(22px, 1.8vw, 28px); line-height: 1.35; }
+.arkan-pos-page h3 { font-size: 19px; line-height: 1.4; }
+.arkan-pos-page small, .arkan-pos-page label { font-size: 14px; line-height: 1.6; }
+.arkan-pos-page button, .arkan-pos-page input, .arkan-pos-page select, .arkan-pos-page textarea { font: inherit; }
+.arkan-pos-page button { min-height: 44px; padding: 10px 15px; }
+.arkan-pos-page input, .arkan-pos-page select, .arkan-pos-page textarea { min-height: 44px; padding: 10px 12px; font-size: 16px !important; }
+.arkan-pos-page .cart { max-height: none !important; height: auto !important; overflow: visible !important; }
+.arkan-pos-page .ordersTableWrap { max-height: none !important; min-height: 0 !important; overflow-x: auto !important; overflow-y: visible !important; }
+.arkan-pos-page .ordersTable { font-size: 15px !important; }
+.arkan-pos-page .ordersTh, .arkan-pos-page .ordersTd { padding: 14px 13px !important; }
+.arkan-pos-page .orderFilters { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
+.arkan-pos-page .orderWorkspace { grid-template-columns: minmax(0, .9fr) minmax(0, 1.4fr) !important; align-items: start; }
+.arkan-pos-page .products { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important; gap: 12px !important; }
+.arkan-pos-page .product { padding: 12px !important; font-size: 16px; }
+.arkan-pos-page .product b { font-size: 16px; line-height: 1.45; }
+.arkan-pos-page .product small { font-size: 15px; font-weight: 700; }
+.arkan-pos-page .tableTile { min-height: 116px !important; font-size: 20px !important; }
+.arkan-pos-page .tableTile small { font-size: 14px !important; }
+.arkan-floor-dashboard { align-items: start !important; overflow: visible; }
+.arkan-floor-dashboard h2 { font-size: 25px !important; }
+.arkan-floor-dashboard h3 { font-size: 19px !important; }
+.arkan-floor-dashboard small { font-size: 14px !important; }
+.arkan-floor-dashboard button { font-size: 15px; min-height: 46px !important; }
+.arkan-floor-dashboard .floorDetailRow span { font-size: 14px !important; }
+.arkan-pos-page .cartItem { padding: 14px 0 !important; }
+.arkan-pos-page .cartItem b { font-size: 16px; }
+.arkan-pos-page .note { font-size: 14px !important; }
+.arkan-pos-page .totals, .arkan-pos-page .discountBox { font-size: 16px; }
+.arkan-pos-page .submit { min-height: 50px; font-size: 17px; }
+.arkan-pos-page .cashModal { max-height: calc(100dvh - 32px); overflow-y: auto; }
+@media (max-width: 1050px) {
+  .arkan-pos-page .orderWorkspace { grid-template-columns: minmax(0,1fr) !important; }
+  .arkan-pos-page .orderFilters { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)) !important; }
+  .arkan-pos-page .products { grid-template-columns: repeat(auto-fill,minmax(135px,1fr)) !important; }
+}
+@media (max-width: 900px) {
+  .arkan-floor-dashboard { grid-template-columns: minmax(0,1fr) minmax(0,1fr) !important; }
+  .arkan-floor-dashboard > div:nth-child(2) { grid-column: 1 / -1 !important; grid-row: 1; }
+  .arkan-floor-dashboard > aside:first-child { grid-column: 1 !important; }
+  .arkan-floor-dashboard > aside:nth-of-type(2) { grid-column: 2 !important; }
+  .arkan-floor-dashboard > .floorDetails { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 650px) {
+  .arkan-pos-page { padding: 14px 10px 28px !important; }
+  .arkan-pos-page .orderWorkspace { grid-template-columns: minmax(0,1fr) !important; }
+  .arkan-pos-page .allOrdersHeading { align-items: flex-start; flex-direction: column; }
+  .arkan-pos-page .orderFilters { grid-template-columns: minmax(0,1fr) !important; }
+  .arkan-pos-page .products { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  .arkan-floor-dashboard { grid-template-columns: minmax(0,1fr) !important; padding: 10px !important; }
+  .arkan-floor-dashboard > div:nth-child(2), .arkan-floor-dashboard > aside:first-child,
+  .arkan-floor-dashboard > aside:nth-of-type(2), .arkan-floor-dashboard > .floorDetails {
+    grid-column: 1 !important; grid-row: auto !important;
+  }
+  .arkan-floor-dashboard .floorDetailRow { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  .arkan-pos-page .tabs { gap: 7px; }
+  .arkan-pos-page .tab { flex: 1 1 calc(50% - 7px); padding: 12px 10px; }
+}
+@media (max-width: 380px) {
+  .arkan-pos-page .products { grid-template-columns: minmax(0,1fr) !important; }
+  .arkan-floor-dashboard .floorDetailRow { grid-template-columns: minmax(0,1fr) !important; }
+}
