@@ -786,7 +786,7 @@ const s = {
  floorInlineModal:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",padding:14,marginTop:10,background:"#fffaf1",border:"1px solid #e5d3b8",borderRadius:10},
  modalBackdrop:{position:"fixed",inset:0,zIndex:1000,background:"rgba(0,0,0,.48)",display:"grid",placeItems:"center",padding:16},
  cashModal:{width:"min(820px,96vw)",maxHeight:"calc(100dvh - 32px)",overflowY:"auto",display:"grid",gap:22,padding:"clamp(26px,4vw,48px)",background:"#fff",borderRadius:22,boxShadow:"0 24px 80px rgba(0,0,0,.3)"},
- modalAmount:{fontSize:clamp(34px,4vw,44px),fontWeight:900,color:"#8b622e",padding:"20px 0",borderBottom:"1px solid #eee5d8"},
+ modalAmount:{fontSize:"clamp(34px,4vw,44px)",fontWeight:900,color:"#8b622e",padding:"20px 0",borderBottom:"1px solid #eee5d8"},
  cashInput:{width:"100%",minWidth:0,boxSizing:"border-box",padding:"22px 18px",border:"2px solid #c9a36d",borderRadius:14,background:"#fff",color:"#242424",fontSize:32,fontWeight:900,fontFamily:"inherit"},
  cashWarning:{padding:"14px 16px",border:"1px solid #e6a6a6",borderRadius:10,background:"#fff0f0",color:"#a12c2c",fontSize:16,fontWeight:800,lineHeight:1.7},
  cashChange:{padding:"14px 16px",borderRadius:10,background:"#f3f8f3",fontSize:19,fontWeight:700},
