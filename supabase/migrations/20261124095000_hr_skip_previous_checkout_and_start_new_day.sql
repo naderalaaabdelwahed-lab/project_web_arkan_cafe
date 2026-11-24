@@ -49,7 +49,7 @@ begin
 
   update public.hr_attendance
   set checkout_skipped_at = p_check_in_at,
-      notes = left(concat_ws(E'\\n', nullif(notes, ''), 'تم تجاوز تسجيل الانصراف دون إنشاء وقت انصراف وهمي عند بدء يوم عمل جديد'), 1000),
+      notes = left(concat_ws(E'\n', nullif(notes, ''), 'تم تجاوز تسجيل الانصراف دون إنشاء وقت انصراف وهمي عند بدء يوم عمل جديد'), 1000),
       updated_at = p_check_in_at
   where id = v_open.id;
 
