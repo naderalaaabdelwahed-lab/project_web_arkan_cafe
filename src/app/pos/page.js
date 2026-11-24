@@ -34,6 +34,18 @@ export default function PosPage() {
   const [productCategoryNames, setProductCategoryNames] = useState({});
   const [currentBusinessDayId, setCurrentBusinessDayId] = useState(null);
   const [canCloseDay, setCanCloseDay] = useState(false);
+  const [posPermissions, setPosPermissions] = useState({
+    salesView: false,
+    discountApply: false,
+    itemsRemove: false,
+    tableEmpty: false,
+    tableTransfer: false,
+    itemsTransfer: false,
+    tableMerge: false,
+    paymentReceive: false,
+    orderFinish: false,
+    receiptPrint: false,
+  });
   const [salesFrom, setSalesFrom] = useState(() => todayISO());
   const [salesTo, setSalesTo] = useState(() => todayISO());
   const salesRangeTouched = useRef(false);
@@ -84,16 +96,44 @@ export default function PosPage() {
   const load = useCallback(async () => {
     setError("");
     try {
-      const [adminResult, permissionResult, closePermissionResult] = await Promise.all([
+      const posPermissionKeys = [
+        "pos.sales.view",
+        "pos.discount.apply",
+        "pos.items.remove",
+        "pos.table.empty",
+        "pos.table.transfer",
+        "pos.items.transfer",
+        "pos.table.merge",
+        "pos.payment.receive",
+        "pos.order.finish",
+        "pos.receipt.print",
+      ];
+      const [adminResult, permissionResult, closePermissionResult, ...posPermissionResults] = await Promise.all([
         supabase.rpc("is_admin"),
         supabase.rpc("has_permission", { requested_permission: "pos.use" }),
         supabase.rpc("has_permission", { requested_permission: "daily_closing.close" }),
+        ...posPermissionKeys.map((requested_permission) => supabase.rpc("has_permission", { requested_permission })),
       ]);
       if (adminResult.error) throw adminResult.error;
       if (permissionResult.error) throw permissionResult.error;
       if (closePermissionResult.error) throw closePermissionResult.error;
-      const canUse = Boolean(adminResult.data || permissionResult.data);
-      setCanCloseDay(Boolean(adminResult.data || closePermissionResult.data));
+      const failedPosPermission = posPermissionResults.find((result) => result.error);
+      if (failedPosPermission) throw failedPosPermission.error;
+      const isAdmin = Boolean(adminResult.data);
+      const canUse = Boolean(isAdmin || permissionResult.data);
+      setPosPermissions({
+        salesView: isAdmin || Boolean(posPermissionResults[0].data),
+        discountApply: isAdmin || Boolean(posPermissionResults[1].data),
+        itemsRemove: isAdmin || Boolean(posPermissionResults[2].data),
+        tableEmpty: isAdmin || Boolean(posPermissionResults[3].data),
+        tableTransfer: isAdmin || Boolean(posPermissionResults[4].data),
+        itemsTransfer: isAdmin || Boolean(posPermissionResults[5].data),
+        tableMerge: isAdmin || Boolean(posPermissionResults[6].data),
+        paymentReceive: isAdmin || Boolean(posPermissionResults[7].data),
+        orderFinish: isAdmin || Boolean(posPermissionResults[8].data),
+        receiptPrint: isAdmin || Boolean(posPermissionResults[9].data),
+      });
+      setCanCloseDay(Boolean(isAdmin || closePermissionResult.data));
       setAllowed(canUse);
       if (!canUse) return;
 
@@ -363,6 +403,7 @@ export default function PosPage() {
   }
 
   async function printReceipt(order = selectedOrder) {
+    if (!posPermissions.receiptPrint) return setError("ليس لديك صلاحية طباعة الفاتورة.");
     if (!order) return setError("افتح أوردر الأول علشان تطبع الفاتورة.");
     const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (ch) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     const rows = (order.order_items || []).map((it) => "<tr><td>"+esc(it.product_name || it.name)+"</td><td>"+fmt(it.quantity)+"</td><td>"+fmt(it.unit_price)+"</td><td>"+fmt(Number(it.quantity||0)*Number(it.unit_price||0))+"</td></tr>").join("");
@@ -437,6 +478,7 @@ export default function PosPage() {
   }
 
   async function applyOrderDiscount() {
+    if (!posPermissions.discountApply) return setError("ليس لديك صلاحية تطبيق الخصم.");
     if (!editingOrderId) return;
     if (newItemsSubtotal > 0) return setError("احفظ الأصناف الجديدة أولًا ثم طبّق الخصم.");
     setSaving(true); setError(""); setMessage("");
@@ -452,6 +494,7 @@ export default function PosPage() {
   }
 
   async function applySelectedTableDiscount() {
+    if (!posPermissions.discountApply) return setError("ليس لديك صلاحية تطبيق الخصم.");
     if (!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
     setSaving(true); setError(""); setMessage("");
     try {
@@ -472,6 +515,7 @@ export default function PosPage() {
   }
 
   async function recordCashPayment(orderId = editingOrderId, receivedOverride = null) {
+    if (!posPermissions.paymentReceive) return setError("ليس لديك صلاحية تسجيل السداد.");
     if (!orderId) return;
     const received = receivedOverride === null ? Number(cashReceived) : Number(receivedOverride);
     if (!Number.isFinite(received) || received <= 0) return setError("اكتب المبلغ النقدي المستلم.");
@@ -502,6 +546,7 @@ export default function PosPage() {
   }
 
   async function transferSelectedItems() {
+    if (!posPermissions.itemsTransfer) return setError("ليس لديك صلاحية نقل الأصناف.");
     if (!editingOrderId) return;
     if (!transferTarget) return setError("اختار الطاولة المستقبِلة.");
     const selectedItems = Object.entries(transferQuantities)
@@ -566,6 +611,7 @@ export default function PosPage() {
   }
 
   async function removeSelectedFloorItem() {
+    if (!posPermissions.itemsRemove) return setError("ليس لديك صلاحية حذف الأصناف.");
     if (!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
     const item = (selectedTableOrder.order_items || []).find((entry) => String(entry.id) === String(removeItemId));
     if (!item) return setError("اختار الصنف المطلوب حذفه.");
@@ -596,6 +642,7 @@ export default function PosPage() {
   }
 
   async function emptySelectedTable() {
+    if(!posPermissions.tableEmpty) return setError("ليس لديك صلاحية إفراغ الطاولة.");
     if(!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
 
     setSaving(true);setError("");setMessage("");
@@ -609,6 +656,7 @@ export default function PosPage() {
   }
 
   async function mergeSelectedTable() {
+    if (!posPermissions.tableMerge) return setError("ليس لديك صلاحية دمج الطاولات.");
     if (!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
     if (!mergeTargetId) return setError("اختار الطاولة المستقبِلة.");
     setSaving(true); setError(""); setMessage("");
@@ -628,6 +676,7 @@ export default function PosPage() {
   }
 
   async function transferTable(orderId = editingOrderId) {
+    if (!posPermissions.tableTransfer) return setError("ليس لديك صلاحية نقل الطاولات.");
     if (!orderId) return;
     if (!transferTarget) return setError("اختار الطاولة الجديدة.");
     const [targetArea, targetNumber] = transferTarget.split(":");
@@ -769,7 +818,7 @@ export default function PosPage() {
         
       `}</style>
 
-      <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "sales") { setScreen("sales"); } else if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
+      <nav className="tabs" style={s.tabs}>{tabs.filter((t) => t.id !== "sales" || posPermissions.salesView).map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "sales") { setScreen("sales"); } else if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       {error && <p style={s.error}>{error}</p>}
       {showTransfer && (selectedTableOrder || editingOrderId) && !editingOrderClosed && <div style={s.modalBackdrop} onClick={() => { if (!saving) { setShowTransfer(false); setTransferTarget(""); } }}>
         <div role="dialog" aria-modal="true" aria-labelledby="transfer-table-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden"}} onClick={e => e.stopPropagation()}>
@@ -974,13 +1023,13 @@ export default function PosPage() {
                 <button type="button" disabled={!selectedTableOrder || saving} onClick={() => { setShowTransfer(true); setShowMergePanel(false); setShowDiscountPanel(false); setTransferTarget(""); }}>
                   <span className="pos-action-icon">🔀</span><b>نقل الطلب لطاولة أخرى</b>
                 </button>
-                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => selectedTableOrder && openTable(selectedTableOrder.table_number, selectedTableOrder.table_area, "transfer-items")}>
+                <button type="button" disabled={!selectedTableOrder || !posPermissions.itemsTransfer || saving} onClick={() => selectedTableOrder && openTable(selectedTableOrder.table_number, selectedTableOrder.table_area, "transfer-items")}>
                   <span className="pos-action-icon">📦</span><b>نقل صنف لطاولة أخرى</b>
                 </button>
-                <button type="button" disabled={!selectedTableOrder || !(selectedTableOrder.order_items || []).some(item => item.preparation_status === "pending") || saving} onClick={() => { setRemoveItemId(""); setRemoveItemQuantity("1"); setShowRemoveItemModal(true); setShowMergePanel(false); setShowTransfer(false); setShowDiscountPanel(false); }}>
+                <button type="button" disabled={!selectedTableOrder || !posPermissions.itemsRemove || !(selectedTableOrder.order_items || []).some(item => item.preparation_status === "pending") || saving} onClick={() => { setRemoveItemId(""); setRemoveItemQuantity("1"); setShowRemoveItemModal(true); setShowMergePanel(false); setShowTransfer(false); setShowDiscountPanel(false); }}>
                   <span className="pos-action-icon">🗑️</span><b>مسح صنف من الطاولة</b>
                 </button>
-                <button type="button" disabled={!selectedTableOrder || mergeTargets.length === 0 || saving} onClick={() => { setShowMergePanel(true); setShowTransfer(false); setShowDiscountPanel(false); setMergeTargetId(""); }}>
+                <button type="button" disabled={!selectedTableOrder || !posPermissions.tableMerge || mergeTargets.length === 0 || saving} onClick={() => { setShowMergePanel(true); setShowTransfer(false); setShowDiscountPanel(false); setMergeTargetId(""); }}>
                   <span className="pos-action-icon">🧩</span><b>دمج طاولة في طاولة</b>
                 </button>
                 <button type="button" disabled={!selectedTableOrder || saving} onClick={() => openTable(selectedTableOrder.table_number, selectedTableOrder.table_area)}>
@@ -1017,19 +1066,19 @@ export default function PosPage() {
             <section className="pos-floor-action-panel pos-floor-payment-actions" aria-label="عمليات الحساب والدفع">
               <h3>الحساب والدفع</h3>
               <div className="pos-floor-action-grid">
-                <button type="button" className="is-primary" disabled={!selectedTableOrder || selectedDue <= 0 || saving} onClick={() => { setCashReceived(""); setShowCashModal(true); }}>
+                <button type="button" className="is-primary" disabled={!selectedTableOrder || !posPermissions.paymentReceive || selectedDue <= 0 || saving} onClick={() => { setCashReceived(""); setShowCashModal(true); }}>
                   <span className="pos-action-icon">💵</span><b>سداد نقدي</b>
                 </button>
-                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => { setShowDiscountPanel(v => !v); setShowTransfer(false); setShowMergePanel(false); setDiscountType("amount"); setDiscountValue(String(selectedTableOrder?.discount_amount || 0)); }}>
+                <button type="button" disabled={!selectedTableOrder || !posPermissions.discountApply || saving} onClick={() => { setShowDiscountPanel(v => !v); setShowTransfer(false); setShowMergePanel(false); setDiscountType("amount"); setDiscountValue(String(selectedTableOrder?.discount_amount || 0)); }}>
                   <span className="pos-action-icon">🏷️</span><b>تطبيق خصم</b>
                 </button>
-                <button type="button" disabled={!selectedTableOrder || selectedDue <= 0 || saving} onClick={() => setShowFinishOrderModal(true)}>
+                <button type="button" disabled={!selectedTableOrder || !posPermissions.orderFinish || selectedDue <= 0 || saving} onClick={() => setShowFinishOrderModal(true)}>
                   <span className="pos-action-icon">✅</span><b>إنهاء الطلب</b>
                 </button>
-                <button type="button" className="is-danger" disabled={!selectedTableOrder || Number(paymentSummary[selectedTableOrder?.id] || 0) > 0 || saving} onClick={() => setShowEmptyTableModal(true)}>
+                <button type="button" className="is-danger" disabled={!selectedTableOrder || !posPermissions.tableEmpty || Number(paymentSummary[selectedTableOrder?.id] || 0) > 0 || saving} onClick={() => setShowEmptyTableModal(true)}>
                   <span className="pos-action-icon">🧹</span><b>إفراغ الطاولة</b>
                 </button>
-                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => printReceipt(selectedTableOrder)}>
+                <button type="button" disabled={!selectedTableOrder || !posPermissions.receiptPrint || saving} onClick={() => printReceipt(selectedTableOrder)}>
                   <span className="pos-action-icon">🧾</span><b>طباعة الفاتورة</b>
                 </button>
               </div>
