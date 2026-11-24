@@ -145,6 +145,7 @@ export default function PosPage() {
     setCart([]); setCustomer(""); setPhone(""); setAddress(""); setNotes("");
     setDiscountValue("0"); setTable(null); setReservationId(null);
     setEditingOrderId(null); setEditingOrderTotal(null);
+    setShowTransfer(false); setTransferTarget("");
   }
   function openTable(n, selectedArea) {
     const currentOrder = activeTables.find((o) => o.table_number === n && o.table_area === selectedArea);
