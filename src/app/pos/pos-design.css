@@ -586,3 +586,20 @@
   font-size: 16px !important;
   line-height: 1.6 !important;
 }
+
+
+/* Increase readability of the centered floor order details */
+.arkan-pos-page .pos-floor-order-preview,
+.arkan-pos-page .pos-floor-order-preview p,
+.arkan-pos-page .pos-floor-order-preview th,
+.arkan-pos-page .pos-floor-order-preview td {
+  font-size: 18px !important;
+  line-height: 1.7 !important;
+}
+.arkan-pos-page .pos-floor-order-preview h3 {
+  font-size: 20px !important;
+  line-height: 1.6 !important;
+}
+.arkan-pos-page .pos-floor-order-preview tfoot th {
+  font-size: 19px !important;
+}
