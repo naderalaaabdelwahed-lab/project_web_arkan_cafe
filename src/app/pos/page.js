@@ -326,13 +326,13 @@ export default function PosPage() {
         p_items: cart.map((x) => ({ product_id: x.product_id, quantity: x.quantity, note: x.note })),
         p_table_number: mode === "dine-in" ? table : null,
         p_table_area: mode === "dine-in" ? area : null,
-        p_customer_name: customer || null,
-        p_phone: phone || null,
+        p_customer_name: null,
+        p_phone: null,
         p_address: address || null,
-        p_notes: notes || null,
+        p_notes: null,
         p_reservation_id: reservationId,
-        p_discount_type: discountType,
-        p_discount_value: Number(discountValue) || 0,
+        p_discount_type: "amount",
+        p_discount_value: 0,
         p_payments: mode === "dine-in" ? [] : (total > 0 ? [{ method: payment, amount: Number(total.toFixed(2)) }] : []),
       });
       if (result.error) throw result.error;
@@ -783,14 +783,18 @@ export default function PosPage() {
               </table>
             </div>
             <div style={s.fields}>
-              <input style={s.field} placeholder="اسم العميل (اختياري)" value={customer} disabled={Boolean(editingOrderId)} onChange={e=>setCustomer(e.target.value)} />
-              <input style={s.field} placeholder="رقم الموبايل (اختياري)" value={phone} disabled={Boolean(editingOrderId)} onChange={e=>setPhone(e.target.value)} />
-              <textarea style={s.field} rows={2} placeholder="ملاحظات الطلب" value={notes} disabled={Boolean(editingOrderId)} onChange={e=>setNotes(e.target.value)} />
-            </div>
-            <div data-pos-discount style={s.discountBox}><b style={{fontSize:15}}>الخصم على الأوردر</b><small style={s.muted}>الخصم اختياري — سيُسجل 0 ج.م لو سبت القيمة صفر</small><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><select className="pos-filter-control" aria-label="نوع الخصم" style={{...s.select,color:"#000",WebkitTextFillColor:"#000"}} value={discountType} onChange={e=>setDiscountType(e.target.value)}><option value="amount">خصم مبلغ (ج.م)</option><option value="percent">خصم نسبة (%)</option></select><input className="pos-filter-control" aria-label="قيمة الخصم" style={{...s.discountInput,color:"#000",WebkitTextFillColor:"#000",opacity:1}} type="number" min="0" max={discountType === "percent" ? 100 : subtotal} step="0.01" placeholder={discountType === "percent" ? "النسبة %" : "المبلغ ج.م"} value={discountValue} onChange={e=>setDiscountValue(e.target.value)} /></div></div>
-            {editingOrderId && <button className="submit" style={s.submit} disabled={saving || editingOrderClosed || newItemsSubtotal > 0} onClick={applyOrderDiscount}>{saving ? "جاري تطبيق الخصم..." : "تطبيق الخصم على الأوردر"}</button>}
-            {editingOrderId ? <div className="totals" style={s.totals}><div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div><div><span>قيمة الإضافات</span><b>{fmt(newItemsSubtotal)} ج.م</b></div><div style={s.grand}><b>الإجمالي بعد الإضافة</b><b>{fmt(Number(editingOrderTotal || 0) + newItemsSubtotal)} ج.م</b></div></div> : <><div className="totals" style={s.totals}><div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div><div><span>الخصم</span><b>{fmt(discount)} ج.م</b></div><div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div></div><div style={s.pay}><span>الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div></>}
-            {editingOrderId && mode === "dine-in" && !editingOrderClosed && <div className="discountBox" style={s.discountBox}><b style={{fontSize:18}}>السداد النقدي</b><div>إجمالي الفاتورة: {fmt(editingOrderTotal)} ج.م</div><div>المدفوع: {fmt(paymentSummary[editingOrderId] || 0)} ج.م</div><div>المتبقي: {fmt(editingOrderDue)} ج.م</div><input className="pos-filter-control" style={s.cashInput} type="number" min={editingOrderDue} step="0.01" placeholder="المبلغ المستلم من العميل" value={cashReceived} onChange={e=>setCashReceived(e.target.value)} />{cashReceived.trim() !== "" && Number.isFinite(cashReceivedNumber) && cashReceivedNumber < editingOrderDue && <div role="alert" style={s.cashWarning}>المبلغ أقل من المطلوب بـ {fmt(editingOrderDue-cashReceivedNumber)} ج.م.</div>}<div style={s.cashChange}>الباقي للعميل: {fmt(Number.isFinite(cashReceivedNumber) ? Math.max(0,cashReceivedNumber-editingOrderDue) : 0)} ج.م</div><button className="submit" style={s.cashSubmit} disabled={saving || newItemsSubtotal > 0 || editingOrderDue <= 0 || !Number.isFinite(cashReceivedNumber) || cashReceivedNumber < editingOrderDue} onClick={recordCashPayment}>{saving ? "جاري تسجيل السداد..." : "تسجيل السداد النقدي"}</button></div>}
+              <input sty            {editingOrderId ? <div className="totals" style={s.totals}>
+              <div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div>
+              <div><span>قيمة الإضافات</span><b>{fmt(newItemsSubtotal)} ج.م</b></div>
+              <div style={s.grand}><b>الإجمالي بعد الإضافة</b><b>{fmt(Number(editingOrderTotal || 0) + newItemsSubtotal)} ج.م</b></div>
+            </div> : <>
+              <div className="totals" style={s.totals}>
+                <div><span>الإجمالي</span><b>{fmt(subtotal)} ج.م</b></div>
+                <div style={s.grand}><b>المطلوب</b><b>{fmt(total)} ج.م</b></div>
+              </div>
+              <div style={s.pay}><span>طريقة الدفع</span>{["cash","card"].map(v=><button key={v} style={s.secondary} onClick={()=>setPayment(v)}>{payment === v ? "✓ " : ""}{v === "cash" ? "نقدي" : "بطاقة"}</button>)}</div>
+            </>}
+ngOrderClosed && <div className="discountBox" style={s.discountBox}><b style={{fontSize:18}}>السداد النقدي</b><div>إجمالي الفاتورة: {fmt(editingOrderTotal)} ج.م</div><div>المدفوع: {fmt(paymentSummary[editingOrderId] || 0)} ج.م</div><div>المتبقي: {fmt(editingOrderDue)} ج.م</div><input className="pos-filter-control" style={s.cashInput} type="number" min={editingOrderDue} step="0.01" placeholder="المبلغ المستلم من العميل" value={cashReceived} onChange={e=>setCashReceived(e.target.value)} />{cashReceived.trim() !== "" && Number.isFinite(cashReceivedNumber) && cashReceivedNumber < editingOrderDue && <div role="alert" style={s.cashWarning}>المبلغ أقل من المطلوب بـ {fmt(editingOrderDue-cashReceivedNumber)} ج.م.</div>}<div style={s.cashChange}>الباقي للعميل: {fmt(Number.isFinite(cashReceivedNumber) ? Math.max(0,cashReceivedNumber-editingOrderDue) : 0)} ج.م</div><button className="submit" style={s.cashSubmit} disabled={saving || newItemsSubtotal > 0 || editingOrderDue <= 0 || !Number.isFinite(cashReceivedNumber) || cashReceivedNumber < editingOrderDue} onClick={recordCashPayment}>{saving ? "جاري تسجيل السداد..." : "تسجيل السداد النقدي"}</button></div>}
             {!editingOrderClosed && <button className="submit" style={s.submit} disabled={saving || (editingOrderId ? newItemsSubtotal <= 0 : !cart.length) || (mode === "dine-in" && !table)} onClick={checkout}>{saving ? "جاري الحفظ..." : editingOrderId ? "حفظ الإضافات على نفس الأوردر" : "تأكيد الطلب وإرساله للتجهيز"}</button>}
           </section>
         </div>
