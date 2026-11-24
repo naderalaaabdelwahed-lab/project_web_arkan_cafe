@@ -3,8 +3,8 @@ import {useCallback,useEffect,useMemo,useState} from "react";
 import {supabase} from "@/lib/supabase";
 
 const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-const box={background:"#211b14",border:"1px solid #443723",borderRadius:12,padding:16};
-const field={padding:10,borderRadius:8,border:"1px solid #54452e",background:"#15120e",color:"#fff"};
+const box={background:"#FFFFFF",border:"1px solid #E8E0D4",borderRadius:12,padding:16};
+const field={padding:10,borderRadius:8,border:"1px solid #D8CDBB",background:"#FFFFFF",color:"#29251F"};
 const statusLabels={present:"حاضر",absent_pending:"غياب قيد المراجعة",absent:"غياب",unpaid_leave:"إجازة بدون راتب",excused:"غياب بعذر",holiday:"عطلة"};
 
 export default function AttendancePage(){
@@ -81,8 +81,19 @@ export default function AttendancePage(){
   }catch(e){setError(e.message)}
  }
 
- return <main dir="rtl" style={{padding:24,maxWidth:1400,margin:"0 auto",color:"var(--foreground,#fff)"}}>
+ return <main className="attendance-page" dir="rtl" style={{padding:24,maxWidth:1400,margin:"0 auto",color:"#29251F",background:"#F6F4F0",minHeight:"100vh"}}>
   <style jsx global>{`
+   .attendance-page button { background:#91672F; color:#fff; border:1px solid #91672F; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:600; }
+   .attendance-page button:disabled { opacity:.55; cursor:not-allowed; }
+   .attendance-page button:hover:not(:disabled) { filter:brightness(.94); }
+   .attendance-page input:focus,.attendance-page select:focus { outline:2px solid #B58B4D; outline-offset:1px; }
+   .attendance-page select option { background:#fff; color:#29251F; }
+   .attendance-page h1,.attendance-page h2 { color:#29251F; }
+   .attendance-page p { color:#62594F; }
+   .attendance-page table { background:#fff; }
+   .attendance-page th { color:#62594F; }
+   .attendance-page td { color:#29251F; }
+
    @media print {
     body * { visibility:hidden !important; }
     .attendance-print, .attendance-print * { visibility:visible !important; }
@@ -96,7 +107,7 @@ export default function AttendancePage(){
   `}</style>
   <h1>كشف الحضور الشهري</h1>
   <p>لكل موظف سجل مستقل لكل شهر، ويتم إنشاء سجل الشهر تلقائيًا مع بداية الشهر أو عند إضافة موظف جديد.</p>
-  {error&&<p role="alert" style={{color:"#ff8c8c"}}>{error}</p>}
+  {error&&<p role="alert" style={{color:"#96352E",background:"#FBE9E7",padding:10,borderRadius:8}}>{error}</p>}
   {message&&<p role="status">{message}</p>}
   <section className="attendance-no-print" style={{...box,display:"flex",gap:12,flexWrap:"wrap",alignItems:"end",marginBottom:18}}>
    <label>الموظف<br/><select style={field} value={employee} onChange={e=>setEmployee(e.target.value)}><option value="">اختر الموظف</option>{employees.map(x=><option key={x.id} value={x.id}>{x.full_name}{x.employment_status==="inactive"?" (غير نشط)":""}</option>)}</select></label>
@@ -111,7 +122,7 @@ export default function AttendancePage(){
   </section>
   {selected&&<>
    <section className="attendance-print" style={{...box,marginBottom:18}}>
-    <header style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap",borderBottom:"1px solid #8b6d3c",paddingBottom:12,marginBottom:14}}>
+    <header style={{display:"flex",justifyContent:"space-between",gap:12,flexWrap:"wrap",borderBottom:"1px solid #E8E0D4",paddingBottom:12,marginBottom:14}}>
      <div>
       <h1 style={{margin:"0 0 8px"}}>ARKAN — تقرير الموظف</h1>
       <h2 style={{margin:"0 0 6px"}}>{selected.full_name}</h2>
@@ -120,7 +131,7 @@ export default function AttendancePage(){
      </div>
      <div><strong>الشهر: {month}</strong></div>
     </header>
-    <section style={{marginBottom:18,padding:14,border:"1px solid #8b6d3c",borderRadius:10}}>
+    <section style={{marginBottom:18,padding:14,border:"1px solid #E8E0D4",borderRadius:10}}>
      <h2 style={{margin:"0 0 12px"}}>الخصومات وفرق الوقت وصافي الراتب</h2>
      {payrollItem?<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10}}>
@@ -170,5 +181,5 @@ export default function AttendancePage(){
   {!selected&&!loading&&<section style={box}>لا يوجد موظفون لعرض كشفهم.</section>}
  </main>;
 }
-const th={textAlign:"right",padding:9,borderBottom:"1px solid #54452e",whiteSpace:"nowrap"};
-const td={padding:9,borderBottom:"1px solid #3a3022",whiteSpace:"nowrap"};
+const th={textAlign:"right",padding:9,borderBottom:"1px solid #E8E0D4",whiteSpace:"nowrap"};
+const td={padding:9,borderBottom:"1px solid #E8E0D4",whiteSpace:"nowrap"};
