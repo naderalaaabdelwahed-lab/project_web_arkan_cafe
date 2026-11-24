@@ -60,6 +60,8 @@ export default function PosPage() {
   const [showCashModal, setShowCashModal] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState("");
   const [pendingFloorAction, setPendingFloorAction] = useState("");
+  const [showMergePanel, setShowMergePanel] = useState(false);
+  const [showDiscountPanel, setShowDiscountPanel] = useState(false);
   const [itemNoteEditor, setItemNoteEditor] = useState(null);
   const [itemNoteDraft, setItemNoteDraft] = useState("");
 
@@ -372,6 +374,26 @@ export default function PosPage() {
     finally { setSaving(false); }
   }
 
+  async function applySelectedTableDiscount() {
+    if (!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const result = await supabase.rpc("pos_update_order_discount", {
+        p_order_id: selectedTableOrder.id,
+        p_discount_type: discountType,
+        p_discount_value: Number(discountValue) || 0,
+      });
+      if (result.error) throw result.error;
+      setMessage("تم تطبيق الخصم على الأوردر ARK-" + selectedTableOrder.id + " بنجاح.");
+      setShowDiscountPanel(false);
+      await load();
+    } catch (e) {
+      setError("تعذر تطبيق الخصم: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function recordCashPayment(orderId = editingOrderId, receivedOverride = null) {
     if (!orderId) return;
     const received = receivedOverride === null ? Number(cashReceived) : Number(receivedOverride);
@@ -383,7 +405,7 @@ export default function PosPage() {
     try {
       const result = await supabase.rpc("pos_settle_and_close_cash", { p_order_id: orderId, p_received: received });
       if (result.error) throw result.error;
-      setMessage("تم سداد الأوردر وإغلاقه وتفريغ الطاولة. الباقي للعميل: " + fmt(result.data.change) + " ج.م");
+      setMessage("تم سداد الأوردر وإغلاقه وإتاحة الطاولة تلقائيًا. الباقي للعميل: " + fmt(result.data.change) + " ج.م");
       setCashReceived("");
       setShowCashModal(false);
       reset();
@@ -463,13 +485,13 @@ export default function PosPage() {
 
   async function emptySelectedTable() {
     if(!selectedTableOrder) return setError("حدد طاولة مشغولة أولًا.");
-    if(!window.confirm("تأكيد إفراغ الطاولة؟ سيتم إلغاء الأوردر وحذف أصنافه، بشرط عدم وجود دفعات أو أصناف بدأ تجهيزها.")) return;
+    if(!window.confirm("تنبيه: إفراغ الطاولة هنا يعني إلغاء الأوردر الحالي وحذف أصنافه وإرجاع مخزونها، وليس تسجيل دفعة. هل تريد المتابعة؟")) return;
     setSaving(true);setError("");setMessage("");
     try{
       const result=await supabase.rpc("pos_empty_table_order",{p_order_id:selectedTableOrder.id,p_reason:"تم إفراغ الطاولة من شاشة الصالة"});
       if(result.error) throw result.error;
       setMessage("تم إلغاء الأوردر وإفراغ الطاولة رقم "+selectedTableOrder.table_number+".");
-      setSelectedTableKey(""); await load();
+      setSelectedTableKey(""); setShowMergePanel(false); setShowDiscountPanel(false); await load();
     }catch(e){setError("تعذر إفراغ الطاولة: "+e.message);}
     finally{setSaving(false);}
   }
@@ -702,7 +724,23 @@ export default function PosPage() {
             <button className="pos-floor-refresh" type="button" style={s.secondary} onClick={load} disabled={loading}>↻ تحديث البيانات</button>
           </aside>
           <div className="pos-floor-order-preview-grid" dir="rtl">
-            <div className="pos-floor-preview-empty" aria-hidden="true"></div>
+            <section className="pos-floor-action-panel pos-floor-order-actions" aria-label="عمليات إدارة الأوردر">
+              <h3>إدارة الأوردر</h3>
+              <div className="pos-floor-action-grid">
+                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => { setShowTransfer(true); setShowMergePanel(false); setShowDiscountPanel(false); setTransferTarget(""); }}>
+                  <span className="pos-action-icon">🔀</span><b>نقل الطلب لطاولة أخرى</b>
+                </button>
+                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => selectedTableOrder && openTable(selectedTableOrder.table_number, selectedTableOrder.table_area, "transfer-items")}>
+                  <span className="pos-action-icon">📦</span><b>نقل صنف لطاولة أخرى</b>
+                </button>
+                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => selectedTableOrder && openTable(selectedTableOrder.table_number, selectedTableOrder.table_area, "remove-items")}>
+                  <span className="pos-action-icon">🗑️</span><b>مسح صنف من الطاولة</b>
+                </button>
+                <button type="button" disabled={!selectedTableOrder || mergeTargets.length === 0 || saving} onClick={() => { setShowMergePanel(v => !v); setShowTransfer(false); setShowDiscountPanel(false); setMergeTargetId(""); }}>
+                  <span className="pos-action-icon">🧩</span><b>دمج طاولة في طاولة</b>
+                </button>
+              </div>
+            </section>
             <section className="pos-floor-order-preview">
               {selectedTableKey ? (
                 <>
@@ -729,7 +767,26 @@ export default function PosPage() {
                 </>
               ) : <p>اضغط على أي طاولة لعرض الأوردر هنا.</p>}
             </section>
-            <div className="pos-floor-preview-empty" aria-hidden="true"></div>
+            <section className="pos-floor-action-panel pos-floor-payment-actions" aria-label="عمليات الحساب والدفع">
+              <h3>الحساب والدفع</h3>
+              <div className="pos-floor-action-grid">
+                <button type="button" className="is-primary" disabled={!selectedTableOrder || selectedDue <= 0 || saving} onClick={() => { setCashReceived(""); setShowCashModal(true); }}>
+                  <span className="pos-action-icon">💵</span><b>سداد نقدي</b>
+                </button>
+                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => { setShowDiscountPanel(v => !v); setShowTransfer(false); setShowMergePanel(false); setDiscountType("amount"); setDiscountValue(String(selectedTableOrder?.discount_amount || 0)); }}>
+                  <span className="pos-action-icon">🏷️</span><b>تطبيق خصم</b>
+                </button>
+                <button type="button" disabled={!selectedTableOrder || selectedDue <= 0 || saving} onClick={() => { if (window.confirm("تأكيد إنهاء الأوردر بسداد المبلغ المتبقي نقدًا (" + fmt(selectedDue) + " ج.م)؟ سيتم إغلاق الأوردر وإتاحة الطاولة تلقائيًا.")) recordCashPayment(selectedTableOrder.id, selectedDue); }}>
+                  <span className="pos-action-icon">✅</span><b>إنهاء الطلب</b>
+                </button>
+                <button type="button" className="is-danger" disabled={!selectedTableOrder || Number(paymentSummary[selectedTableOrder?.id] || 0) > 0 || saving} onClick={emptySelectedTable}>
+                  <span className="pos-action-icon">🧹</span><b>إفراغ الطاولة</b>
+                </button>
+                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => printReceipt(selectedTableOrder)}>
+                  <span className="pos-action-icon">🧾</span><b>طباعة الفاتورة</b>
+                </button>
+              </div>
+            </section>
           </div>
         </section>
         {showTransfer&&selectedTableOrder&&<div className="floorInlineModal" style={s.floorInlineModal}>
@@ -740,6 +797,24 @@ export default function PosPage() {
           </select>
           <button className="submit" style={s.submit} disabled={saving||!transferTarget} onClick={()=>transferTable(selectedTableOrder.id)}>تأكيد النقل</button>
           <button style={s.secondary} onClick={()=>setShowTransfer(false)}>إلغاء</button>
+        </div>}
+        {showMergePanel&&selectedTableOrder&&<div className="floorInlineModal pos-floor-inline-action" style={s.floorInlineModal}>
+          <b>دمج أوردر الطاولة {selectedTableOrder.table_number} داخل طاولة أخرى</b>
+          <select style={s.filterInput} value={mergeTargetId} onChange={e=>setMergeTargetId(e.target.value)}>
+            <option value="">اختار الطاولة المستقبِلة</option>
+            {mergeTargets.map(o=><option key={o.id} value={o.id}>{o.table_area==="indoor"?"داخلية":"خارجية"} — طاولة {o.table_number} — ARK-{o.id}</option>)}
+          </select>
+          <button className="submit" style={s.submit} disabled={saving||!mergeTargetId} onClick={mergeSelectedTable}>{saving?"جاري الدمج...":"تأكيد الدمج"}</button>
+          <button style={s.secondary} disabled={saving} onClick={()=>{setShowMergePanel(false);setMergeTargetId("");}}>إلغاء</button>
+        </div>}
+        {showDiscountPanel&&selectedTableOrder&&<div className="floorInlineModal pos-floor-inline-action" style={s.floorInlineModal}>
+          <b>تطبيق خصم على الأوردر ARK-{selectedTableOrder.id}</b>
+          <select style={s.filterInput} value={discountType} onChange={e=>setDiscountType(e.target.value)}>
+            <option value="amount">خصم مبلغ بالجنيه</option><option value="percent">خصم بالنسبة المئوية</option>
+          </select>
+          <input style={s.filterInput} type="number" min="0" max={discountType==="percent"?100:undefined} step="0.01" value={discountValue} onChange={e=>setDiscountValue(e.target.value)} aria-label="قيمة الخصم" />
+          <button className="submit" style={s.submit} disabled={saving||Number(discountValue)<0||!discountValue.trim()} onClick={applySelectedTableDiscount}>{saving?"جاري تطبيق الخصم...":"تأكيد الخصم"}</button>
+          <button style={s.secondary} disabled={saving} onClick={()=>setShowDiscountPanel(false)}>إلغاء</button>
         </div>}
         {showCashModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowCashModal(false)}>
           <div className="cashModal" style={s.cashModal} onClick={e=>e.stopPropagation()}>
