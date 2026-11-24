@@ -7,8 +7,8 @@ import "./pos-design.css";
 const tabs = [
   { id: "dine-in", label: "الصالة" },
   { id: "takeaway", label: "تيك أواي" },
-  { id: "delivery", label: "دليفري" },
   { id: "all", label: "الكل" },
+  { id: "delivery", label: "دليفري" },
 ];
 const fmt = (n) => Number(n || 0).toLocaleString("ar-EG", { maximumFractionDigits: 2 });
 
