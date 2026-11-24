@@ -75,19 +75,22 @@ export default function PosPage() {
       setAllowed(canUse);
       if (!canUse) return;
 
-      const [p, c, st, r, day] = await Promise.all([
+      const [p, c, st, r, day, sellable] = await Promise.all([
         supabase.from("products").select("id,name,price,image_url,category_id,is_available").eq("is_available", true).order("name"),
         supabase.from("categories").select("id,name,display_order").eq("is_active", true).order("display_order"),
         supabase.from("restaurant_settings").select("indoor_tables,outdoor_tables").eq("id", 1).single(),
         supabase.from("reservations").select("id,customer_name,phone,reservation_date,reservation_time,status,seating_area,table_number").in("status", ["pending","confirmed"]),
         supabase.from("business_days").select("id").eq("status", "open").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.rpc("get_pos_sellable_product_ids"),
       ]);
       if (p.error) throw p.error;
       if (c.error) throw c.error;
       if (st.error) throw st.error;
       if (r.error) throw r.error;
       if (day.error) throw day.error;
-      setProducts(p.data || []);
+      if (sellable.error) throw sellable.error;
+      const sellableProductIds = new Set((sellable.data || []).map((row) => Number(row.product_id)));
+      setProducts((p.data || []).filter((product) => sellableProductIds.has(Number(product.id)));
       setCategories(c.data || []);
       setSettings(st.data || { indoor_tables: 0, outdoor_tables: 0 });
       setCurrentBusinessDayId(day.data?.id ?? null);
