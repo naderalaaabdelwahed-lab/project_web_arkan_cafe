@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const cairoToday = new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Cairo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-const empty = { full_name:"", phone:"", job_title:"", department:"", hire_date:cairoToday, termination_date:"", monthly_salary:"", paid_leave_days:"4", daily_work_hours:"8", attendance_code:"", notes:"" };
+const empty = { full_name:"", phone:"", job_title:"", department:"", hire_date:cairoToday, termination_date:"", monthly_salary:"", daily_work_hours:"8", attendance_code:"", notes:"" };
 const inputStyle = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1px solid #54452e", background:"#15120e", color:"#f4e9d8", boxSizing:"border-box" };
 const labelStyle = { display:"grid", gap:6, color:"#dbe4ec", fontSize:14 };
 
@@ -96,7 +96,6 @@ export default function HrEmployeesPage() {
           <label style={labelStyle}>تاريخ التعيين<input type="date" required style={inputStyle} value={form.hire_date} onChange={e=>setForm({...form,hire_date:e.target.value})}/></label>
           <label style={labelStyle}>تاريخ انتهاء الخدمة (اختياري)<input type="date" style={inputStyle} value={form.termination_date||""} min={form.hire_date} onChange={e=>setForm({...form,termination_date:e.target.value})}/><small style={{color:"#ad9e88"}}>لو الموظف ساب الشغل في نص الشهر، سجل آخر يوم عمل هنا قبل إيقافه.</small></label>
           <label style={labelStyle}>الراتب الشهري<input type="number" min="0" step="0.01" style={inputStyle} value={form.monthly_salary} onChange={e=>setForm({...form,monthly_salary:e.target.value})}/></label>
-          <label style={labelStyle}>أيام الإجازة المدفوعة<input type="number" min="0" step="0.5" style={inputStyle} value={form.paid_leave_days} onChange={e=>setForm({...form,paid_leave_days:e.target.value})}/></label>
           <label style={labelStyle}>ساعات العمل المطلوبة يوميًا<input type="number" min="1" max="24" step="0.5" required style={inputStyle} value={form.daily_work_hours} onChange={e=>setForm({...form,daily_work_hours:e.target.value})}/><small style={{color:"#c9a45c"}}>سعر الساعة تلقائيًا: {Number(form.monthly_salary)>0&&Number(form.daily_work_hours)>0?(Number(form.monthly_salary)/(30*Number(form.daily_work_hours))).toFixed(2):"—"} ج.م</small></label>
           <label style={labelStyle}>كود الحضور والانصراف (6 أرقام)<input type="password" inputMode="numeric" autoComplete="new-password" maxLength={6} minLength={6} pattern="[0-9]{6}" required={!editing} style={inputStyle} value={form.attendance_code||""} onChange={e=>setForm({...form,attendance_code:e.target.value.replace(/\D/g,"").slice(0,6)})} placeholder={editing?"اتركه فارغًا للاحتفاظ بالكود الحالي":"مثال: 482951"}/><small style={{color:"#ad9e88"}}>{editing?"اكتب كودًا جديدًا فقط إذا أردت تغييره.":"أنشئ كودًا سريًا خاصًا بالموظف، وسيستخدمه لتسجيل الحضور والانصراف."}</small></label>
           <label style={{...labelStyle,gridColumn:"1/-1"}}>الصورة الشخصية (JPG / PNG / WebP)<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>setPhoto(e.target.files?.[0]||null)}/></label>
