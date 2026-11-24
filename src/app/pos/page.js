@@ -515,6 +515,7 @@ export default function PosPage() {
   return (
     <main dir="rtl" className="arkan-pos-page" style={s.page}>
       <style jsx global>{`
+
         .arkan-pos-page { width: 100%; min-height: 100vh; box-sizing: border-box; padding: clamp(20px, 2.2vw, 34px) !important; font-size: 16px; }
         .arkan-pos-page h1 { font-size: clamp(28px, 2.2vw, 36px) !important; }
         .arkan-pos-page h2 { font-size: clamp(22px, 1.8vw, 29px) !important; }
@@ -530,6 +531,55 @@ export default function PosPage() {
           .arkan-pos-page { padding: 12px !important; }
           .arkan-pos-page .tab { min-width: 0; flex: 1 1 auto; padding: 12px 14px !important; }
         }
+      
+
+        /* Floor layout styles */
+
+          .arkan-floor-dashboard { gap: 18px !important; grid-template-columns: 285px minmax(420px, 1.4fr) minmax(350px, 1fr) !important; }
+          .arkan-floor-dashboard > aside:first-child,
+          .arkan-floor-dashboard > aside:first-child .floorTools {
+            background: #fff !important;
+          }
+          .arkan-floor-dashboard > aside:first-child .floorTools {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            gap: 10px;
+          }
+          .arkan-floor-dashboard > aside:first-child .floorTools > :not(button) {
+            width: 100%;
+          }
+          .arkan-floor-dashboard > aside:first-child .floorTools > button {
+            width: calc(50% - 5px);
+            min-height: 140px;
+            aspect-ratio: 1 / 1;
+            box-sizing: border-box;
+            padding: 10px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            white-space: normal;
+            line-height: 1.5;
+          }
+          .arkan-floor-dashboard button { min-height: 40px; font-weight: 700; transition: transform .15s ease, box-shadow .15s ease; }
+          .arkan-floor-dashboard button:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,35,22,.10); }
+          .arkan-floor-dashboard button:focus-visible { outline: 3px solid #d28c2c; outline-offset: 2px; }
+          .arkan-floor-dashboard .floor-table-tile { min-height: 145px; padding: 16px 10px; border-radius: 14px; box-shadow: 0 2px 7px rgba(45,35,22,.05); }
+          .arkan-floor-dashboard .floor-table-tile small { font-size: 12px; line-height: 1.5; }
+          .arkan-floor-dashboard .floor-table-tile .table-amount { font-size: 12px; font-weight: 800; }
+          .arkan-floor-dashboard .floor-action-card { box-shadow: 0 3px 12px rgba(45,35,22,.05); }
+          @media (max-width: 1450px) {
+            .arkan-floor-dashboard { grid-template-columns: minmax(250px,.75fr) minmax(0,1.25fr) !important; }
+            .arkan-floor-dashboard > :last-child { grid-column: 1 / -1; position: static !important; }
+          }
+          @media (max-width: 900px) {
+            .arkan-floor-dashboard { grid-template-columns: minmax(0,1fr) !important; }
+            .arkan-floor-dashboard > * { grid-column: 1 / -1; position: static !important; }
+            .arkan-floor-dashboard .floor-table-grid { grid-template-columns: repeat(auto-fill,minmax(105px,1fr)); }
+            .arkan-floor-dashboard .floor-preview-wrap { overflow-x: auto; }
+            .arkan-floor-dashboard .floor-legend { gap: 10px 16px; }
+          }
+        
       `}</style>
 
       <header style={s.header}>
@@ -599,52 +649,7 @@ export default function PosPage() {
         </section>
       ) : mode === "dine-in" && screen === "tables" ? (
         <>
-        <style jsx>{`
-          .arkan-floor-dashboard { gap: 18px !important; grid-template-columns: 285px minmax(420px, 1.4fr) minmax(350px, 1fr) !important; }
-          .arkan-floor-dashboard > aside:first-child,
-          .arkan-floor-dashboard > aside:first-child .floorTools {
-            background: #fff !important;
-          }
-          .arkan-floor-dashboard > aside:first-child .floorTools {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: stretch;
-            gap: 10px;
-          }
-          .arkan-floor-dashboard > aside:first-child .floorTools > :not(button) {
-            width: 100%;
-          }
-          .arkan-floor-dashboard > aside:first-child .floorTools > button {
-            width: calc(50% - 5px);
-            min-height: 140px;
-            aspect-ratio: 1 / 1;
-            box-sizing: border-box;
-            padding: 10px;
-            display: grid;
-            place-items: center;
-            text-align: center;
-            white-space: normal;
-            line-height: 1.5;
-          }
-          .arkan-floor-dashboard button { min-height: 40px; font-weight: 700; transition: transform .15s ease, box-shadow .15s ease; }
-          .arkan-floor-dashboard button:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(45,35,22,.10); }
-          .arkan-floor-dashboard button:focus-visible { outline: 3px solid #d28c2c; outline-offset: 2px; }
-          .arkan-floor-dashboard .floor-table-tile { min-height: 145px; padding: 16px 10px; border-radius: 14px; box-shadow: 0 2px 7px rgba(45,35,22,.05); }
-          .arkan-floor-dashboard .floor-table-tile small { font-size: 12px; line-height: 1.5; }
-          .arkan-floor-dashboard .floor-table-tile .table-amount { font-size: 12px; font-weight: 800; }
-          .arkan-floor-dashboard .floor-action-card { box-shadow: 0 3px 12px rgba(45,35,22,.05); }
-          @media (max-width: 1450px) {
-            .arkan-floor-dashboard { grid-template-columns: minmax(250px,.75fr) minmax(0,1.25fr) !important; }
-            .arkan-floor-dashboard > :last-child { grid-column: 1 / -1; position: static !important; }
-          }
-          @media (max-width: 900px) {
-            .arkan-floor-dashboard { grid-template-columns: minmax(0,1fr) !important; }
-            .arkan-floor-dashboard > * { grid-column: 1 / -1; position: static !important; }
-            .arkan-floor-dashboard .floor-table-grid { grid-template-columns: repeat(auto-fill,minmax(105px,1fr)); }
-            .arkan-floor-dashboard .floor-preview-wrap { overflow-x: auto; }
-            .arkan-floor-dashboard .floor-legend { gap: 10px 16px; }
-          }
-        `}</style>
+        
         <section className="arkan-floor-dashboard" style={s.floorDashboard}>
           <aside style={s.floorSidebar}>
             <div className="floor-action-card" style={s.floorTools}>
