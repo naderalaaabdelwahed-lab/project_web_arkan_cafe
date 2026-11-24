@@ -41,6 +41,7 @@ export default function AdminMenuPage() {
   const [categoryName, setCategoryName] = useState("");
   const [categoryDepartment, setCategoryDepartment] = useState("kitchen");
   const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
 
   const [imageUrl, setImageUrl] = useState("");
   const [originalImageUrl, setOriginalImageUrl] = useState("");
@@ -136,7 +137,7 @@ export default function AdminMenuPage() {
 
     const [categoriesResult, productsResult] = await Promise.all([
       supabase.from("categories").select("*").order("department").order("display_order").order("id"),
-      supabase.from("products").select("*, categories(name)").order("id"),
+      supabase.from("products").select("*, categories(name,department)").order("id"),
     ]);
 
     if (categoriesResult.error || productsResult.error) {
@@ -241,6 +242,7 @@ export default function AdminMenuPage() {
     setCategoryName("");
     setCategoryDepartment("kitchen");
     setEditingCategoryId(null);
+    setShowCategoryForm(false);
   }
 
   async function saveCategory(e) {
@@ -270,6 +272,7 @@ export default function AdminMenuPage() {
   function editCategory(item) {
     if (!can("menu.update")) return;
     setEditingCategoryId(item.id);
+    setShowCategoryForm(true);
     setCategoryName(item.name || "");
     setCategoryDepartment(item.department || "kitchen");
     setError("");
@@ -523,6 +526,7 @@ export default function AdminMenuPage() {
                 <button type="button" className="menu-category-add" onClick={() => {
                   resetCategoryForm();
                   setCategoryDepartment(department.id);
+                  setShowCategoryForm(true);
                 }}>
                   ＋ إضافة قسم
                 </button>
@@ -531,7 +535,7 @@ export default function AdminMenuPage() {
           ))}
         </div>
 
-        {(can("menu.create") || can("menu.update")) && (categoryName || editingCategoryId || categoryDepartment) && (
+        {(can("menu.create") || can("menu.update")) && showCategoryForm && (
           <form className="menu-category-form" onSubmit={saveCategory}>
             <strong>{editingCategoryId ? "تعديل القسم" : "إضافة قسم جديد"}</strong>
             <input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="اسم القسم الجديد" required />
