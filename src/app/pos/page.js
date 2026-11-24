@@ -797,9 +797,8 @@ export default function PosPage() {
         <div role="dialog" aria-modal="true" aria-labelledby="pos-close-day-title" style={s.itemNoteModal} onClick={e=>e.stopPropagation()}>
           <h2 id="pos-close-day-title" style={{margin:0,textAlign:"center"}}>تأكيد إنهاء اليومية</h2>
           <p style={{margin:0,textAlign:"center",color:"#75664f"}}>اليومية رقم #{currentBusinessDayId} — {currentBusinessDay?.business_date}</p>
-          <div style={{padding:14,borderRadius:10,background:"#faf8f4",display:"grid",gap:7}}>
-            <div style={{display:"flex",justifyContent:"space-between",gap:12}}><span>إجمالي المبيعات الحالية</span><b>{fmt(salesSummary.totalSales)} ج.م</b></div>
-            <small style={{color:"#75664f",lineHeight:1.7}}>سيتم حفظ تقرير اليومية الحالية، إغلاقها، وفتح يومية جديدة. لا يمكن التراجع عن الإقفال.</small>
+          <div style={{padding:14,borderRadius:10,background:"#faf8f4"}}>
+            <p style={{margin:0,textAlign:"center",color:"#75664f",lineHeight:1.8}}>سيتم حفظ تقرير اليومية الحالية، إغلاقها، وفتح يومية جديدة. لا يمكن التراجع عن الإقفال.</p>
           </div>
           <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
             <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150,background:"#a52d2d"}} disabled={saving} onClick={closeBusinessDayFromPos}>{saving?"جاري إنهاء اليومية...":"OK — تأكيد الإنهاء"}</button>
