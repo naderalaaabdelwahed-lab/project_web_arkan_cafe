@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import "./pos-design.css";
 
 const tabs = [
   { id: "dine-in", label: "الصالة" },
@@ -661,7 +662,7 @@ export default function PosPage() {
         
         <section className="arkan-floor-dashboard" style={s.floorDashboard}>
           <aside style={s.floorSidebar}>
-            <div className="floor-action-card" style={s.floorTools}>
+            <div className="floorTools floor-action-card" style={s.floorTools}>
               <h3 style={{margin:"0 0 4px"}}>عمليات الطاولة</h3>
               {selectedTableOrder ? <>
                 <b>{selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية"} — طاولة {selectedTableOrder.table_number}</b>
