@@ -27,6 +27,19 @@ const allowedPermissions = [
   "inventory.purchases.manage",
   "inventory.movements.manage",
   "inventory.reports.view",
+  "hr.employees.view",
+  "hr.employees.create",
+  "hr.employees.update",
+  "hr.employees.archive",
+  "hr.employees.accounts.manage",
+  "hr.attendance.view",
+  "hr.attendance.manage",
+  "hr.shifts.view",
+  "hr.shifts.manage",
+  "hr.payroll.view",
+  "hr.payroll.adjust",
+  "hr.payroll.create",
+  "hr.payroll.finalize",
 ];
 
 function getAdminClient() {
