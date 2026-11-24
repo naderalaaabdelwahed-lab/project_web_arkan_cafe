@@ -401,3 +401,19 @@
   .menu-category-management { padding: 15px; }
   .menu-category-chip { flex-wrap: wrap; }
 }
+
+/* ARKAN unified palette override — preserve existing layout and dimensions */
+.admin-menu { background:#F6F4F0; color:#29251F; }
+.admin-menu-header h1,.menu-product-info h3,.menu-modal h2,.menu-category-management h3,.menu-category-form strong { color:#29251F; }
+.admin-menu-header p,.menu-product-info p,.menu-category-chip > small,.menu-loading,.menu-empty { color:#746958; }
+.menu-stat-card,.menu-product-card,.menu-category-management,.menu-department-card,.menu-modal,.menu-loading,.menu-empty { background:#FFFFFF; border-color:#E8E0D4; }
+.menu-stat-card span { color:#746958; }
+.menu-stat-card strong,.menu-product-info h3 { color:#B58B4D; }
+.menu-toolbar input,.menu-toolbar select,.menu-form input,.menu-form textarea,.menu-form select,.menu-category-chip,.menu-category-form input,.menu-category-form select { background:#FFFFFF; color:#29251F; border-color:#E8E0D4; }
+.menu-add-btn,.menu-save-btn,.menu-category-add,.menu-category-form button { background:#B58B4D; color:#FFFFFF; }
+.menu-cancel-btn,.menu-edit-btn,.menu-toggle-btn,.menu-category-chip button,.menu-category-form button[type="button"] { background:#F5EFE4; color:#29251F; }
+.menu-product-status.available { background:#EAF4EC; color:#39734C; }
+.menu-product-status.unavailable { background:#FBEDEC; color:#A33C32; }
+.menu-modal-overlay { background:rgba(41,37,31,.45); }
+.menu-modal { border-color:#E8E0D4; }
+.menu-form label,.menu-category-chip > span { color:#29251F; }
