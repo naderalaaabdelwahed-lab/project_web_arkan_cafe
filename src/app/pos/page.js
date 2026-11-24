@@ -535,7 +535,7 @@ export default function PosPage() {
 
         /* Floor layout styles */
 
-          .arkan-floor-dashboard { gap: 18px !important; grid-template-columns: 285px minmax(420px, 1.4fr) minmax(350px, 1fr) !important; }
+          .arkan-floor-dashboard { gap: 18px !important; grid-template-columns: 320px minmax(420px, 1.4fr) minmax(350px, 1fr) !important; }
           .arkan-floor-dashboard > aside:first-child,
           .arkan-floor-dashboard > aside:first-child .floorTools {
             background: #fff !important;
@@ -551,7 +551,9 @@ export default function PosPage() {
           }
           .arkan-floor-dashboard > aside:first-child .floorTools > button {
             width: calc(50% - 5px);
-            min-height: 140px;
+            min-height: 0;
+            min-width: 0;
+            height: auto;
             aspect-ratio: 1 / 1;
             box-sizing: border-box;
             padding: 10px;
@@ -568,7 +570,7 @@ export default function PosPage() {
           .arkan-floor-dashboard .floor-table-tile small { font-size: 12px; line-height: 1.5; }
           .arkan-floor-dashboard .floor-table-tile .table-amount { font-size: 12px; font-weight: 800; }
           .arkan-floor-dashboard .floor-action-card { box-shadow: 0 3px 12px rgba(45,35,22,.05); }
-          @media (max-width: 1450px) {
+          @media (max-width: 1180px) {
             .arkan-floor-dashboard { grid-template-columns: minmax(250px,.75fr) minmax(0,1.25fr) !important; }
             .arkan-floor-dashboard > :last-child { grid-column: 1 / -1; position: static !important; }
           }
