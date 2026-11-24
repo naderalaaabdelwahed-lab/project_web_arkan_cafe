@@ -609,3 +609,14 @@
 .arkan-pos-page .floor-table-tile .table-amount {
   color: #000 !important;
 }
+
+
+/* Right sidebar table-total card: black text on its white background */
+.arkan-pos-page .pos-floor-summary-sidebar .pos-floor-total-card {
+  background: #fff !important;
+  color: #000 !important;
+}
+.arkan-pos-page .pos-floor-summary-sidebar .pos-floor-total-card small,
+.arkan-pos-page .pos-floor-summary-sidebar .pos-floor-total-card strong {
+  color: #000 !important;
+}
