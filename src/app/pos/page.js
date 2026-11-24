@@ -600,8 +600,8 @@ export default function PosPage() {
               <button style={s.clear} disabled={!selectedTableOrder||saving} onClick={emptySelectedTable}>إفراغ الطاولة</button>
             </div>
           </aside>
-          <div style={s.floorDetails}><b>تفاصيل الطاولة المحددة</b>
-            {selectedTableOrder?<div style={s.floorDetailRow}>
+          <div className="floorDetails" style={s.floorDetails}><b>تفاصيل الطاولة المحددة</b>
+            {selectedTableOrder?<div className="floorDetailRow" style={s.floorDetailRow}>
               <span>طاولة {selectedTableOrder.table_number} ({selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية"})</span>
               <span>ARK-{selectedTableOrder.id}</span><span>الأصناف: {(selectedTableOrder.order_items||[]).length}</span>
               <span>الإجمالي: {fmt(selectedTableOrder.total_amount)} ج.م</span><span>المدفوع: {fmt(paymentSummary[selectedTableOrder.id]||0)} ج.م</span>
@@ -609,7 +609,7 @@ export default function PosPage() {
             </div>:<small style={s.muted}>لم يتم تحديد طاولة مشغولة بعد.</small>}
           </div>
         </section>
-        {showTransfer&&selectedTableOrder&&<div style={s.floorInlineModal}>
+        {showTransfer&&selectedTableOrder&&<div className="floorInlineModal" style={s.floorInlineModal}>
           <b>نقل الطاولة بالكامل — ARK-{selectedTableOrder.id}</b>
           <select style={s.filterInput} value={transferTarget} onChange={e=>setTransferTarget(e.target.value)}>
             <option value="">اختار طاولة فارغة</option>
@@ -619,7 +619,7 @@ export default function PosPage() {
           <button style={s.secondary} onClick={()=>setShowTransfer(false)}>إلغاء</button>
         </div>}
         {showCashModal&&selectedTableOrder&&<div style={s.modalBackdrop} onClick={()=>!saving&&setShowCashModal(false)}>
-          <div style={s.cashModal} onClick={e=>e.stopPropagation()}>
+          <div className="cashModal" style={s.cashModal} onClick={e=>e.stopPropagation()}>
             <h2>سداد الأوردر وإغلاق الطاولة</h2><small>ARK-{selectedTableOrder.id} — طاولة {selectedTableOrder.table_number}</small>
             <div style={s.modalAmount}>المتبقي: {fmt(selectedDue)} ج.م</div>
             <label style={s.floorLabel}>المبلغ المستلم من العميل</label>
