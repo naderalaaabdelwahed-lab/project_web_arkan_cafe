@@ -98,3 +98,17 @@
 .hr-main > main[dir="rtl"] thead,.hr-main > main[dir="rtl"] th { background:#F5EFE4!important; color:#746958!important; border-color:#E8E0D4!important; }
 .hr-main > main[dir="rtl"] td,.hr-main > main[dir="rtl"] tbody tr,.hr-main > main[dir="rtl"] tbody tr:nth-child(even) { background:#FFFFFF!important; color:#29251F!important; border-color:#E8E0D4!important; }
 .hr-main > main[dir="rtl"] tbody tr:hover { background:#F6F4F0!important; }
+
+
+/* High-contrast HR typography, including legacy report styles */
+html body .hr-shell *,
+html body .hr-main > main[dir="rtl"] *,
+html body .hr-attendance-page * {
+  color: #29251F !important;
+}
+html body .hr-shell input::placeholder,
+html body .hr-shell textarea::placeholder,
+html body .hr-main > main[dir="rtl"] input::placeholder {
+  color: #746958 !important;
+  opacity: 1;
+}
