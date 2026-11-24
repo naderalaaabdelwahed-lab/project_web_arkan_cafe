@@ -38,6 +38,11 @@ const links = [
     permission: "bar.view",
   },
   {
+    href: "/admin/preparation-screens",
+    label: "🖥️ إدارة شاشات التجهيز",
+    permission: "menu.update",
+  },
+  {
     href: "/admin/preparation-settings",
     label: "⚙️ توزيع أقسام التجهيز",
     permission: "menu.update",
