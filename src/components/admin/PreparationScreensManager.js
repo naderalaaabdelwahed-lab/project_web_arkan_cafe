@@ -26,7 +26,8 @@ export default function PreparationScreensManager() {
     if (categoryError) throw categoryError;
     setScreens((screenRows || []).map((screen) => ({
       ...screen,
-      category_ids: (screen.preparation_screen_categories || []).map((row) => row.category_id),\n      category_names: (screen.preparation_screen_categories || []).map((row) => categoryRows.find((category) => category.id === row.category_id)?.name || "قسم غير متاح"),
+      category_ids: (screen.preparation_screen_categories || []).map((row) => row.category_id),
+      category_names: (screen.preparation_screen_categories || []).map((row) => categoryRows.find((category) => category.id === row.category_id)?.name || "قسم غير متاح"),
     })));
     setCategories(categoryRows || []);
   }, []);
