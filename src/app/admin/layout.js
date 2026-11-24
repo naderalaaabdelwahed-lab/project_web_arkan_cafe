@@ -13,11 +13,6 @@ const links = [
     permission: "dashboard.view",
   },
   {
-    href: "/admin/pos",
-    label: "🧾 شاشة الكاشير POS",
-    permission: "pos.use",
-  },
-  {
     href: "/admin/orders",
     label: "▤ الطلبات",
     permission: "orders.view",
