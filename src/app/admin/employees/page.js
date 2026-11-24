@@ -73,7 +73,6 @@ const permissionGroups = [
       ["pos.table.transfer", "نقل الأوردر لطاولة أخرى"],
       ["pos.items.transfer", "نقل صنف لطاولة أخرى"],
       ["pos.table.merge", "دمج الطاولات"],
-      ["pos.payment.receive", "تسجيل سداد نقدي"],
       ["pos.order.finish", "إنهاء الأوردر وإخلاء الطاولة"],
       ["pos.receipt.print", "طباعة الفاتورة"],
     ],
