@@ -143,7 +143,7 @@ export default function PosPage() {
         supabase.rpc("get_pos_sellable_product_ids"),
         supabase.from("business_days").select("*").order("opened_at", { ascending: false }),
         supabase.from("products").select("id,category_id"),
-        supabase.from("categories").select("id,name"),
+        supabase.from("categories").select("id,name,department"),
       ]);
       if (p.error) throw p.error;
       if (c.error) throw c.error;
