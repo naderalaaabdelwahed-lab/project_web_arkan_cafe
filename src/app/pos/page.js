@@ -783,9 +783,9 @@ export default function PosPage() {
               </table>
             </div>
             <div style={s.fields}>
-              {mode !== "dine-in" && !editingOrderId && <>
-                <input style={s.field} placeholder="اسم العميل" value={customer} onChange={e => setCustomer(e.target.value)} />
-                <input style={s.field} placeholder="رقم موبايل العميل" type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+              {mode !== "dine-in" && <>
+                <input style={s.field} placeholder="اسم العميل" value={customer} disabled={Boolean(editingOrderId)} onChange={e => setCustomer(e.target.value)} />
+                <input style={s.field} placeholder="رقم موبايل العميل" type="tel" value={phone} disabled={Boolean(editingOrderId)} onChange={e => setPhone(e.target.value)} />
               </>}
               {editingOrderId ? <div className="totals" style={s.totals}>
                 <div><span>إجمالي الأوردر الحالي</span><b>{fmt(editingOrderTotal)} ج.م</b></div>
