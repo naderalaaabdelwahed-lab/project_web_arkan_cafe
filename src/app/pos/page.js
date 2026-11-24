@@ -537,6 +537,7 @@ export default function PosPage() {
   }
 
   function startItemTransfer() {
+    if (!posPermissions.itemsTransfer) return setError("ليس لديك صلاحية نقل الأصناف.");
     const eligible = cart.filter((item) => item.existing && item.preparationStatus === "pending");
     setTransferQuantities(Object.fromEntries(eligible.map((item) => [String(item.orderItemId), "0"])));
     setTransferTarget("");
@@ -735,7 +736,8 @@ export default function PosPage() {
       salesRangeTouched.current = false;
       setSalesFrom(todayISO()); setSalesTo(todayISO());
       setMessage("تم إغلاق اليومية وحفظ التقرير بنجاح، وبدأت يومية جديدة.");
-      setTab("sales"); setScreen("sales");
+      if (posPermissions.salesView) { setTab("sales"); setScreen("sales"); }
+      else { setTab("dine-in"); setScreen("tables"); }
     } catch (e) {
       setError("فشل إنهاء اليومية: " + e.message);
     } finally {
@@ -1020,7 +1022,7 @@ export default function PosPage() {
             <section className="pos-floor-action-panel pos-floor-order-actions" aria-label="عمليات إدارة الأوردر">
               <h3>إدارة الأوردر</h3>
               <div className="pos-floor-action-grid">
-                <button type="button" disabled={!selectedTableOrder || saving} onClick={() => { setShowTransfer(true); setShowMergePanel(false); setShowDiscountPanel(false); setTransferTarget(""); }}>
+                <button type="button" disabled={!selectedTableOrder || !posPermissions.tableTransfer || saving} onClick={() => { setShowTransfer(true); setShowMergePanel(false); setShowDiscountPanel(false); setTransferTarget(""); }}>
                   <span className="pos-action-icon">🔀</span><b>نقل الطلب لطاولة أخرى</b>
                 </button>
                 <button type="button" disabled={!selectedTableOrder || !posPermissions.itemsTransfer || saving} onClick={() => selectedTableOrder && openTable(selectedTableOrder.table_number, selectedTableOrder.table_area, "transfer-items")}>
@@ -1212,9 +1214,9 @@ export default function PosPage() {
             {mode === "dine-in" && <div style={s.dineActions}>
               <h3 style={{margin:"0 0 4px"}}>عمليات الطلب</h3>
               {editingOrderId ? <>
-                <button type="button" style={s.secondary} onClick={() => printReceipt()}>طباعة الفاتورة</button>
-                <button type="button" style={s.secondary} onClick={() => { setShowTransfer(v => !v); setShowItemTransfer(false); setTransferTarget(""); }}>نقل الطاولة بالكامل</button>
-                <button type="button" style={s.secondary} onClick={startItemTransfer}>نقل أصناف لطاولة أخرى</button>
+                <button type="button" style={s.secondary} disabled={!posPermissions.receiptPrint} onClick={() => printReceipt()}>طباعة الفاتورة</button>
+                <button type="button" style={s.secondary} disabled={!posPermissions.tableTransfer} onClick={() => { setShowTransfer(v => !v); setShowItemTransfer(false); setTransferTarget(""); }}>نقل الطاولة بالكامل</button>
+                <button type="button" style={s.secondary} disabled={!posPermissions.itemsTransfer} onClick={startItemTransfer}>نقل أصناف لطاولة أخرى</button>
                 <button type="button" style={s.secondary} onClick={() => setScreen("tables")}>الرجوع للطاولات</button>
                 <button type="button" style={s.clear} onClick={() => { reset(); setScreen("tables"); }}>إلغاء فتح الأوردر</button>
               </> : <button type="button" style={s.secondary} onClick={() => setScreen("tables")}>الرجوع للطاولات</button>}
