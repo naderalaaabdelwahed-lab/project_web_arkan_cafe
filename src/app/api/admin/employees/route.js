@@ -29,7 +29,6 @@ const allowedPermissions = [
   "pos.table.transfer",
   "pos.items.transfer",
   "pos.table.merge",
-  "pos.payment.receive",
   "pos.order.finish",
   "pos.receipt.print",
   "inventory.view",
