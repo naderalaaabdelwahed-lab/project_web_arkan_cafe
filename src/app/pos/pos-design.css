@@ -394,3 +394,11 @@
   .arkan-pos-page .pos-open-tables-sidebar { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .arkan-pos-page .pos-sidebar-refresh { grid-column: 1 / -1; }
 }
+
+
+/* Remove the empty space above the POS category bar */
+.arkan-pos-page { padding-top: 0 !important; }
+.arkan-pos-page > .tabs {
+  margin-top: 0 !important;
+  padding-top: 4px !important;
+}
