@@ -830,3 +830,48 @@
     overflow-x: hidden;
   }
 }
+
+
+/* Use the remaining viewport height for larger action tiles and readable ticket details */
+@media (min-width: 921px) {
+  .arkan-pos-page .arkan-floor-dashboard {
+    grid-template-rows: minmax(0, auto) minmax(270px, 1fr) !important;
+    align-content: stretch !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview-grid {
+    height: 100% !important;
+    min-height: 270px !important;
+    max-height: none !important;
+    align-self: stretch !important;
+  }
+  .arkan-pos-page .pos-floor-action-panel {
+    padding: 11px !important;
+    gap: 8px !important;
+  }
+  .arkan-pos-page .pos-floor-action-panel h3 {
+    font-size: 17px !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid button {
+    padding: 8px 6px !important;
+    gap: 7px !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid .pos-action-icon {
+    font-size: 30px !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid b {
+    font-size: 15px !important;
+    line-height: 1.35 !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview h3 {
+    font-size: 19px !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview th,
+  .arkan-pos-page .pos-floor-order-preview td {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+    padding: 8px 7px !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview tfoot th {
+    font-size: 17px !important;
+  }
+}
