@@ -1061,16 +1061,9 @@
   --pos-gold-light:#F5EFE4;
 }
 .arkan-pos-page { background:var(--pos-bg)!important; color:var(--pos-ink)!important; }
-
-/* Readable POS text while preserving semantic button and status colors */
-.arkan-pos-page { color: #29251F; }
-.arkan-pos-page :is(h1,h2,h3,h4,h5,h6,p,label,th,td,small,strong,span) {
-  color: inherit;
-}
+/* Keep form text readable without overriding button, badge or status colors */
 .arkan-pos-page input,
 .arkan-pos-page select,
 .arkan-pos-page textarea { color: #29251F; background-color: #FFFFFF; }
 .arkan-pos-page input::placeholder,
 .arkan-pos-page textarea::placeholder { color: #62594F; opacity: 1; }
-.arkan-pos-page .tabs .tab.active,
-.arkan-pos-page .tabs .tab[aria-current="page"] { color: #FFFFFF !important; }
