@@ -9,8 +9,11 @@ const tabs = [
   { id: "takeaway", label: "تيك أواي" },
   { id: "all", label: "الكل" },
   { id: "delivery", label: "دليفري" },
+  { id: "sales", label: "المبيعات" },
 ];
 const fmt = (n) => Number(n || 0).toLocaleString("ar-EG", { maximumFractionDigits: 2 });
+const toISODate = (date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+const todayISO = () => toISODate(new Date());
 
 export default function PosPage() {
   const [allowed, setAllowed] = useState(false);
@@ -27,7 +30,13 @@ export default function PosPage() {
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [businessDays, setBusinessDays] = useState([]);
+  const [productCategoryNames, setProductCategoryNames] = useState({});
   const [currentBusinessDayId, setCurrentBusinessDayId] = useState(null);
+  const [canCloseDay, setCanCloseDay] = useState(false);
+  const [salesFrom, setSalesFrom] = useState(() => todayISO());
+  const [salesTo, setSalesTo] = useState(() => todayISO());
+  const [showCloseDayModal, setShowCloseDayModal] = useState(false);
   const [orderSearch, setOrderSearch] = useState("");
   const [orderTypeFilter, setOrderTypeFilter] = useState("all");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -74,23 +83,29 @@ export default function PosPage() {
   const load = useCallback(async () => {
     setError("");
     try {
-      const [adminResult, permissionResult] = await Promise.all([
+      const [adminResult, permissionResult, closePermissionResult] = await Promise.all([
         supabase.rpc("is_admin"),
         supabase.rpc("has_permission", { requested_permission: "pos.use" }),
+        supabase.rpc("has_permission", { requested_permission: "daily_closing.close" }),
       ]);
       if (adminResult.error) throw adminResult.error;
       if (permissionResult.error) throw permissionResult.error;
+      if (closePermissionResult.error) throw closePermissionResult.error;
       const canUse = Boolean(adminResult.data || permissionResult.data);
+      setCanCloseDay(Boolean(adminResult.data || closePermissionResult.data));
       setAllowed(canUse);
       if (!canUse) return;
 
-      const [p, c, st, r, day, sellable] = await Promise.all([
+      const [p, c, st, r, day, sellable, days, reportProducts, reportCategories] = await Promise.all([
         supabase.from("products").select("id,name,price,image_url,category_id,is_available").eq("is_available", true).order("name"),
         supabase.from("categories").select("id,name,display_order").eq("is_active", true).order("display_order"),
         supabase.from("restaurant_settings").select("indoor_tables,outdoor_tables").eq("id", 1).single(),
         supabase.from("reservations").select("id,customer_name,phone,reservation_date,reservation_time,status,seating_area,table_number").in("status", ["pending","confirmed"]),
-        supabase.from("business_days").select("id").eq("status", "open").order("opened_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("business_days").select("*").order("opened_at", { ascending: false }),
         supabase.rpc("get_pos_sellable_product_ids"),
+        supabase.from("business_days").select("*").order("opened_at", { ascending: false }),
+        supabase.from("products").select("id,category_id"),
+        supabase.from("categories").select("id,name"),
       ]);
       if (p.error) throw p.error;
       if (c.error) throw c.error;
@@ -98,12 +113,18 @@ export default function PosPage() {
       if (r.error) throw r.error;
       if (day.error) throw day.error;
       if (sellable.error) throw sellable.error;
+      if (days.error) throw days.error;
+      if (reportProducts.error) throw reportProducts.error;
+      if (reportCategories.error) throw reportCategories.error;
       const sellableProductIds = new Set((sellable.data || []).map((row) => Number(row.product_id)));
       setProducts((p.data || []).filter((product) => sellableProductIds.has(Number(product.id))));
       setCategories(c.data || []);
       setSettings(st.data || { indoor_tables: 0, outdoor_tables: 0 });
       setCurrentBusinessDayId(day.data?.id ?? null);
-      const today = new Date().toLocaleDateString("en-CA");
+      setBusinessDays(days.data || []);
+      const categoryNameById = Object.fromEntries((reportCategories.data || []).map((item) => [item.id, item.name]));
+      setProductCategoryNames(Object.fromEntries((reportProducts.data || []).map((item) => [item.id, categoryNameById[item.category_id] || "غير محدد"])));
+      const today = todayISO();
       setReservations((r.data || []).filter((x) => x.reservation_date === today));
       const allOrders = [];
       for (let from = 0; ; from += 1000) {
@@ -171,6 +192,42 @@ export default function PosPage() {
   const selectedDiscountInput = Math.max(0, Number(discountValue) || 0);
   const selectedDiscountPreview = Math.min(selectedDiscountBase, discountType === "percent" ? selectedDiscountBase * Math.min(100, selectedDiscountInput) / 100 : selectedDiscountInput);
   const selectedTotalAfterDiscount = Math.max(0, selectedDiscountBase - selectedDiscountPreview);
+  const currentBusinessDay = businessDays.find((day) => String(day.id) === String(currentBusinessDayId)) || null;
+  const salesSummary = useMemo(() => {
+    const selectedDays = businessDays.filter((day) => day.business_date >= salesFrom && day.business_date <= salesTo);
+    return selectedDays.reduce((summary, day) => {
+      if (day.status === "closed") {
+        summary.totalSales += Number(day.total_sales || 0);
+        summary.deliverySales += Number(day.delivery_sales || 0);
+        summary.takeawaySales += Number(day.takeaway_sales || 0);
+        summary.dineInSales += Number(day.dine_in_sales || 0);
+        summary.barSales += Number(day.bar_sales || 0);
+        summary.kitchenSales += Number(day.kitchen_sales || 0);
+        summary.deliveryFees += Number(day.delivery_fees || 0);
+        summary.totalOrders += Number(day.total_orders || 0);
+        summary.cancelledOrders += Number(day.cancelled_orders || 0);
+        return summary;
+      }
+      const dayOrders = orders.filter((order) => String(order.business_day_id) === String(day.id));
+      const active = dayOrders.filter((order) => !["cancelled","canceled"].includes(String(order.status || "").toLowerCase()));
+      summary.totalOrders += dayOrders.length;
+      summary.cancelledOrders += dayOrders.length - active.length;
+      active.forEach((order) => {
+        const amount = Number(order.total_amount || 0);
+        if (order.order_type === "delivery") summary.deliverySales += amount;
+        else if (order.order_type === "takeaway") summary.takeawaySales += amount;
+        else if (["dine-in","dine_in","dinein"].includes(String(order.order_type || "").toLowerCase())) summary.dineInSales += amount;
+        summary.totalSales += amount;
+        summary.deliveryFees += Number(order.delivery_fee || 0);
+        (order.order_items || []).forEach((item) => {
+          const itemAmount = Number(item.subtotal ?? (Number(item.quantity || 0) * Number(item.unit_price || 0)));
+          if (productCategoryNames[item.product_id] === "مشروبات") summary.barSales += itemAmount;
+          else summary.kitchenSales += itemAmount;
+        });
+      });
+      return summary;
+    }, { totalSales:0,deliverySales:0,takeawaySales:0,dineInSales:0,barSales:0,kitchenSales:0,deliveryFees:0,totalOrders:0,cancelledOrders:0 });
+  }, [businessDays,orders,productCategoryNames,salesFrom,salesTo]);
   const cashReceivedNumber = cashReceived.trim() === "" ? NaN : Number(cashReceived);
   const cashShortfall = Number.isFinite(cashReceivedNumber) ? Math.max(0, selectedDue - cashReceivedNumber) : 0;
   const editingOrderDue = editingOrderId ? Math.max(0, Number(editingOrderTotal || 0) - Number(paymentSummary[editingOrderId] || 0)) : 0;
@@ -589,6 +646,44 @@ export default function PosPage() {
     }
   }
 
+  function setSalesPreset(preset) {
+    const now = new Date();
+    if (preset === "today") {
+      const value = toISODate(now); setSalesFrom(value); setSalesTo(value); return;
+    }
+    if (preset === "yesterday") {
+      now.setDate(now.getDate() - 1);
+      const value = toISODate(now); setSalesFrom(value); setSalesTo(value); return;
+    }
+    if (preset === "this-month") {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      setSalesFrom(toISODate(first)); setSalesTo(toISODate(now)); return;
+    }
+    if (preset === "last-month") {
+      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const last = new Date(now.getFullYear(), now.getMonth(), 0);
+      setSalesFrom(toISODate(first)); setSalesTo(toISODate(last));
+    }
+  }
+
+  async function closeBusinessDayFromPos() {
+    if (!canCloseDay) { setError("ليس لديك صلاحية إنهاء اليومية."); return; }
+    if (!currentBusinessDayId || saving) return;
+    setSaving(true); setError(""); setMessage("");
+    try {
+      const { error: closeError } = await supabase.rpc("close_business_day");
+      if (closeError) throw closeError;
+      setShowCloseDayModal(false);
+      await load();
+      setMessage("تم إغلاق اليومية وحفظ التقرير بنجاح، وبدأت يومية جديدة.");
+      setTab("sales"); setScreen("sales");
+    } catch (e) {
+      setError("فشل إنهاء اليومية: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading) return <main dir="rtl" className="arkan-pos-page" style={s.page}>جاري تحميل ARKAN POS...</main>;
   if (!allowed) return <main dir="rtl" className="arkan-pos-page" style={s.page}><h2>شاشة الكاشير</h2><p>ليس لديك صلاحية pos.use. اطلب من المدير تفعيلها لحسابك.</p></main>;
 
@@ -664,7 +759,7 @@ export default function PosPage() {
         
       `}</style>
 
-      <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
+      <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "sales") { setScreen("sales"); } else if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
       {error && <p style={s.error}>{error}</p>}
       {showTransfer && (selectedTableOrder || editingOrderId) && !editingOrderClosed && <div style={s.modalBackdrop} onClick={() => { if (!saving) { setShowTransfer(false); setTransferTarget(""); } }}>
         <div role="dialog" aria-modal="true" aria-labelledby="transfer-table-title" style={{...s.itemNoteModal,width:"min(760px,96vw)",maxHeight:"92dvh",overflow:"hidden"}} onClick={e => e.stopPropagation()}>
@@ -698,6 +793,20 @@ export default function PosPage() {
           </div>
         </div>
       </div>}
+      {showCloseDayModal && <div style={s.modalBackdrop} onClick={()=>!saving&&setShowCloseDayModal(false)}>
+        <div role="dialog" aria-modal="true" aria-labelledby="pos-close-day-title" style={s.itemNoteModal} onClick={e=>e.stopPropagation()}>
+          <h2 id="pos-close-day-title" style={{margin:0,textAlign:"center"}}>تأكيد إنهاء اليومية</h2>
+          <p style={{margin:0,textAlign:"center",color:"#75664f"}}>اليومية رقم #{currentBusinessDayId} — {currentBusinessDay?.business_date}</p>
+          <div style={{padding:14,borderRadius:10,background:"#faf8f4",display:"grid",gap:7}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:12}}><span>إجمالي المبيعات الحالية</span><b>{fmt(salesSummary.totalSales)} ج.م</b></div>
+            <small style={{color:"#75664f",lineHeight:1.7}}>سيتم حفظ تقرير اليومية الحالية، إغلاقها، وفتح يومية جديدة. لا يمكن التراجع عن الإقفال.</small>
+          </div>
+          <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+            <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:150,background:"#a52d2d"}} disabled={saving} onClick={closeBusinessDayFromPos}>{saving?"جاري إنهاء اليومية...":"OK — تأكيد الإنهاء"}</button>
+            <button type="button" style={s.secondary} disabled={saving} onClick={()=>setShowCloseDayModal(false)}>إلغاء</button>
+          </div>
+        </div>
+      </div>}
       {message && <div style={s.modalBackdrop}>
         <div role="alertdialog" aria-modal="true" aria-labelledby="pos-success-title" style={s.itemNoteModal} onClick={e => e.stopPropagation()}>
           <div style={{display:"grid",placeItems:"center",width:54,height:54,margin:"0 auto",borderRadius:"50%",background:"#e9f7ee",color:"#246c45",fontSize:30,fontWeight:900}}>✓</div>
@@ -706,7 +815,44 @@ export default function PosPage() {
           <button type="button" className="submit" style={{...s.submit,width:"auto",minWidth:120,justifySelf:"center"}} onClick={() => setMessage("")}>OK</button>
         </div>
       </div>}
-      {tab === "all" && screen !== "order" ? (
+      {tab === "sales" ? (
+        <section className="pos-sales-page">
+          <div className="pos-sales-heading">
+            <div><h2>ملخص المبيعات</h2><p>إجمالي المبيعات المسجلة خلال الفترة المختارة</p></div>
+            <button type="button" onClick={load} disabled={loading}>↻ تحديث البيانات</button>
+          </div>
+          <div className="pos-sales-filter-card">
+            <div className="pos-sales-presets">
+              <button type="button" onClick={() => setSalesPreset("today")}>اليوم</button>
+              <button type="button" onClick={() => setSalesPreset("yesterday")}>أمس</button>
+              <button type="button" onClick={() => setSalesPreset("this-month")}>الشهر الحالي</button>
+              <button type="button" onClick={() => setSalesPreset("last-month")}>الشهر الماضي</button>
+            </div>
+            <div className="pos-sales-dates">
+              <label>من تاريخ<input type="date" value={salesFrom} onChange={e=>setSalesFrom(e.target.value)} /></label>
+              <label>إلى تاريخ<input type="date" value={salesTo} onChange={e=>setSalesTo(e.target.value)} /></label>
+            </div>
+            <small>الفترة: {salesFrom || "—"} إلى {salesTo || "—"}</small>
+          </div>
+          <div className="pos-sales-grid">
+            <article className="pos-sales-card pos-sales-total"><span>إجمالي المبيعات</span><strong>{fmt(salesSummary.totalSales)} ج.م</strong><small>عدد الطلبات: {fmt(salesSummary.totalOrders)}</small></article>
+            <article className="pos-sales-card"><span>مبيعات المطبخ</span><strong>{fmt(salesSummary.kitchenSales)} ج.م</strong></article>
+            <article className="pos-sales-card"><span>مبيعات البار</span><strong>{fmt(salesSummary.barSales)} ج.م</strong></article>
+            <article className="pos-sales-card"><span>مبيعات الدليفري</span><strong>{fmt(salesSummary.deliverySales)} ج.م</strong></article>
+            <article className="pos-sales-card"><span>مبيعات التيك أواي</span><strong>{fmt(salesSummary.takeawaySales)} ج.م</strong></article>
+            <article className="pos-sales-card"><span>مبيعات الصالة</span><strong>{fmt(salesSummary.dineInSales)} ج.م</strong></article>
+            <article className="pos-sales-card"><span>رسوم التوصيل</span><strong>{fmt(salesSummary.deliveryFees)} ج.م</strong><small>ضمن إجمالي المبيعات وليست إضافة عليه</small></article>
+            <article className="pos-sales-card"><span>الطلبات الملغاة</span><strong>{fmt(salesSummary.cancelledOrders)}</strong><small>لا تدخل في إجمالي المبيعات</small></article>
+          </div>
+          {salesFrom && salesTo && salesFrom > salesTo && <p className="pos-sales-warning">تاريخ البداية لازم يكون قبل تاريخ النهاية.</p>}
+          {canCloseDay && currentBusinessDayId && currentBusinessDay?.status === "open" && (
+            <div className="pos-sales-close">
+              <div><b>اليومية الحالية مفتوحة</b><small>تاريخ اليومية: {currentBusinessDay.business_date} — رقم اليومية: #{currentBusinessDay.id}</small></div>
+              <button type="button" onClick={()=>setShowCloseDayModal(true)} disabled={saving}>إنهاء اليوم</button>
+            </div>
+          )}
+        </section>
+      ) : tab === "all" && screen !== "order" ? (
         <section style={s.allOrdersPage}>
           <div className="allOrdersHeading" style={s.allOrdersHeading}>
             <div><h2 style={{margin:"0 0 5px"}}>كل الطلبات</h2><small style={s.muted}>عرض شامل لكل الطلبات المسجلة، وليس يوم العمل الحالي فقط</small></div>
