@@ -580,11 +580,6 @@ export default function PosPage() {
         <>
         <section className="arkan-floor-dashboard" style={s.floorDashboard}>
           <aside style={s.floorSidebar}>
-            <div style={s.floorTotal}>
-              <small>إجمالي أوردرات الصالة المفتوحة</small><strong style={{fontSize:28}}>{fmt(floorTotal)} ج.م</strong>
-              <small>{activeTables.length} أوردر نشط</small>
-              <button style={s.secondary} onClick={load} disabled={loading}>↻ تحديث البيانات</button>
-            </div>
             <div style={s.floorTools}>
               <h3 style={{margin:"0 0 4px"}}>عمليات الطاولة</h3>
               {selectedTableOrder ? <>
@@ -635,7 +630,13 @@ export default function PosPage() {
 
           </div>
           <aside style={s.floorOrderSidebar}>
-            <section style={s.floorOrderPreview}>
+            <div style={s.floorTotal}>
+              <small>إجمالي أوردرات الصالة المفتوحة</small>
+              <strong style={{fontSize:28}}>{fmt(floorTotal)} ج.م</strong>
+              <small>{activeTables.length} أوردر نشط</small>
+              <button style={s.secondary} onClick={load} disabled={loading}>↻ تحديث البيانات</button>
+            </div>
+            <section style={{...s.floorOrderPreview,marginTop:12}}>
               <div style={s.head}>
                 <div><h2 style={{margin:0}}>أوردر الطاولة المحددة</h2><small style={s.muted}>{selectedTableOrder ? "ARK-"+selectedTableOrder.id+" — "+(selectedTableOrder.table_area==="indoor"?"داخلية":"خارجية")+" — طاولة "+selectedTableOrder.table_number : "اختار طاولة مشغولة بكليك واحد لعرض الأصناف"}</small></div>
                 {selectedTableOrder&&<b style={{color:"#8b622e"}}>{fmt(selectedTableOrder.total_amount)} ج.م</b>}
