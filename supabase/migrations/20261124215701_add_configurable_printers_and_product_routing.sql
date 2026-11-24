@@ -64,3 +64,6 @@ values
   ('default-bar', 'طابعة البار', 'bar', 'usb', 80, false, 'تحتاج إعداد بعد شراء الطابعة'),
   ('default-cashier', 'طابعة الكاشير', 'cashier', 'usb', 80, false, 'تحتاج إعداد بعد شراء الطابعة')
 on conflict (printer_key) do nothing;
+
+-- Product edits remain protected by the existing products RLS policies.
+grant select, insert, update on public.products to authenticated;
