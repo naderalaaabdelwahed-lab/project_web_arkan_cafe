@@ -328,7 +328,7 @@ export default function PosPage() {
   }
 
   async function recordCashPayment(orderId = editingOrderId) {
-    if (!editingOrderId) return;
+    if (!orderId) return;
     const received = Number(cashReceived);
     if (!Number.isFinite(received) || received <= 0) return setError("اكتب المبلغ النقدي المستلم.");
     setSaving(true); setError(""); setMessage("");
@@ -442,7 +442,7 @@ export default function PosPage() {
         p_target_table_area: targetArea,
       });
       if (result.error) throw result.error;
-      setMessage("تم نقل الأوردر ARK-" + editingOrderId + " إلى الطاولة " + targetNumber + " بنجاح.");
+      setMessage("تم نقل الأوردر ARK-" + orderId + " إلى الطاولة " + targetNumber + " بنجاح.");
       setShowTransfer(false);
       setTransferTarget("");
       reset();
