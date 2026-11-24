@@ -93,8 +93,8 @@ create policy "Kitchen and bar employees view orders"
 on public.orders for select to authenticated
 using (
   public.is_admin()
-  or (preparation_station = 'kitchen' and public.has_permission('kitchen.view'))
-  or (preparation_station = 'bar' and public.has_permission('bar.view'))
+  or public.has_permission('kitchen.view')
+  or public.has_permission('bar.view')
 );
 
 drop policy if exists "Kitchen and bar employees view order items" on public.order_items;
@@ -122,7 +122,7 @@ begin
     raise exception 'Authentication required';
   end if;
 
-  if p_station not in ('kitchen', 'bar') then
+  if p_station is null or p_station not in ('kitchen', 'bar') then
     raise exception 'Invalid preparation station';
   end if;
 
