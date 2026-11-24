@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import "./pos-design.css";
 
 const tabs = [
-  { id: "dine-in", label: "الصالة" },
+  { id: "dine-in", label: "صالة المطعم" },
   { id: "takeaway", label: "تيك أواي" },
   { id: "all", label: "الكل" },
   { id: "delivery", label: "دليفري" },
@@ -593,10 +593,6 @@ export default function PosPage() {
       `}</style>
 
       <nav className="tabs" style={s.tabs}>{tabs.map((t) => <button key={t.id} className="tab" style={{ ...s.tab, ...(tab === t.id ? s.selectedTab : {}) }} onClick={() => { setTab(t.id); if (t.id === "all") { setScreen("all"); } else { setMode(t.id); setScreen(t.id === "dine-in" ? "tables" : "order"); } }}>{t.label}</button>)}</nav>
-      <header style={s.header}>
-        <div><small style={s.eyebrow}>ARKAN POS WEB</small><h1 style={{ margin: "5px 0" }}>نقطة البيع</h1><small style={s.muted}>إدارة الصالة والتيك أواي والدليفري</small></div>
-        <button style={s.secondary} onClick={load}>تحديث البيانات</button>
-      </header>
       {error && <p style={s.error}>{error}</p>}
       {message && <p style={s.success}>{message}</p>}
       {tab === "all" && screen !== "order" ? (
@@ -683,7 +679,6 @@ export default function PosPage() {
           </aside>
           <div style={s.floorTables}>
             <div style={{display:"grid",gap:12}}>
-              <div style={s.head}><div><h2 style={{margin:"0 0 5px"}}>صالة المطعم</h2><small style={s.muted}>اضغط مرة لاختيار الطاولة وعرض أوردرها — اضغط مرتين لفتحها</small></div><b style={{...s.floorCountPill}}>{floorTableCount} طاولة</b></div>
               <div className="floor-status-strip" style={s.floorStatusStrip}>
                 <div style={{...s.floorStatusCard,borderColor:"#bfe0c8"}}><b style={{color:"#267447"}}>{floorAvailableCount}</b><small>متاحة</small></div>
                 <div style={{...s.floorStatusCard,borderColor:"#efc1c1"}}><b style={{color:"#a12c2c"}}>{floorOccupiedCount}</b><small>مشغولة</small></div>
