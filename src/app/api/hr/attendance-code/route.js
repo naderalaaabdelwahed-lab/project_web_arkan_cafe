@@ -27,8 +27,13 @@ function cairoParts(date) {
   }).formatToParts(date).map(part => [part.type, part.value]));
 }
 function cairoDate(date) {
-  const parts = cairoParts(date);
-  return parts.year + "-" + parts.month + "-" + parts.day;
+  const p = cairoParts(date);
+  return p.year + "-" + p.month + "-" + p.day;
+}
+function addDays(value, amount) {
+  const date = new Date(value + "T00:00:00Z");
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().slice(0, 10);
 }
 function rateLimit(ip) {
   const now = Date.now();
@@ -39,7 +44,59 @@ function rateLimit(ip) {
   if (attempts.size > 5000) {
     for (const [key, value] of attempts) if (now > value.resetAt) attempts.delete(key);
   }
-  return current.count <= 10;
+  return current.count <= 20;
+}
+function latestMovement(rows) {
+  const events = [];
+  for (const row of rows || []) {
+    if (row.check_in_at) events.push({ action: "check_in", recorded_at: row.check_in_at, shift_date: row.shift_date });
+    if (row.check_out_at) events.push({ action: "check_out", recorded_at: row.check_out_at, shift_date: row.shift_date });
+  }
+  events.sort((a, b) => new Date(b.recorded_at) - new Date(a.recorded_at));
+  return events[0] || null;
+}
+
+export async function GET(request) {
+  try {
+    const db = dbClient();
+    const employeeId = new URL(request.url).searchParams.get("employee_id");
+    if (!employeeId) {
+      const { data, error } = await db.from("hr_employees")
+        .select("id,full_name,job_title")
+        .eq("employment_status", "active")
+        .not("attendance_pin_hash", "is", null)
+        .order("full_name", { ascending: true });
+      if (error) throw error;
+      return NextResponse.json({ employees: data || [] });
+    }
+    if (!/^[0-9a-f-]{36}$/i.test(employeeId)) {
+      return NextResponse.json({ error: "اختيار الموظف غير صحيح." }, { status: 400 });
+    }
+    const { data: employee, error: employeeError } = await db.from("hr_employees")
+      .select("id,full_name").eq("id", employeeId).eq("employment_status", "active").maybeSingle();
+    if (employeeError) throw employeeError;
+    if (!employee) return NextResponse.json({ error: "الموظف غير موجود أو غير نشط." }, { status: 404 });
+
+    const [{ data: rows, error: rowsError }, { data: openRows, error: openError }] = await Promise.all([
+      db.from("hr_attendance").select("shift_date,check_in_at,check_out_at")
+        .eq("employee_id", employeeId).order("shift_date", { ascending: false }).limit(10),
+      db.from("hr_attendance").select("shift_date,check_in_at")
+        .eq("employee_id", employeeId).not("check_in_at", "is", null)
+        .is("check_out_at", null).order("shift_date", { ascending: false }).limit(1)
+    ]);
+    if (rowsError) throw rowsError;
+    if (openError) throw openError;
+    const today = cairoDate(new Date());
+    const openPrevious = (openRows || []).find(row => row.shift_date < today) || null;
+    return NextResponse.json({
+      employee,
+      last_movement: latestMovement(rows),
+      open_previous_shift: openPrevious ? { shift_date: openPrevious.shift_date, check_in_at: openPrevious.check_in_at } : null
+    });
+  } catch (error) {
+    console.error("HR attendance-code GET:", error);
+    return NextResponse.json({ error: "تعذر تحميل بيانات الموظف." }, { status: 500 });
+  }
 }
 
 export async function POST(request) {
@@ -49,50 +106,81 @@ export async function POST(request) {
     const body = await request.json();
     const action = String(body.action || "");
     const code = String(body.code || "").trim();
-    if (!["check_in", "check_out"].includes(action)) return NextResponse.json({ error: "اختار حضور أو انصراف." }, { status: 400 });
+    const employeeId = String(body.employee_id || "");
+    if (!["check_in", "check_out", "skip_previous"].includes(action)) {
+      return NextResponse.json({ error: "اختار حضور أو انصراف." }, { status: 400 });
+    }
+    if (!/^[0-9a-f-]{36}$/i.test(employeeId)) return NextResponse.json({ error: "اختار الموظف أولاً." }, { status: 400 });
     if (!/^\d{6}$/.test(code)) return NextResponse.json({ error: "أدخل كودًا صحيحًا مكوّنًا من 6 أرقام." }, { status: 400 });
 
     const db = dbClient();
-    const { data: employees, error: employeeError } = await db.from("hr_employees")
+    const { data: employee, error: employeeError } = await db.from("hr_employees")
       .select("id,full_name,daily_work_hours,attendance_pin_hash")
-      .eq("employment_status", "active").not("attendance_pin_hash", "is", null);
+      .eq("id", employeeId).eq("employment_status", "active").maybeSingle();
     if (employeeError) throw employeeError;
-    const matches = (employees || []).filter(employee => verifyCode(code, employee.attendance_pin_hash));
-    if (matches.length !== 1) {
+    if (!employee || !verifyCode(code, employee.attendance_pin_hash)) {
       return NextResponse.json({ error: "الكود غير صحيح أو الموظف غير نشط. راجع الإدارة." }, { status: 401 });
     }
-    const employee = matches[0];
+
     const now = new Date();
     const today = cairoDate(now);
+    const todayRow = await db.from("hr_attendance").select("id,check_in_at")
+      .eq("employee_id", employee.id).eq("shift_date", today).maybeSingle();
+    if (todayRow.error) throw todayRow.error;
 
-    if (action === "check_in") {
-      const { data: existing, error } = await db.from("hr_attendance")
-        .select("id,check_in_at").eq("employee_id", employee.id).eq("shift_date", today).maybeSingle();
-      if (error) throw error;
-      if (existing?.check_in_at) return NextResponse.json({ error: "تم تسجيل حضورك لهذا اليوم بالفعل." }, { status: 409 });
+    if (action === "check_in" || action === "skip_previous") {
+      if (todayRow.data?.check_in_at) {
+        return NextResponse.json({ error: "تم تسجيل حضور الموظف لهذا اليوم بالفعل." }, { status: 409 });
+      }
+      const { data: openRows, error: openError } = await db.from("hr_attendance")
+        .select("id,shift_date,check_in_at").eq("employee_id", employee.id)
+        .not("check_in_at", "is", null).is("check_out_at", null)
+        .lt("shift_date", today).order("shift_date", { ascending: false }).limit(1);
+      if (openError) throw openError;
+      const openPrevious = openRows?.[0] || null;
+      if (action === "check_in" && openPrevious) {
+        return NextResponse.json({
+          needs_skip: true,
+          open_shift_date: openPrevious.shift_date,
+          error: "فيه حضور مفتوح من يوم سابق من غير انصراف. راجع التاريخ واضغط زر تجاوز الانصراف السابق لتسجيل حضور اليوم."
+        }, { status: 409 });
+      }
+      if (action === "skip_previous" && !openPrevious) {
+        return NextResponse.json({ error: "مفيش حضور سابق مفتوح يحتاج التجاوز. استخدم تسجيل الحضور العادي." }, { status: 409 });
+      }
+
       const values = {
         employee_id: employee.id, shift_date: today, check_in_at: now.toISOString(),
         check_in_method: "pin", attendance_status: "present", late_minutes: 0, updated_at: now.toISOString()
       };
-      const saved = existing
-        ? await db.from("hr_attendance").update(values).eq("id", existing.id)
-        : await db.from("hr_attendance").insert(values);
+      const saved = await db.from("hr_attendance").insert(values);
       if (saved.error) {
-        if (saved.error.code === "23505") return NextResponse.json({ error: "تم تسجيل حضورك لهذا اليوم بالفعل." }, { status: 409 });
+        if (saved.error.code === "23505") return NextResponse.json({ error: "تم تسجيل حضور الموظف لهذا اليوم بالفعل." }, { status: 409 });
         throw saved.error;
       }
-      return NextResponse.json({ success: true, employee_name: employee.full_name, action, recorded_at: now.toISOString(), shift_date: today });
+      return NextResponse.json({
+        success: true, employee_name: employee.full_name, action: "check_in",
+        recorded_at: now.toISOString(), shift_date: today,
+        skipped_previous_checkout: action === "skip_previous",
+        previous_shift_date: openPrevious?.shift_date || null
+      });
     }
 
-    const { data: openRows, error: openError } = await db.from("hr_attendance")
-      .select("id,employee_id,shift_date,check_in_at").eq("employee_id", employee.id)
-      .not("check_in_at", "is", null).is("check_out_at", null)
-      .order("check_in_at", { ascending: false }).limit(1);
+    const parts = cairoParts(now);
+    const checkoutShiftDate = Number(parts.hour) < 4 ? addDays(today, -1) : today;
+    const { data: open, error: openError } = await db.from("hr_attendance")
+      .select("id,shift_date,check_in_at").eq("employee_id", employee.id)
+      .eq("shift_date", checkoutShiftDate)
+      .not("check_in_at", "is", null).is("check_out_at", null).maybeSingle();
     if (openError) throw openError;
-    const open = openRows?.[0];
-    if (!open) return NextResponse.json({ error: "مفيش حضور مفتوح للموظف ده. سجل الحضور الأول." }, { status: 409 });
-    const elapsed = Math.max(0, Math.round((now - new Date(open.check_in_at)) / 60000));
-    const worked = elapsed;
+    if (!open) {
+      return NextResponse.json({
+        error: Number(parts.hour) < 4
+          ? "مفيش حضور مفتوح بتاريخ أمس لتسجيل الانصراف عليه."
+          : "مفيش حضور مفتوح لليوم. سجل الحضور الأول."
+      }, { status: 409 });
+    }
+    const worked = Math.max(0, Math.round((now - new Date(open.check_in_at)) / 60000));
     const planned = Math.round(Number(employee.daily_work_hours || 8) * 60);
     const overtime = Math.max(0, worked - planned);
     const shortage = Math.max(0, planned - worked);
@@ -101,7 +189,10 @@ export async function POST(request) {
       overtime_minutes: overtime, shortage_minutes: shortage, updated_at: now.toISOString()
     }).eq("id", open.id);
     if (updateError) throw updateError;
-    return NextResponse.json({ success: true, employee_name: employee.full_name, action, recorded_at: now.toISOString(), shift_date: open.shift_date });
+    return NextResponse.json({
+      success: true, employee_name: employee.full_name, action,
+      recorded_at: now.toISOString(), shift_date: open.shift_date
+    });
   } catch (error) {
     console.error("HR attendance code:", error);
     return NextResponse.json({ error: "حصل خطأ أثناء التسجيل. حاول مرة أخرى أو راجع المدير." }, { status: 500 });
