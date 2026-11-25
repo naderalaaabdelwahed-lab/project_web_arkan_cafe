@@ -154,7 +154,7 @@ const adminPage=document.getElementById("admin-page");
 document.getElementById("open-admin").addEventListener("click",()=>{
   posNav.hidden=true;
   posDashboard.hidden=true;
-  posNote.hidden=true;
+  if(posNote) posNote.hidden=true;
   adminPage.hidden=false;
   window.scrollTo(0,0);
 });
@@ -162,6 +162,6 @@ document.getElementById("back-to-pos").addEventListener("click",()=>{
   adminPage.hidden=true;
   posNav.hidden=false;
   posDashboard.hidden=false;
-  posNote.hidden=false;
+  if(posNote) posNote.hidden=false;
   window.scrollTo(0,0);
 });
