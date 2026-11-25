@@ -1329,15 +1329,12 @@
   font-weight: 800;
 }
 .egsoft-pos-page .pos-admin-entry:hover { background: #574b3b; }
+/* Restore the original compact table tiles and keep the order controls below visible. */
 @media (min-width: 921px) {
-  .egsoft-pos-page .arkan-floor-dashboard { align-items: stretch !important; }
-  .egsoft-pos-page .floorTables {
-    min-height: max(68vh, 560px);
-    grid-template-rows: auto minmax(0,1fr) auto;
-  }
+  .egsoft-pos-page .floorTables { min-height: 0 !important; }
   .egsoft-pos-page .floor-table-grid {
-    align-content: space-evenly;
-    grid-auto-rows: minmax(100px,1fr);
+    align-content: start !important;
+    grid-auto-rows: auto !important;
   }
 }
 .admin-page { min-height: calc(100vh - 30px); }
