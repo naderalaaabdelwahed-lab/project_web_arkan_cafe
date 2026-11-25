@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' http://127.0.0.1:4317;">
-<title>ARKAN CAFE | نظام نقاط البيع</title>
+<title>Egsoft | نظام نقاط البيع</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#fff;color:#242424;font-family:Tahoma,Arial,sans-serif}
-.arkan-pos-page{min-height:100vh;padding:24px;background:#fff}
-.pos-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.arkan-pos-page h1{font-size:clamp(28px,2.2vw,36px)}.arkan-pos-page h2{font-size:clamp(22px,1.8vw,29px)}.arkan-pos-page h3{font-size:19px}.arkan-pos-page button,.arkan-pos-page input,.arkan-pos-page select,.arkan-pos-page textarea{font-size:15px}.arkan-pos-page button{min-height:44px}
+.egsoft-pos-page{min-height:100vh;padding:24px;background:#fff}
+.pos-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.egsoft-pos-page h1{font-size:clamp(28px,2.2vw,36px)}.egsoft-pos-page h2{font-size:clamp(22px,1.8vw,29px)}.egsoft-pos-page h3{font-size:19px}.egsoft-pos-page button,.egsoft-pos-page input,.egsoft-pos-page select,.egsoft-pos-page textarea{font-size:15px}.egsoft-pos-page button{min-height:44px}
 .eyebrow{color:#a7793d;font-weight:800;letter-spacing:2px}
 button,input,select{font-family:inherit}
 button{cursor:pointer;font-weight:700}
@@ -64,14 +64,14 @@ button{cursor:pointer;font-weight:700}
 .status-pill{display:inline-block;padding:5px 9px;border-radius:20px;background:#f5f0e8;color:#805a2a;font-size:11px}
 .demo-note{margin:12px 0 0;color:#999;font-size:11px}
 @media(max-width:1180px){.arkan-floor-dashboard{grid-template-columns:minmax(250px,.75fr) minmax(0,1.25fr)}.arkan-floor-dashboard>.pos-floor-order-preview-grid{grid-column:1/-1;position:static}.pos-floor-order-preview-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:900px){.arkan-pos-page{padding:12px}.tab{min-width:0;flex:1 1 auto;padding:12px 14px}.arkan-floor-dashboard{grid-template-columns:minmax(0,1fr)}.arkan-floor-dashboard>*{grid-column:1/-1;position:static}.pos-floor-order-preview-grid{grid-template-columns:minmax(0,1fr)}.floor-table-grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr))}.pos-header{gap:12px;align-items:flex-start}.tabs{gap:10px}.tab{flex:1 1 auto;min-width:0;padding:12px 14px}}
+@media(max-width:900px){.egsoft-pos-page{padding:12px}.tab{min-width:0;flex:1 1 auto;padding:12px 14px}.arkan-floor-dashboard{grid-template-columns:minmax(0,1fr)}.arkan-floor-dashboard>*{grid-column:1/-1;position:static}.pos-floor-order-preview-grid{grid-template-columns:minmax(0,1fr)}.floor-table-grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr))}.pos-header{gap:12px;align-items:flex-start}.tabs{gap:10px}.tab{flex:1 1 auto;min-width:0;padding:12px 14px}}
 </style>
   <link rel="stylesheet" href="./pos-design.css">
 </head>
 <body>
-<main class="arkan-pos-page">
+<main class="egsoft-pos-page">
 <header class="pos-header">
- <div><div class="eyebrow">ARKAN CAFE</div><div style="font-weight:800;font-size:18px">نظام نقاط البيع</div></div>
+ <div><div class="eyebrow">Egsoft</div><div style="font-weight:800;font-size:18px">نظام نقاط البيع</div></div>
  <button type="button" class="secondary" id="switch-user">تبديل المستخدم</button>
 </header>
 <nav class="tabs">
