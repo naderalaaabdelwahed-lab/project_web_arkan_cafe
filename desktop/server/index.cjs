@@ -137,15 +137,21 @@ function startLocalServer({ userDataPath, port = 4317 }) {
       status: "pending", subtotal_minor: subtotal, discount_minor: discount,
       total_minor: subtotal - discount,
       notes: String(body.notes || "").slice(0, 1000),
+      customer_name: String(body.customer_name || "").slice(0, 120),
+      phone: String(body.phone || "").slice(0, 30),
+      address: String(body.address || "").slice(0, 500),
+      payment_method: ["cash", "card", "wallet"].includes(body.payment_method) ? body.payment_method : "cash",
       created_at: createdAt, updated_at: createdAt, sync_status: "pending"
     };
 
     const saveOrder = db.transaction(() => {
       db.prepare(`INSERT INTO orders
         (id, order_number, order_type, status, subtotal_minor, discount_minor,
-         total_minor, notes, created_at, updated_at, sync_status)
+         total_minor, notes, customer_name, phone, address, payment_method,
+         created_at, updated_at, sync_status)
         VALUES (@id, @order_number, @order_type, @status, @subtotal_minor,
-         @discount_minor, @total_minor, @notes, @created_at, @updated_at, @sync_status)`
+         @discount_minor, @total_minor, @notes, @customer_name, @phone, @address,
+         @payment_method, @created_at, @updated_at, @sync_status)`
       ).run(order);
 
       const addLine = db.prepare(`INSERT INTO order_items
