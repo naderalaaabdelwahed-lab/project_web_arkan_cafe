@@ -69,14 +69,10 @@ button{cursor:pointer;font-weight:700}
   <link rel="stylesheet" href="./pos-design.css">
 </head>
 <body>
-<main class="egsoft-pos-page">
-<header class="pos-header">
- <div><div class="eyebrow">Egsoft</div><div style="font-weight:800;font-size:18px">نظام نقاط البيع</div></div>
- <button type="button" class="secondary" id="switch-user">تبديل المستخدم</button>
-</header>
-<nav class="tabs">
+<main class="egsoft-pos-page">\n<nav class="tabs">
  <button class="tab active">صالة المطعم</button><button class="tab">تيك أواي</button><button class="tab">الكل</button><button class="tab">دليفري</button>
 </nav>
+
 <section class="arkan-floor-dashboard">
  <aside class="pos-open-tables-sidebar">
   <div class="pos-sidebar-total"><small>إجمالي الفلوس</small><strong id="sidebar-total">0 ج.م</strong></div>
@@ -92,7 +88,7 @@ button{cursor:pointer;font-weight:700}
   </div>
  </div>
  <aside class="pos-floor-summary-sidebar">
-  <div class="floor-action-card"><small>إجمالي الطاولات</small><strong id="floor-total">0 ج.م</strong><small id="floor-open-count">0 طاولة مفتوحة</small></div>
+  <div class="pos-brand-tile" aria-label="Egsoft">Egsoft</div>\n  <div class="floor-action-card"><small>إجمالي الطاولات</small><strong id="floor-total">0 ج.م</strong><small id="floor-open-count">0 طاولة مفتوحة</small></div>
   <button class="pos-floor-refresh secondary" id="summary-refresh">↻ تحديث البيانات</button>
  </aside>
  <div class="pos-floor-order-preview-grid">
