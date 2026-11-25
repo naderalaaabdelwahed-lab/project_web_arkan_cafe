@@ -9,7 +9,6 @@ function createSupabaseRestClient() {
     const response = await fetch(url + path, {
       headers: {
         apikey: key,
-        Authorization: "Bearer " + key,
         Accept: "application/json"
       },
       signal: AbortSignal.timeout(10000)
