@@ -1,6 +1,6 @@
-/* ARKAN POS — Visual redesign only. Import after any existing POS styles.
+/* Egsoft POS — Visual redesign only. Import after any existing POS styles.
    Keeps all Supabase logic, states, RPC calls and events unchanged. */
-.arkan-pos-page {
+.egsoft-pos-page {
   --pos-ink: #24221f;
   --pos-muted: #817c73;
   --pos-border: #e9e5dd;
@@ -16,232 +16,232 @@
   font-family: inherit;
   line-height: 1.5;
 }
-.arkan-pos-page *, .arkan-pos-page *::before, .arkan-pos-page *::after { box-sizing: border-box; }
-.arkan-pos-page h1,.arkan-pos-page h2,.arkan-pos-page h3 { color: var(--pos-ink); letter-spacing: -.025em; }
-.arkan-pos-page h1 { font-size: clamp(25px, 2vw, 32px) !important; font-weight: 850; }
-.arkan-pos-page h2 { font-size: clamp(19px, 1.45vw, 23px) !important; font-weight: 800; }
-.arkan-pos-page h3 { font-size: 17px !important; font-weight: 800; }
-.arkan-pos-page button { font-family: inherit; font-size: 13px !important; transition: background-color .14s ease, border-color .14s ease, box-shadow .14s ease, transform .14s ease; }
-.arkan-pos-page button:not(:disabled):active { transform: scale(.985); }
-.arkan-pos-page button:disabled { opacity: .46; cursor: not-allowed !important; }
-.arkan-pos-page button:focus-visible, .arkan-pos-page input:focus-visible,
-.arkan-pos-page select:focus-visible,.arkan-pos-page textarea:focus-visible { outline: 3px solid rgba(172,122,61,.30); outline-offset: 2px; }
-.arkan-pos-page input,.arkan-pos-page select,.arkan-pos-page textarea { font-family: inherit; font-size: 13px !important; accent-color: var(--pos-gold); }
-.arkan-pos-page input::placeholder,.arkan-pos-page textarea::placeholder { color: #aaa59d; }
+.egsoft-pos-page *, .egsoft-pos-page *::before, .egsoft-pos-page *::after { box-sizing: border-box; }
+.egsoft-pos-page h1,.egsoft-pos-page h2,.egsoft-pos-page h3 { color: var(--pos-ink); letter-spacing: -.025em; }
+.egsoft-pos-page h1 { font-size: clamp(25px, 2vw, 32px) !important; font-weight: 850; }
+.egsoft-pos-page h2 { font-size: clamp(19px, 1.45vw, 23px) !important; font-weight: 800; }
+.egsoft-pos-page h3 { font-size: 17px !important; font-weight: 800; }
+.egsoft-pos-page button { font-family: inherit; font-size: 13px !important; transition: background-color .14s ease, border-color .14s ease, box-shadow .14s ease, transform .14s ease; }
+.egsoft-pos-page button:not(:disabled):active { transform: scale(.985); }
+.egsoft-pos-page button:disabled { opacity: .46; cursor: not-allowed !important; }
+.egsoft-pos-page button:focus-visible, .egsoft-pos-page input:focus-visible,
+.egsoft-pos-page select:focus-visible,.egsoft-pos-page textarea:focus-visible { outline: 3px solid rgba(172,122,61,.30); outline-offset: 2px; }
+.egsoft-pos-page input,.egsoft-pos-page select,.egsoft-pos-page textarea { font-family: inherit; font-size: 13px !important; accent-color: var(--pos-gold); }
+.egsoft-pos-page input::placeholder,.egsoft-pos-page textarea::placeholder { color: #aaa59d; }
 
 /* Compact premium header & segmented nav */
-.arkan-pos-page > header { border-bottom: 1px solid var(--pos-border); padding-bottom: 19px; margin-bottom: 18px !important; }
-.arkan-pos-page > header small:first-child { font-size: 10px; color: var(--pos-gold) !important; letter-spacing: .16em; }
-.arkan-pos-page > header > button { border: 1px solid var(--pos-border) !important; background: #fff !important; border-radius: 11px !important; padding: 11px 16px !important; }
-.arkan-pos-page .tabs { display: flex; padding: 5px; background: #eae7e1; width: fit-content; max-width: 100%; border-radius: 13px; gap: 5px !important; margin-bottom: 20px !important; }
-.arkan-pos-page .tabs .tab { border: 0 !important; border-radius: 9px !important; background: transparent !important; color: #767168 !important; min-width: 102px; padding: 10px 20px !important; font-weight: 750; box-shadow: none; }
-.arkan-pos-page .tabs .tab[aria-current="page"],
-.arkan-pos-page .tabs .tab.active { background: var(--pos-ink) !important; color: #fff !important; }
-.arkan-pos-page .tabs .tab[style*="rgb(44, 40, 35)"],
-.arkan-pos-page .tabs .tab[style*="#2c2823"] { background: var(--pos-ink) !important; color: #fff !important; box-shadow: 0 3px 9px rgba(0,0,0,.12); }
-.arkan-pos-page .tabs .tab:not([style*="rgb(44, 40, 35)"]):not([style*="#2c2823"]):hover { background: #dfdbd3 !important; }
+.egsoft-pos-page > header { border-bottom: 1px solid var(--pos-border); padding-bottom: 19px; margin-bottom: 18px !important; }
+.egsoft-pos-page > header small:first-child { font-size: 10px; color: var(--pos-gold) !important; letter-spacing: .16em; }
+.egsoft-pos-page > header > button { border: 1px solid var(--pos-border) !important; background: #fff !important; border-radius: 11px !important; padding: 11px 16px !important; }
+.egsoft-pos-page .tabs { display: flex; padding: 5px; background: #eae7e1; width: fit-content; max-width: 100%; border-radius: 13px; gap: 5px !important; margin-bottom: 20px !important; }
+.egsoft-pos-page .tabs .tab { border: 0 !important; border-radius: 9px !important; background: transparent !important; color: #767168 !important; min-width: 102px; padding: 10px 20px !important; font-weight: 750; box-shadow: none; }
+.egsoft-pos-page .tabs .tab[aria-current="page"],
+.egsoft-pos-page .tabs .tab.active { background: var(--pos-ink) !important; color: #fff !important; }
+.egsoft-pos-page .tabs .tab[style*="rgb(44, 40, 35)"],
+.egsoft-pos-page .tabs .tab[style*="#2c2823"] { background: var(--pos-ink) !important; color: #fff !important; box-shadow: 0 3px 9px rgba(0,0,0,.12); }
+.egsoft-pos-page .tabs .tab:not([style*="rgb(44, 40, 35)"]):not([style*="#2c2823"]):hover { background: #dfdbd3 !important; }
 
 /* General soft cards */
-.arkan-pos-page .arkan-floor-dashboard > aside > div,
-.arkan-pos-page .arkan-floor-dashboard > aside > section,
-.arkan-pos-page .arkan-floor-dashboard > div,
-.arkan-pos-page .orderWorkspace > aside,
-.arkan-pos-page .orderWorkspace > section,
-.arkan-pos-page .allOrdersHeading,
-.arkan-pos-page .allOrdersPage {
+.egsoft-pos-page .arkan-floor-dashboard > aside > div,
+.egsoft-pos-page .arkan-floor-dashboard > aside > section,
+.egsoft-pos-page .arkan-floor-dashboard > div,
+.egsoft-pos-page .orderWorkspace > aside,
+.egsoft-pos-page .orderWorkspace > section,
+.egsoft-pos-page .allOrdersHeading,
+.egsoft-pos-page .allOrdersPage {
   box-shadow: var(--pos-shadow);
 }
 
 /* Floor: operations | floor plan | active ticket */
-.arkan-pos-page .arkan-floor-dashboard {
+.egsoft-pos-page .arkan-floor-dashboard {
   display: grid;
   grid-template-columns: minmax(235px, 270px) minmax(0, 1fr) minmax(290px, 345px) !important;
   align-items: start;
   gap: 16px !important;
 }
-.arkan-pos-page .arkan-floor-dashboard > aside:first-child,
-.arkan-pos-page .arkan-floor-dashboard > aside:last-child { position: sticky !important; top: 14px; align-self: start; max-height: calc(100vh - 28px); overflow: auto; scrollbar-width: thin; background: transparent !important; }
-.arkan-pos-page .arkan-floor-dashboard > div:nth-child(2) { min-width: 0; padding: 20px !important; background: #fff !important; border: 1px solid var(--pos-border) !important; border-radius: var(--pos-radius) !important; }
-.arkan-pos-page .arkan-floor-dashboard > aside > div,
-.arkan-pos-page .arkan-floor-dashboard > aside > section { border: 1px solid var(--pos-border) !important; border-radius: var(--pos-radius) !important; background: #fff !important; }
-.arkan-pos-page .arkan-floor-dashboard .floorTools { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px !important; padding: 16px !important; }
-.arkan-pos-page .arkan-floor-dashboard .floorTools > :not(button) { grid-column: 1/-1; width: auto !important; }
-.arkan-pos-page .arkan-floor-dashboard .floorTools > h3 { padding-bottom: 10px; margin-bottom: 2px !important; border-bottom: 1px solid var(--pos-border); }
-.arkan-pos-page .arkan-floor-dashboard .floorTools > button { width: 100% !important; aspect-ratio: auto !important; height: auto !important; min-height: 54px !important; border: 1px solid var(--pos-border) !important; border-radius: 11px !important; padding: 10px 8px !important; line-height: 1.45; color: #4a4136; background: #faf9f7; font-size: 12px !important; font-weight: 750; }
-.arkan-pos-page .arkan-floor-dashboard .floorTools > button:hover:not(:disabled) { transform: translateY(-1px); border-color: #d5c4ad !important; background: #f8f2e9 !important; box-shadow: none; }
-.arkan-pos-page .arkan-floor-dashboard .floorTools > button.submit { background: var(--pos-ink) !important; border-color: var(--pos-ink) !important; color: #fff !important; }
-.arkan-pos-page .arkan-floor-dashboard .floorTools > button[style*="background: none"] { color: #a53c36 !important; background: #fff4f2 !important; border-color: #f2dcd8 !important; }
-.arkan-pos-page .arkan-floor-dashboard .floorTools select { margin: 3px 0; }
-.arkan-pos-page .arkan-floor-dashboard .floorTools small { color: var(--pos-muted); }
+.egsoft-pos-page .arkan-floor-dashboard > aside:first-child,
+.egsoft-pos-page .arkan-floor-dashboard > aside:last-child { position: sticky !important; top: 14px; align-self: start; max-height: calc(100vh - 28px); overflow: auto; scrollbar-width: thin; background: transparent !important; }
+.egsoft-pos-page .arkan-floor-dashboard > div:nth-child(2) { min-width: 0; padding: 20px !important; background: #fff !important; border: 1px solid var(--pos-border) !important; border-radius: var(--pos-radius) !important; }
+.egsoft-pos-page .arkan-floor-dashboard > aside > div,
+.egsoft-pos-page .arkan-floor-dashboard > aside > section { border: 1px solid var(--pos-border) !important; border-radius: var(--pos-radius) !important; background: #fff !important; }
+.egsoft-pos-page .arkan-floor-dashboard .floorTools { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px !important; padding: 16px !important; }
+.egsoft-pos-page .arkan-floor-dashboard .floorTools > :not(button) { grid-column: 1/-1; width: auto !important; }
+.egsoft-pos-page .arkan-floor-dashboard .floorTools > h3 { padding-bottom: 10px; margin-bottom: 2px !important; border-bottom: 1px solid var(--pos-border); }
+.egsoft-pos-page .arkan-floor-dashboard .floorTools > button { width: 100% !important; aspect-ratio: auto !important; height: auto !important; min-height: 54px !important; border: 1px solid var(--pos-border) !important; border-radius: 11px !important; padding: 10px 8px !important; line-height: 1.45; color: #4a4136; background: #faf9f7; font-size: 12px !important; font-weight: 750; }
+.egsoft-pos-page .arkan-floor-dashboard .floorTools > button:hover:not(:disabled) { transform: translateY(-1px); border-color: #d5c4ad !important; background: #f8f2e9 !important; box-shadow: none; }
+.egsoft-pos-page .arkan-floor-dashboard .floorTools > button.submit { background: var(--pos-ink) !important; border-color: var(--pos-ink) !important; color: #fff !important; }
+.egsoft-pos-page .arkan-floor-dashboard .floorTools > button[style*="background: none"] { color: #a53c36 !important; background: #fff4f2 !important; border-color: #f2dcd8 !important; }
+.egsoft-pos-page .arkan-floor-dashboard .floorTools select { margin: 3px 0; }
+.egsoft-pos-page .arkan-floor-dashboard .floorTools small { color: var(--pos-muted); }
 
 /* Status strip */
-.arkan-pos-page .floor-status-strip { gap: 10px !important; }
-.arkan-pos-page .floor-status-strip > div { border: 1px solid var(--pos-border) !important; border-radius: 12px !important; padding: 15px 8px !important; background: #f9f8f5 !important; }
-.arkan-pos-page .floor-status-strip > div b { font-size: 28px; line-height: 1; font-weight: 900; }
-.arkan-pos-page .floor-status-strip > div small { font-size: 12px; color: #77736d; }
-.arkan-pos-page .arkan-floor-dashboard h3 { margin-top: 0; }
-.arkan-pos-page .floor-table-grid { grid-template-columns: repeat(auto-fill,minmax(100px,1fr)) !important; gap: 10px !important; }
-.arkan-pos-page .floor-table-tile {
+.egsoft-pos-page .floor-status-strip { gap: 10px !important; }
+.egsoft-pos-page .floor-status-strip > div { border: 1px solid var(--pos-border) !important; border-radius: 12px !important; padding: 15px 8px !important; background: #f9f8f5 !important; }
+.egsoft-pos-page .floor-status-strip > div b { font-size: 28px; line-height: 1; font-weight: 900; }
+.egsoft-pos-page .floor-status-strip > div small { font-size: 12px; color: #77736d; }
+.egsoft-pos-page .arkan-floor-dashboard h3 { margin-top: 0; }
+.egsoft-pos-page .floor-table-grid { grid-template-columns: repeat(auto-fill,minmax(100px,1fr)) !important; gap: 10px !important; }
+.egsoft-pos-page .floor-table-tile {
   min-height: 116px !important;
   display: flex !important; flex-direction: column; align-items: center; justify-content: center;
   gap: 5px !important; padding: 15px 8px !important;
   border-radius: 13px !important; box-shadow: none !important;
   border: 1px solid #d9eadc !important; background: #edf8ef !important; color: #287b45 !important;
 }
-.arkan-pos-page .floor-table-tile b { font-size: 28px !important; line-height: 1.1; }
-.arkan-pos-page .floor-table-tile small { font-weight: 700; color: inherit; font-size: 12px !important; }
-.arkan-pos-page .floor-table-tile .table-amount { padding-top: 3px; font-size: 11px !important; white-space: nowrap; }
-.arkan-pos-page .floor-table-tile[style*="fdeaea"],
-.arkan-pos-page .floor-table-tile[style*="rgb(253, 234, 234)"] { background: #fff0ed !important; border-color: #f3d2cb !important; color: #ad4c40 !important; }
-.arkan-pos-page .floor-table-tile[style*="e3f0ff"],
-.arkan-pos-page .floor-table-tile[style*="rgb(227, 240, 255)"] { background: #ecf3ff !important; border-color: #ccddf6 !important; color: #365f9e !important; }
-.arkan-pos-page .floor-table-tile[style*="fff4d9"],
-.arkan-pos-page .floor-table-tile[style*="rgb(255, 244, 217)"] { background: #fff7e6 !important; border-color: #f3e1b7 !important; color: #a17a2e !important; }
-.arkan-pos-page .floor-table-tile[style*="outline: 3px"] { outline: 3px solid #c99248 !important; outline-offset: 2px; }
-.arkan-pos-page .floor-table-tile:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 13px rgba(43,39,33,.08) !important; }
-.arkan-pos-page .floor-legend { display: flex; flex-wrap: wrap; gap: 10px 18px !important; border-top: 1px solid var(--pos-border); padding-top: 16px; margin-top: 6px !important; font-size: 12px !important; }
+.egsoft-pos-page .floor-table-tile b { font-size: 28px !important; line-height: 1.1; }
+.egsoft-pos-page .floor-table-tile small { font-weight: 700; color: inherit; font-size: 12px !important; }
+.egsoft-pos-page .floor-table-tile .table-amount { padding-top: 3px; font-size: 11px !important; white-space: nowrap; }
+.egsoft-pos-page .floor-table-tile[style*="fdeaea"],
+.egsoft-pos-page .floor-table-tile[style*="rgb(253, 234, 234)"] { background: #fff0ed !important; border-color: #f3d2cb !important; color: #ad4c40 !important; }
+.egsoft-pos-page .floor-table-tile[style*="e3f0ff"],
+.egsoft-pos-page .floor-table-tile[style*="rgb(227, 240, 255)"] { background: #ecf3ff !important; border-color: #ccddf6 !important; color: #365f9e !important; }
+.egsoft-pos-page .floor-table-tile[style*="fff4d9"],
+.egsoft-pos-page .floor-table-tile[style*="rgb(255, 244, 217)"] { background: #fff7e6 !important; border-color: #f3e1b7 !important; color: #a17a2e !important; }
+.egsoft-pos-page .floor-table-tile[style*="outline: 3px"] { outline: 3px solid #c99248 !important; outline-offset: 2px; }
+.egsoft-pos-page .floor-table-tile:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 13px rgba(43,39,33,.08) !important; }
+.egsoft-pos-page .floor-legend { display: flex; flex-wrap: wrap; gap: 10px 18px !important; border-top: 1px solid var(--pos-border); padding-top: 16px; margin-top: 6px !important; font-size: 12px !important; }
 
 /* Ticket pane */
-.arkan-pos-page .arkan-floor-dashboard > aside:last-child > div:first-child { padding: 20px !important; background: #292622 !important; color: #fff !important; border-color: #292622 !important; }
-.arkan-pos-page .arkan-floor-dashboard > aside:last-child > div:first-child small { color: #c6bfb4; }
-.arkan-pos-page .arkan-floor-dashboard > aside:last-child > div:first-child strong { color: #fff; font-size: 30px !important; letter-spacing: -.04em; }
-.arkan-pos-page .arkan-floor-dashboard > aside:last-child > div:first-child button { color: #fff; border-color: #625b53 !important; background: #39342f !important; }
-.arkan-pos-page .arkan-floor-dashboard > aside:last-child > section { padding: 17px !important; }
-.arkan-pos-page .floor-preview-wrap { max-height: 360px !important; overflow: auto; }
-.arkan-pos-page .floor-preview-wrap table { min-width: 470px !important; }
-.arkan-pos-page .floor-preview-wrap th,.arkan-pos-page .floor-preview-wrap td { padding: 10px 9px !important; font-size: 12px !important; }
+.egsoft-pos-page .arkan-floor-dashboard > aside:last-child > div:first-child { padding: 20px !important; background: #292622 !important; color: #fff !important; border-color: #292622 !important; }
+.egsoft-pos-page .arkan-floor-dashboard > aside:last-child > div:first-child small { color: #c6bfb4; }
+.egsoft-pos-page .arkan-floor-dashboard > aside:last-child > div:first-child strong { color: #fff; font-size: 30px !important; letter-spacing: -.04em; }
+.egsoft-pos-page .arkan-floor-dashboard > aside:last-child > div:first-child button { color: #fff; border-color: #625b53 !important; background: #39342f !important; }
+.egsoft-pos-page .arkan-floor-dashboard > aside:last-child > section { padding: 17px !important; }
+.egsoft-pos-page .floor-preview-wrap { max-height: 360px !important; overflow: auto; }
+.egsoft-pos-page .floor-preview-wrap table { min-width: 470px !important; }
+.egsoft-pos-page .floor-preview-wrap th,.egsoft-pos-page .floor-preview-wrap td { padding: 10px 9px !important; font-size: 12px !important; }
 
 /* Menu and active order */
-.arkan-pos-page .orderWorkspace { grid-template-columns: minmax(320px,.92fr) minmax(0,1.4fr) !important; gap: 16px !important; }
-.arkan-pos-page .orderWorkspace > aside,
-.arkan-pos-page .orderWorkspace > section { border: 1px solid var(--pos-border) !important; border-radius: var(--pos-radius) !important; padding: 20px !important; background: #fff !important; }
-.arkan-pos-page .orderWorkspace > aside { max-height: calc(100vh - 28px); overflow-y: auto; position: sticky; top: 14px; scrollbar-width: thin; }
-.arkan-pos-page .orderWorkspace input,.arkan-pos-page .orderWorkspace select,.arkan-pos-page .orderWorkspace textarea { border-radius: 10px !important; border-color: var(--pos-border) !important; }
-.arkan-pos-page .orderWorkspace .products { grid-template-columns: repeat(auto-fill,minmax(135px,1fr)) !important; gap: 10px !important; }
-.arkan-pos-page .orderWorkspace .product { padding: 10px !important; border: 1px solid var(--pos-border) !important; border-radius: 13px !important; min-height: 145px; align-content: start; box-shadow: none; }
-.arkan-pos-page .orderWorkspace .product:hover:not(:disabled) { border-color: #cba777 !important; background: #fffcf7 !important; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(42,33,22,.06); }
-.arkan-pos-page .orderWorkspace .product img { height: 92px !important; border-radius: 9px !important; }
-.arkan-pos-page .orderWorkspace .product b { font-size: 13px; }
-.arkan-pos-page .orderWorkspace .product small { color: #9b6a2f; font-size: 12px; font-weight: 850; }
-.arkan-pos-page .orderWorkspace .categories button { border-radius: 9px !important; min-height: 38px; }
-.arkan-pos-page .orderWorkspace .categories button:hover { background: var(--pos-gold-light) !important; border-color: #dec09b !important; }
-.arkan-pos-page .orderWorkspace .cartTableWrap { max-height: 430px !important; }
-.arkan-pos-page .orderWorkspace .cartTable th,.arkan-pos-page .orderWorkspace .cartTable td { padding: 12px 10px !important; }
-.arkan-pos-page .orderWorkspace .submit { background: var(--pos-ink) !important; border-radius: 11px !important; min-height: 50px; color: #fff !important; }
-.arkan-pos-page .orderWorkspace .submit:hover:not(:disabled) { background: #4d4133 !important; }
-.arkan-pos-page .orderWorkspace .totals { border-top: 1px solid var(--pos-border); margin-top: 10px; padding-top: 15px !important; }
-.arkan-pos-page .orderWorkspace .totals > div { display: flex; justify-content: space-between; gap: 14px; }
-.arkan-pos-page .orderWorkspace .totals > div:last-child { font-size: 19px !important; border-top: 1px dashed #ddd5c9; margin-top: 7px; padding-top: 14px !important; }
-.arkan-pos-page .orderWorkspace .totals > div:last-child b { color: #93642f; }
+.egsoft-pos-page .orderWorkspace { grid-template-columns: minmax(320px,.92fr) minmax(0,1.4fr) !important; gap: 16px !important; }
+.egsoft-pos-page .orderWorkspace > aside,
+.egsoft-pos-page .orderWorkspace > section { border: 1px solid var(--pos-border) !important; border-radius: var(--pos-radius) !important; padding: 20px !important; background: #fff !important; }
+.egsoft-pos-page .orderWorkspace > aside { max-height: calc(100vh - 28px); overflow-y: auto; position: sticky; top: 14px; scrollbar-width: thin; }
+.egsoft-pos-page .orderWorkspace input,.egsoft-pos-page .orderWorkspace select,.egsoft-pos-page .orderWorkspace textarea { border-radius: 10px !important; border-color: var(--pos-border) !important; }
+.egsoft-pos-page .orderWorkspace .products { grid-template-columns: repeat(auto-fill,minmax(135px,1fr)) !important; gap: 10px !important; }
+.egsoft-pos-page .orderWorkspace .product { padding: 10px !important; border: 1px solid var(--pos-border) !important; border-radius: 13px !important; min-height: 145px; align-content: start; box-shadow: none; }
+.egsoft-pos-page .orderWorkspace .product:hover:not(:disabled) { border-color: #cba777 !important; background: #fffcf7 !important; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(42,33,22,.06); }
+.egsoft-pos-page .orderWorkspace .product img { height: 92px !important; border-radius: 9px !important; }
+.egsoft-pos-page .orderWorkspace .product b { font-size: 13px; }
+.egsoft-pos-page .orderWorkspace .product small { color: #9b6a2f; font-size: 12px; font-weight: 850; }
+.egsoft-pos-page .orderWorkspace .categories button { border-radius: 9px !important; min-height: 38px; }
+.egsoft-pos-page .orderWorkspace .categories button:hover { background: var(--pos-gold-light) !important; border-color: #dec09b !important; }
+.egsoft-pos-page .orderWorkspace .cartTableWrap { max-height: 430px !important; }
+.egsoft-pos-page .orderWorkspace .cartTable th,.egsoft-pos-page .orderWorkspace .cartTable td { padding: 12px 10px !important; }
+.egsoft-pos-page .orderWorkspace .submit { background: var(--pos-ink) !important; border-radius: 11px !important; min-height: 50px; color: #fff !important; }
+.egsoft-pos-page .orderWorkspace .submit:hover:not(:disabled) { background: #4d4133 !important; }
+.egsoft-pos-page .orderWorkspace .totals { border-top: 1px solid var(--pos-border); margin-top: 10px; padding-top: 15px !important; }
+.egsoft-pos-page .orderWorkspace .totals > div { display: flex; justify-content: space-between; gap: 14px; }
+.egsoft-pos-page .orderWorkspace .totals > div:last-child { font-size: 19px !important; border-top: 1px dashed #ddd5c9; margin-top: 7px; padding-top: 14px !important; }
+.egsoft-pos-page .orderWorkspace .totals > div:last-child b { color: #93642f; }
 
 /* All orders */
-.arkan-pos-page .orderFilters { grid-template-columns: minmax(190px,2fr) repeat(3,minmax(120px,1fr)); gap: 10px !important; }
-.arkan-pos-page .orderFilters > input,.arkan-pos-page .orderFilters > select { border: 1px solid var(--pos-border) !important; border-radius: 10px !important; background: #fff; }
-.arkan-pos-page .ordersTableWrap { border: 1px solid var(--pos-border) !important; border-radius: 12px !important; }
-.arkan-pos-page .ordersTable th { background: #2b2824 !important; border-bottom-color: var(--pos-gold) !important; }
-.arkan-pos-page .ordersTable tbody tr:hover { background: #fbf7ef !important; }
-.arkan-pos-page .ordersTable td { border-bottom-color: #eeeae3 !important; }
+.egsoft-pos-page .orderFilters { grid-template-columns: minmax(190px,2fr) repeat(3,minmax(120px,1fr)); gap: 10px !important; }
+.egsoft-pos-page .orderFilters > input,.egsoft-pos-page .orderFilters > select { border: 1px solid var(--pos-border) !important; border-radius: 10px !important; background: #fff; }
+.egsoft-pos-page .ordersTableWrap { border: 1px solid var(--pos-border) !important; border-radius: 12px !important; }
+.egsoft-pos-page .ordersTable th { background: #2b2824 !important; border-bottom-color: var(--pos-gold) !important; }
+.egsoft-pos-page .ordersTable tbody tr:hover { background: #fbf7ef !important; }
+.egsoft-pos-page .ordersTable td { border-bottom-color: #eeeae3 !important; }
 
 /* Modal refinement */
-.arkan-pos-page .cashModal,.arkan-pos-page [role="dialog"] { border: 1px solid #ece5da; border-radius: 19px !important; }
-.arkan-pos-page .cashModal { gap: 17px !important; }
-.arkan-pos-page .cashModal button.submit { background: #2a2723 !important; }
+.egsoft-pos-page .cashModal,.egsoft-pos-page [role="dialog"] { border: 1px solid #ece5da; border-radius: 19px !important; }
+.egsoft-pos-page .cashModal { gap: 17px !important; }
+.egsoft-pos-page .cashModal button.submit { background: #2a2723 !important; }
 
 /* Tablets & small displays */
 @media (max-width: 1350px) {
-  .arkan-pos-page .arkan-floor-dashboard { grid-template-columns: minmax(220px,260px) minmax(0,1fr) !important; }
-  .arkan-pos-page .arkan-floor-dashboard > aside:last-child { grid-column: 1/-1; position: static !important; max-height: none; display: grid; grid-template-columns: minmax(220px,.6fr) minmax(0,1.4fr); gap: 12px; }
-  .arkan-pos-page .arkan-floor-dashboard > aside:last-child > section { margin-top: 0 !important; }
+  .egsoft-pos-page .arkan-floor-dashboard { grid-template-columns: minmax(220px,260px) minmax(0,1fr) !important; }
+  .egsoft-pos-page .arkan-floor-dashboard > aside:last-child { grid-column: 1/-1; position: static !important; max-height: none; display: grid; grid-template-columns: minmax(220px,.6fr) minmax(0,1.4fr); gap: 12px; }
+  .egsoft-pos-page .arkan-floor-dashboard > aside:last-child > section { margin-top: 0 !important; }
 }
 @media (max-width: 920px) {
-  .arkan-pos-page .arkan-floor-dashboard { grid-template-columns: minmax(0,1fr) !important; }
-  .arkan-pos-page .arkan-floor-dashboard > * { grid-column: 1/-1; }
-  .arkan-pos-page .arkan-floor-dashboard > aside:first-child { position: static !important; max-height: none; }
-  .arkan-pos-page .arkan-floor-dashboard > aside:last-child { display: block; }
-  .arkan-pos-page .arkan-floor-dashboard > aside:last-child > section { margin-top: 12px !important; }
-  .arkan-pos-page .orderWorkspace { grid-template-columns: minmax(0,1fr) !important; }
-  .arkan-pos-page .orderWorkspace > aside { position: static; max-height: none; }
-  .arkan-pos-page .orderFilters { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .egsoft-pos-page .arkan-floor-dashboard { grid-template-columns: minmax(0,1fr) !important; }
+  .egsoft-pos-page .arkan-floor-dashboard > * { grid-column: 1/-1; }
+  .egsoft-pos-page .arkan-floor-dashboard > aside:first-child { position: static !important; max-height: none; }
+  .egsoft-pos-page .arkan-floor-dashboard > aside:last-child { display: block; }
+  .egsoft-pos-page .arkan-floor-dashboard > aside:last-child > section { margin-top: 12px !important; }
+  .egsoft-pos-page .orderWorkspace { grid-template-columns: minmax(0,1fr) !important; }
+  .egsoft-pos-page .orderWorkspace > aside { position: static; max-height: none; }
+  .egsoft-pos-page .orderFilters { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @media (max-width: 600px) {
-  .arkan-pos-page { padding: 12px !important; }
-  .arkan-pos-page .tabs { width: 100%; }
-  .arkan-pos-page .tabs .tab { flex: 1; min-width: 0 !important; padding: 10px 4px !important; font-size: 12px !important; }
-  .arkan-pos-page .arkan-floor-dashboard > div:nth-child(2),
-  .arkan-pos-page .orderWorkspace > aside,.arkan-pos-page .orderWorkspace > section { padding: 14px !important; }
-  .arkan-pos-page .floor-table-grid { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
-  .arkan-pos-page .floor-table-tile { min-height: 105px !important; }
-  .arkan-pos-page .orderFilters { grid-template-columns: 1fr; }
-  .arkan-pos-page .floor-status-strip > div b { font-size: 23px; }
+  .egsoft-pos-page { padding: 12px !important; }
+  .egsoft-pos-page .tabs { width: 100%; }
+  .egsoft-pos-page .tabs .tab { flex: 1; min-width: 0 !important; padding: 10px 4px !important; font-size: 12px !important; }
+  .egsoft-pos-page .arkan-floor-dashboard > div:nth-child(2),
+  .egsoft-pos-page .orderWorkspace > aside,.egsoft-pos-page .orderWorkspace > section { padding: 14px !important; }
+  .egsoft-pos-page .floor-table-grid { grid-template-columns: repeat(3,minmax(0,1fr)) !important; }
+  .egsoft-pos-page .floor-table-tile { min-height: 105px !important; }
+  .egsoft-pos-page .orderFilters { grid-template-columns: 1fr; }
+  .egsoft-pos-page .floor-status-strip > div b { font-size: 23px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .arkan-pos-page *, .arkan-pos-page *::before, .arkan-pos-page *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+  .egsoft-pos-page *, .egsoft-pos-page *::before, .egsoft-pos-page *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
 }
 
 /* Readability pass: stronger typography and balanced icon sizing */
-.arkan-pos-page {
+.egsoft-pos-page {
   font-size: 16px !important;
   line-height: 1.65 !important;
 }
-.arkan-pos-page button,
-.arkan-pos-page input,
-.arkan-pos-page select,
-.arkan-pos-page textarea {
+.egsoft-pos-page button,
+.egsoft-pos-page input,
+.egsoft-pos-page select,
+.egsoft-pos-page textarea {
   font-size: 15px !important;
   line-height: 1.5 !important;
 }
-.arkan-pos-page button { font-weight: 750; }
-.arkan-pos-page p,
-.arkan-pos-page label,
-.arkan-pos-page th,
-.arkan-pos-page td,
-.arkan-pos-page .floor-legend,
-.arkan-pos-page .floor-status-strip small {
+.egsoft-pos-page button { font-weight: 750; }
+.egsoft-pos-page p,
+.egsoft-pos-page label,
+.egsoft-pos-page th,
+.egsoft-pos-page td,
+.egsoft-pos-page .floor-legend,
+.egsoft-pos-page .floor-status-strip small {
   font-size: 14px !important;
   line-height: 1.65 !important;
 }
-.arkan-pos-page small,
-.arkan-pos-page .muted,
-.arkan-pos-page .floorHint,
-.arkan-pos-page .floor-hint {
+.egsoft-pos-page small,
+.egsoft-pos-page .muted,
+.egsoft-pos-page .floorHint,
+.egsoft-pos-page .floor-hint {
   font-size: 13px !important;
   line-height: 1.65 !important;
 }
-.arkan-pos-page .tabs .tab {
+.egsoft-pos-page .tabs .tab {
   font-size: 16px !important;
   font-weight: 800 !important;
   min-height: 50px !important;
 }
-.arkan-pos-page .floorTools > button,
-.arkan-pos-page .arkan-floor-dashboard .floorTools > button {
+.egsoft-pos-page .floorTools > button,
+.egsoft-pos-page .arkan-floor-dashboard .floorTools > button {
   min-height: 58px !important;
   padding: 12px 10px !important;
   font-size: 14px !important;
   line-height: 1.55 !important;
 }
-.arkan-pos-page .floor-table-tile b { font-size: 30px !important; }
-.arkan-pos-page .floor-table-tile small { font-size: 14px !important; }
-.arkan-pos-page .floor-table-tile .table-amount { font-size: 13px !important; font-weight: 800 !important; }
-.arkan-pos-page .floor-status-strip > div b { font-size: 30px !important; }
-.arkan-pos-page .floor-status-strip > div small { font-size: 14px !important; }
-.arkan-pos-page .floor-preview-wrap th,
-.arkan-pos-page .floor-preview-wrap td,
-.arkan-pos-page .orderWorkspace .cartTable th,
-.arkan-pos-page .orderWorkspace .cartTable td,
-.arkan-pos-page .ordersTable th,
-.arkan-pos-page .ordersTable td { font-size: 14px !important; }
-.arkan-pos-page .orderWorkspace .product b { font-size: 15px !important; line-height: 1.5; }
-.arkan-pos-page .orderWorkspace .product small { font-size: 14px !important; }
-.arkan-pos-page .orderWorkspace .categories button { font-size: 14px !important; min-height: 42px !important; }
-.arkan-pos-page .orderWorkspace .totals,
-.arkan-pos-page .orderWorkspace .totals > div { font-size: 15px !important; }
-.arkan-pos-page .orderWorkspace .totals > div:last-child { font-size: 21px !important; }
+.egsoft-pos-page .floor-table-tile b { font-size: 30px !important; }
+.egsoft-pos-page .floor-table-tile small { font-size: 14px !important; }
+.egsoft-pos-page .floor-table-tile .table-amount { font-size: 13px !important; font-weight: 800 !important; }
+.egsoft-pos-page .floor-status-strip > div b { font-size: 30px !important; }
+.egsoft-pos-page .floor-status-strip > div small { font-size: 14px !important; }
+.egsoft-pos-page .floor-preview-wrap th,
+.egsoft-pos-page .floor-preview-wrap td,
+.egsoft-pos-page .orderWorkspace .cartTable th,
+.egsoft-pos-page .orderWorkspace .cartTable td,
+.egsoft-pos-page .ordersTable th,
+.egsoft-pos-page .ordersTable td { font-size: 14px !important; }
+.egsoft-pos-page .orderWorkspace .product b { font-size: 15px !important; line-height: 1.5; }
+.egsoft-pos-page .orderWorkspace .product small { font-size: 14px !important; }
+.egsoft-pos-page .orderWorkspace .categories button { font-size: 14px !important; min-height: 42px !important; }
+.egsoft-pos-page .orderWorkspace .totals,
+.egsoft-pos-page .orderWorkspace .totals > div { font-size: 15px !important; }
+.egsoft-pos-page .orderWorkspace .totals > div:last-child { font-size: 21px !important; }
 
 /* Keep visual symbols and icon components crisp without enlarging button labels */
-.arkan-pos-page svg,
-.arkan-pos-page button svg,
-.arkan-pos-page [data-lucide],
-.arkan-pos-page .lucide {
+.egsoft-pos-page svg,
+.egsoft-pos-page button svg,
+.egsoft-pos-page [data-lucide],
+.egsoft-pos-page .lucide {
   width: 21px !important;
   height: 21px !important;
   min-width: 21px;
@@ -249,27 +249,27 @@
   stroke-width: 2;
   flex-shrink: 0;
 }
-.arkan-pos-page .floor-legend span::first-letter {
+.egsoft-pos-page .floor-legend span::first-letter {
   font-size: 19px;
 }
-.arkan-pos-page .floorTotal button::first-letter {
+.egsoft-pos-page .floorTotal button::first-letter {
   font-size: 21px;
 }
-.arkan-pos-page .floor-status-strip > div { min-height: 88px; }
-.arkan-pos-page .floor-table-tile { min-height: 122px !important; }
+.egsoft-pos-page .floor-status-strip > div { min-height: 88px; }
+.egsoft-pos-page .floor-table-tile { min-height: 122px !important; }
 
 @media (max-width: 600px) {
-  .arkan-pos-page { font-size: 15px !important; }
-  .arkan-pos-page button,
-  .arkan-pos-page input,
-  .arkan-pos-page select,
-  .arkan-pos-page textarea { font-size: 14px !important; }
-  .arkan-pos-page .tabs .tab { font-size: 14px !important; min-height: 46px !important; }
-  .arkan-pos-page .floor-table-tile b { font-size: 27px !important; }
-  .arkan-pos-page svg,
-  .arkan-pos-page button svg,
-  .arkan-pos-page [data-lucide],
-  .arkan-pos-page .lucide {
+  .egsoft-pos-page { font-size: 15px !important; }
+  .egsoft-pos-page button,
+  .egsoft-pos-page input,
+  .egsoft-pos-page select,
+  .egsoft-pos-page textarea { font-size: 14px !important; }
+  .egsoft-pos-page .tabs .tab { font-size: 14px !important; min-height: 46px !important; }
+  .egsoft-pos-page .floor-table-tile b { font-size: 27px !important; }
+  .egsoft-pos-page svg,
+  .egsoft-pos-page button svg,
+  .egsoft-pos-page [data-lucide],
+  .egsoft-pos-page .lucide {
     width: 19px !important;
     height: 19px !important;
     min-width: 19px;
@@ -279,7 +279,7 @@
 
 
 /* POS layout pass: top order tabs and compact open-tables rail */
-.arkan-pos-page > .tabs {
+.egsoft-pos-page > .tabs {
   width: 100% !important;
   display: grid !important;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -290,19 +290,19 @@
   background: #eeece7 !important;
   border-radius: 14px !important;
 }
-.arkan-pos-page > .tabs .tab {
+.egsoft-pos-page > .tabs .tab {
   width: 100%;
   min-width: 0 !important;
   min-height: 52px !important;
   font-size: 16px !important;
 }
-.arkan-pos-page > header { margin-top: 0 !important; }
-.arkan-pos-page .arkan-floor-dashboard {
+.egsoft-pos-page > header { margin-top: 0 !important; }
+.egsoft-pos-page .arkan-floor-dashboard {
   grid-template-columns: 176px minmax(0, 1fr) minmax(280px, 320px) !important;
   gap: 13px !important;
   direction: ltr;
 }
-.arkan-pos-page .pos-open-tables-sidebar {
+.egsoft-pos-page .pos-open-tables-sidebar {
   position: sticky !important;
   top: 12px;
   display: flex !important;
@@ -319,8 +319,8 @@
   direction: rtl;
   scrollbar-width: thin;
 }
-.arkan-pos-page .pos-sidebar-total,
-.arkan-pos-page .pos-sidebar-count {
+.egsoft-pos-page .pos-sidebar-total,
+.egsoft-pos-page .pos-sidebar-count {
   display: grid;
   justify-items: center;
   gap: 5px;
@@ -329,13 +329,13 @@
   background: #f8f3eb;
   text-align: center;
 }
-.arkan-pos-page .pos-sidebar-total small,
-.arkan-pos-page .pos-sidebar-count span { color: var(--pos-muted); font-size: 12px !important; }
-.arkan-pos-page .pos-sidebar-total strong { color: #8b622e; font-size: 20px !important; line-height: 1.25; overflow-wrap: anywhere; }
-.arkan-pos-page .pos-sidebar-total strong span { font-size: 11px; }
-.arkan-pos-page .pos-sidebar-count { background: #f1f6f1; }
-.arkan-pos-page .pos-sidebar-count b { color: #267447; font-size: 28px; line-height: 1; }
-.arkan-pos-page .pos-sidebar-refresh {
+.egsoft-pos-page .pos-sidebar-total small,
+.egsoft-pos-page .pos-sidebar-count span { color: var(--pos-muted); font-size: 12px !important; }
+.egsoft-pos-page .pos-sidebar-total strong { color: #8b622e; font-size: 20px !important; line-height: 1.25; overflow-wrap: anywhere; }
+.egsoft-pos-page .pos-sidebar-total strong span { font-size: 11px; }
+.egsoft-pos-page .pos-sidebar-count { background: #f1f6f1; }
+.egsoft-pos-page .pos-sidebar-count b { color: #267447; font-size: 28px; line-height: 1; }
+.egsoft-pos-page .pos-sidebar-refresh {
   width: 100%;
   min-height: 42px !important;
   border: 1px solid #dfcfb8 !important;
@@ -344,9 +344,9 @@
   color: #78552e !important;
   font-weight: 800;
 }
-.arkan-pos-page .pos-open-table-list { display: grid; gap: 7px; }
-.arkan-pos-page .pos-open-table-list h3 { margin: 2px 0 3px !important; font-size: 14px !important; }
-.arkan-pos-page .pos-open-table-list button {
+.egsoft-pos-page .pos-open-table-list { display: grid; gap: 7px; }
+.egsoft-pos-page .pos-open-table-list h3 { margin: 2px 0 3px !important; font-size: 14px !important; }
+.egsoft-pos-page .pos-open-table-list button {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -359,56 +359,56 @@
   background: #fff4f1 !important;
   color: #98483e !important;
 }
-.arkan-pos-page .pos-open-table-list button b { font-size: 17px; }
-.arkan-pos-page .pos-open-table-list button span { font-size: 11px; }
-.arkan-pos-page .pos-open-table-list button.active {
+.egsoft-pos-page .pos-open-table-list button b { font-size: 17px; }
+.egsoft-pos-page .pos-open-table-list button span { font-size: 11px; }
+.egsoft-pos-page .pos-open-table-list button.active {
   border-color: #b88946 !important;
   background: #f8eddd !important;
   color: #795328 !important;
   box-shadow: inset 0 0 0 1px #b88946;
 }
-.arkan-pos-page .pos-no-open-tables { display: block; padding: 10px 4px; color: var(--pos-muted); text-align: center; }
+.egsoft-pos-page .pos-no-open-tables { display: block; padding: 10px 4px; color: var(--pos-muted); text-align: center; }
 @media (max-width: 1350px) {
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     grid-template-columns: 176px minmax(0, 1fr) !important;
   }
-  .arkan-pos-page .arkan-floor-dashboard > aside:last-child {
+  .egsoft-pos-page .arkan-floor-dashboard > aside:last-child {
     grid-column: 1 / -1;
   }
 }
 @media (max-width: 920px) {
-  .arkan-pos-page .arkan-floor-dashboard { grid-template-columns: minmax(0, 1fr) !important; }
-  .arkan-pos-page .pos-open-tables-sidebar {
+  .egsoft-pos-page .arkan-floor-dashboard { grid-template-columns: minmax(0, 1fr) !important; }
+  .egsoft-pos-page .pos-open-tables-sidebar {
     position: static !important;
     max-height: none;
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
   }
-  .arkan-pos-page .pos-open-table-list { grid-column: 1 / -1; grid-template-columns: repeat(auto-fill,minmax(90px,1fr)); }
-  .arkan-pos-page .pos-open-table-list h3 { grid-column: 1 / -1; }
+  .egsoft-pos-page .pos-open-table-list { grid-column: 1 / -1; grid-template-columns: repeat(auto-fill,minmax(90px,1fr)); }
+  .egsoft-pos-page .pos-open-table-list h3 { grid-column: 1 / -1; }
 }
 @media (max-width: 600px) {
-  .arkan-pos-page > .tabs { gap: 4px !important; padding: 4px !important; }
-  .arkan-pos-page > .tabs .tab { min-height: 44px !important; padding: 8px 3px !important; font-size: 13px !important; }
-  .arkan-pos-page .pos-open-tables-sidebar { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .arkan-pos-page .pos-sidebar-refresh { grid-column: 1 / -1; }
+  .egsoft-pos-page > .tabs { gap: 4px !important; padding: 4px !important; }
+  .egsoft-pos-page > .tabs .tab { min-height: 44px !important; padding: 8px 3px !important; font-size: 13px !important; }
+  .egsoft-pos-page .pos-open-tables-sidebar { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .egsoft-pos-page .pos-sidebar-refresh { grid-column: 1 / -1; }
 }
 
 
 /* Remove the empty space above the POS category bar */
-.arkan-pos-page { padding-top: 0 !important; }
-.arkan-pos-page > .tabs {
+.egsoft-pos-page { padding-top: 0 !important; }
+.egsoft-pos-page > .tabs {
   margin-top: 0 !important;
   padding-top: 4px !important;
 }
 
 
 /* Compact right summary rail: totals and refresh are separate; hide order preview */
-.arkan-pos-page .arkan-floor-dashboard {
+.egsoft-pos-page .arkan-floor-dashboard {
   grid-template-columns: 176px minmax(0, 1fr) 168px !important;
 }
-.arkan-pos-page .pos-floor-summary-sidebar {
+.egsoft-pos-page .pos-floor-summary-sidebar {
   display: flex !important;
   flex-direction: column;
   align-items: stretch;
@@ -421,7 +421,7 @@
   overflow: visible !important;
   direction: rtl;
 }
-.arkan-pos-page .pos-floor-summary-sidebar .pos-floor-total-card {
+.egsoft-pos-page .pos-floor-summary-sidebar .pos-floor-total-card {
   display: grid;
   justify-items: center;
   gap: 12px;
@@ -435,20 +435,20 @@
   color: #fff !important;
   text-align: center;
 }
-.arkan-pos-page .pos-floor-summary-sidebar .pos-floor-total-card small {
+.egsoft-pos-page .pos-floor-summary-sidebar .pos-floor-total-card small {
   color: #d1c8bc !important;
   font-size: 16px !important;
   font-weight: 800 !important;
   line-height: 1.5;
 }
-.arkan-pos-page .pos-floor-summary-sidebar .pos-floor-total-card strong {
+.egsoft-pos-page .pos-floor-summary-sidebar .pos-floor-total-card strong {
   color: #fff !important;
   font-size: 28px !important;
   font-weight: 900 !important;
   overflow-wrap: anywhere;
   line-height: 1.4;
 }
-.arkan-pos-page .pos-floor-refresh {
+.egsoft-pos-page .pos-floor-refresh {
   width: 100% !important;
   min-width: 0;
   min-height: 64px !important;
@@ -463,10 +463,10 @@
   color: #78552e !important;
 }
 @media (max-width: 1350px) {
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     grid-template-columns: 176px minmax(0, 1fr) 168px !important;
   }
-  .arkan-pos-page .arkan-floor-dashboard > aside:last-child {
+  .egsoft-pos-page .arkan-floor-dashboard > aside:last-child {
     grid-column: auto !important;
     display: flex !important;
     grid-template-columns: none !important;
@@ -474,10 +474,10 @@
   }
 }
 @media (max-width: 920px) {
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     grid-template-columns: minmax(0, 1fr) !important;
   }
-  .arkan-pos-page .pos-floor-summary-sidebar {
+  .egsoft-pos-page .pos-floor-summary-sidebar {
     position: static !important;
     width: 100%;
     display: grid !important;
@@ -488,30 +488,30 @@
 
 
 /* Remove the left open-tables sidebar and let the floor area use the freed space */
-.arkan-pos-page .pos-open-tables-sidebar {
+.egsoft-pos-page .pos-open-tables-sidebar {
   display: none !important;
 }
-.arkan-pos-page .arkan-floor-dashboard {
+.egsoft-pos-page .arkan-floor-dashboard {
   grid-template-columns: minmax(0, 1fr) 168px !important;
 }
 @media (max-width: 1350px) {
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     grid-template-columns: minmax(0, 1fr) 168px !important;
   }
 }
 @media (max-width: 920px) {
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     grid-template-columns: minmax(0, 1fr) !important;
   }
-  .arkan-pos-page .pos-floor-summary-sidebar {
+  .egsoft-pos-page .pos-floor-summary-sidebar {
     width: 100%;
   }
 }
 
 
 /* Three equal panels below the floor: order details stay in the center panel */
-.arkan-pos-page .floor-legend { display: none !important; }
-.arkan-pos-page .pos-floor-order-preview-grid {
+.egsoft-pos-page .floor-legend { display: none !important; }
+.egsoft-pos-page .pos-floor-order-preview-grid {
   grid-column: 1 / -1 !important;
   display: grid !important;
   grid-template-columns: minmax(0, .75fr) minmax(0, 1.5fr) minmax(0, .75fr) !important;
@@ -521,8 +521,8 @@
   direction: rtl;
   align-items: stretch;
 }
-.arkan-pos-page .pos-floor-preview-empty,
-.arkan-pos-page .pos-floor-order-preview {
+.egsoft-pos-page .pos-floor-preview-empty,
+.egsoft-pos-page .pos-floor-order-preview {
   min-width: 0;
   min-height: 180px;
   border: 1px solid var(--pos-border);
@@ -530,104 +530,104 @@
   background: #fff;
   padding: 14px;
 }
-.arkan-pos-page .pos-floor-preview-empty { visibility: hidden; }
-.arkan-pos-page .pos-floor-order-preview h3 {
+.egsoft-pos-page .pos-floor-preview-empty { visibility: hidden; }
+.egsoft-pos-page .pos-floor-order-preview h3 {
   margin: 0 0 12px;
   font-size: 17px;
   font-weight: 850;
 }
-.arkan-pos-page .pos-floor-order-preview > p {
+.egsoft-pos-page .pos-floor-order-preview > p {
   margin: 0;
   color: var(--pos-muted);
   text-align: center;
   padding: 30px 8px;
 }
-.arkan-pos-page .pos-floor-order-preview .floor-preview-wrap {
+.egsoft-pos-page .pos-floor-order-preview .floor-preview-wrap {
   max-height: 260px;
   overflow: auto;
 }
-.arkan-pos-page .pos-floor-order-preview table {
+.egsoft-pos-page .pos-floor-order-preview table {
   width: 100%;
   min-width: 0 !important;
   border-collapse: collapse;
 }
-.arkan-pos-page .pos-floor-order-preview th,
-.arkan-pos-page .pos-floor-order-preview td {
+.egsoft-pos-page .pos-floor-order-preview th,
+.egsoft-pos-page .pos-floor-order-preview td {
   padding: 9px 7px !important;
   text-align: right;
   border-bottom: 1px solid var(--pos-border);
   font-size: 13px !important;
 }
-.arkan-pos-page .pos-floor-order-preview thead th {
+.egsoft-pos-page .pos-floor-order-preview thead th {
   background: #f5f1e9;
   white-space: nowrap;
 }
-.arkan-pos-page .pos-floor-order-preview tfoot th {
+.egsoft-pos-page .pos-floor-order-preview tfoot th {
   background: #faf7f1;
 }
 @media (max-width: 920px) {
-  .arkan-pos-page .pos-floor-order-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-  .arkan-pos-page .pos-floor-preview-empty,
-  .arkan-pos-page .pos-floor-order-preview { padding: 9px; }
+  .egsoft-pos-page .pos-floor-order-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .egsoft-pos-page .pos-floor-preview-empty,
+  .egsoft-pos-page .pos-floor-order-preview { padding: 9px; }
 }
 @media (max-width: 600px) {
-  .arkan-pos-page .pos-floor-order-preview-grid { grid-template-columns: minmax(0, 1fr) !important; }
-  .arkan-pos-page .pos-floor-preview-empty { display: none; }
+  .egsoft-pos-page .pos-floor-order-preview-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .egsoft-pos-page .pos-floor-preview-empty { display: none; }
 }
 
 
 /* Match all ordinary text in the floor order details to the refresh button size */
-.arkan-pos-page .pos-floor-order-preview,
-.arkan-pos-page .pos-floor-order-preview h3,
-.arkan-pos-page .pos-floor-order-preview p,
-.arkan-pos-page .pos-floor-order-preview th,
-.arkan-pos-page .pos-floor-order-preview td,
-.arkan-pos-page .pos-floor-order-preview tfoot th {
+.egsoft-pos-page .pos-floor-order-preview,
+.egsoft-pos-page .pos-floor-order-preview h3,
+.egsoft-pos-page .pos-floor-order-preview p,
+.egsoft-pos-page .pos-floor-order-preview th,
+.egsoft-pos-page .pos-floor-order-preview td,
+.egsoft-pos-page .pos-floor-order-preview tfoot th {
   font-size: 16px !important;
   line-height: 1.6 !important;
 }
 
 
 /* Increase readability of the centered floor order details */
-.arkan-pos-page .pos-floor-order-preview,
-.arkan-pos-page .pos-floor-order-preview p,
-.arkan-pos-page .pos-floor-order-preview th,
-.arkan-pos-page .pos-floor-order-preview td {
+.egsoft-pos-page .pos-floor-order-preview,
+.egsoft-pos-page .pos-floor-order-preview p,
+.egsoft-pos-page .pos-floor-order-preview th,
+.egsoft-pos-page .pos-floor-order-preview td {
   font-size: 18px !important;
   line-height: 1.7 !important;
 }
-.arkan-pos-page .pos-floor-order-preview h3 {
+.egsoft-pos-page .pos-floor-order-preview h3 {
   font-size: 20px !important;
   line-height: 1.6 !important;
 }
-.arkan-pos-page .pos-floor-order-preview tfoot th {
+.egsoft-pos-page .pos-floor-order-preview tfoot th {
   font-size: 19px !important;
 }
 
 
 /* Keep the money amount shown on each floor table tile black */
-.arkan-pos-page .floor-table-tile .table-amount {
+.egsoft-pos-page .floor-table-tile .table-amount {
   color: #000 !important;
 }
 
 
 /* Right sidebar table-total card: black text on its white background */
-.arkan-pos-page .pos-floor-summary-sidebar .pos-floor-total-card {
+.egsoft-pos-page .pos-floor-summary-sidebar .pos-floor-total-card {
   background: #fff !important;
   color: #000 !important;
 }
-.arkan-pos-page .pos-floor-summary-sidebar .pos-floor-total-card small,
-.arkan-pos-page .pos-floor-summary-sidebar .pos-floor-total-card strong {
+.egsoft-pos-page .pos-floor-summary-sidebar .pos-floor-total-card small,
+.egsoft-pos-page .pos-floor-summary-sidebar .pos-floor-total-card strong {
   color: #000 !important;
 }
 
 
 /* Floor action tiles: fill both side panels and keep the order preview centered */
-.arkan-pos-page .pos-floor-order-preview-grid {
+.egsoft-pos-page .pos-floor-order-preview-grid {
   grid-template-columns: minmax(0,1fr) minmax(0,1.55fr) minmax(0,1fr) !important;
   gap: 12px !important;
 }
-.arkan-pos-page .pos-floor-action-panel {
+.egsoft-pos-page .pos-floor-action-panel {
   min-width: 0;
   min-height: 100%;
   padding: 14px;
@@ -639,21 +639,21 @@
   flex-direction: column;
   gap: 12px;
 }
-.arkan-pos-page .pos-floor-action-panel h3 {
+.egsoft-pos-page .pos-floor-action-panel h3 {
   margin: 0;
   padding-bottom: 9px;
   border-bottom: 1px solid var(--pos-border);
   font-size: 20px !important;
   font-weight: 900;
 }
-.arkan-pos-page .pos-floor-action-grid {
+.egsoft-pos-page .pos-floor-action-grid {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
   grid-auto-rows: minmax(118px,1fr);
   gap: 10px;
 }
-.arkan-pos-page .pos-floor-action-grid button {
+.egsoft-pos-page .pos-floor-action-grid button {
   min-width: 0;
   min-height: 118px !important;
   padding: 12px 8px !important;
@@ -669,64 +669,64 @@
   text-align: center;
   white-space: normal;
 }
-.arkan-pos-page .pos-floor-action-grid button:hover:not(:disabled) {
+.egsoft-pos-page .pos-floor-action-grid button:hover:not(:disabled) {
   border-color: #c9a879 !important;
   background: #f8f0e4 !important;
   transform: translateY(-2px);
 }
-.arkan-pos-page .pos-floor-action-grid button:disabled { opacity: .4; }
-.arkan-pos-page .pos-floor-action-grid button.is-primary {
+.egsoft-pos-page .pos-floor-action-grid button:disabled { opacity: .4; }
+.egsoft-pos-page .pos-floor-action-grid button.is-primary {
   color: #fff !important;
   background: #28764a !important;
   border-color: #28764a !important;
 }
-.arkan-pos-page .pos-floor-action-grid button.is-primary:hover:not(:disabled) { background: #1f623d !important; }
-.arkan-pos-page .pos-floor-action-grid button.is-danger {
+.egsoft-pos-page .pos-floor-action-grid button.is-primary:hover:not(:disabled) { background: #1f623d !important; }
+.egsoft-pos-page .pos-floor-action-grid button.is-danger {
   color: #9c3932 !important;
   background: #fff2ef !important;
   border-color: #efd2cc !important;
 }
-.arkan-pos-page .pos-floor-action-grid .pos-action-icon {
+.egsoft-pos-page .pos-floor-action-grid .pos-action-icon {
   display: block;
   font-size: 34px;
   line-height: 1.1;
 }
-.arkan-pos-page .pos-floor-action-grid b {
+.egsoft-pos-page .pos-floor-action-grid b {
   display: block;
   font-size: 18px !important;
   line-height: 1.5;
   font-weight: 900;
 }
-.arkan-pos-page .pos-floor-inline-action {
+.egsoft-pos-page .pos-floor-inline-action {
   display: grid !important;
   grid-template-columns: minmax(180px,1fr) minmax(160px,1fr) auto auto;
   gap: 10px !important;
 }
 @media (max-width: 1100px) {
-  .arkan-pos-page .pos-floor-order-preview-grid {
+  .egsoft-pos-page .pos-floor-order-preview-grid {
     grid-template-columns: minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr) !important;
   }
-  .arkan-pos-page .pos-floor-action-grid { grid-auto-rows: minmax(100px,1fr); }
-  .arkan-pos-page .pos-floor-action-grid button { min-height: 100px !important; }
-  .arkan-pos-page .pos-floor-action-grid b { font-size: 16px !important; }
+  .egsoft-pos-page .pos-floor-action-grid { grid-auto-rows: minmax(100px,1fr); }
+  .egsoft-pos-page .pos-floor-action-grid button { min-height: 100px !important; }
+  .egsoft-pos-page .pos-floor-action-grid b { font-size: 16px !important; }
 }
 @media (max-width: 920px) {
-  .arkan-pos-page .pos-floor-order-preview-grid { grid-template-columns: minmax(0,1fr) !important; }
-  .arkan-pos-page .pos-floor-action-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .arkan-pos-page .pos-floor-inline-action { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .egsoft-pos-page .pos-floor-order-preview-grid { grid-template-columns: minmax(0,1fr) !important; }
+  .egsoft-pos-page .pos-floor-action-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .egsoft-pos-page .pos-floor-inline-action { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
 }
 @media (max-width: 600px) {
-  .arkan-pos-page .pos-floor-action-grid { grid-auto-rows: minmax(96px,1fr); gap: 8px; }
-  .arkan-pos-page .pos-floor-action-grid button { min-height: 96px !important; }
-  .arkan-pos-page .pos-floor-action-grid .pos-action-icon { font-size: 28px; }
-  .arkan-pos-page .pos-floor-action-grid b { font-size: 15px !important; }
-  .arkan-pos-page .pos-floor-inline-action { grid-template-columns: minmax(0,1fr); }
+  .egsoft-pos-page .pos-floor-action-grid { grid-auto-rows: minmax(96px,1fr); gap: 8px; }
+  .egsoft-pos-page .pos-floor-action-grid button { min-height: 96px !important; }
+  .egsoft-pos-page .pos-floor-action-grid .pos-action-icon { font-size: 28px; }
+  .egsoft-pos-page .pos-floor-action-grid b { font-size: 15px !important; }
+  .egsoft-pos-page .pos-floor-inline-action { grid-template-columns: minmax(0,1fr); }
 }
 
 
 /* Compact floor controls: fit the screen and scroll only the center order items */
 @media (min-width: 921px) {
-  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+  .egsoft-pos-page:has(.pos-floor-order-preview-grid) {
     height: 100dvh !important;
     min-height: 0 !important;
     overflow: hidden !important;
@@ -734,24 +734,24 @@
     display: flex !important;
     flex-direction: column !important;
   }
-  .arkan-pos-page:has(.pos-floor-order-preview-grid) > .tabs {
+  .egsoft-pos-page:has(.pos-floor-order-preview-grid) > .tabs {
     flex: 0 0 auto;
     margin-bottom: 8px !important;
     min-height: 42px !important;
   }
-  .arkan-pos-page:has(.pos-floor-order-preview-grid) > header {
+  .egsoft-pos-page:has(.pos-floor-order-preview-grid) > header {
     flex: 0 0 auto;
     padding-bottom: 6px !important;
     margin-bottom: 8px !important;
   }
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     flex: 1 1 auto;
     min-height: 0 !important;
     overflow: hidden !important;
     align-content: start;
     row-gap: 8px !important;
   }
-  .arkan-pos-page .pos-floor-order-preview-grid {
+  .egsoft-pos-page .pos-floor-order-preview-grid {
     height: clamp(174px, 25vh, 218px) !important;
     min-height: 0 !important;
     max-height: 218px !important;
@@ -759,42 +759,42 @@
     margin-top: 0 !important;
     overflow: hidden !important;
   }
-  .arkan-pos-page .pos-floor-action-panel {
+  .egsoft-pos-page .pos-floor-action-panel {
     min-height: 0 !important;
     height: 100% !important;
     padding: 8px !important;
     gap: 6px !important;
     overflow: hidden !important;
   }
-  .arkan-pos-page .pos-floor-action-panel h3 {
+  .egsoft-pos-page .pos-floor-action-panel h3 {
     flex: 0 0 auto;
     padding-bottom: 5px !important;
     font-size: 15px !important;
     line-height: 1.3 !important;
   }
-  .arkan-pos-page .pos-floor-action-grid {
+  .egsoft-pos-page .pos-floor-action-grid {
     min-height: 0 !important;
     grid-template-columns: repeat(2,minmax(0,1fr)) !important;
     grid-template-rows: repeat(3,minmax(0,1fr)) !important;
     grid-auto-rows: minmax(0,1fr) !important;
     gap: 6px !important;
   }
-  .arkan-pos-page .pos-floor-action-grid button {
+  .egsoft-pos-page .pos-floor-action-grid button {
     min-height: 0 !important;
     height: 100% !important;
     padding: 5px 4px !important;
     gap: 4px !important;
     border-radius: 9px !important;
   }
-  .arkan-pos-page .pos-floor-action-grid .pos-action-icon {
+  .egsoft-pos-page .pos-floor-action-grid .pos-action-icon {
     font-size: 23px !important;
     line-height: 1 !important;
   }
-  .arkan-pos-page .pos-floor-action-grid b {
+  .egsoft-pos-page .pos-floor-action-grid b {
     font-size: 13px !important;
     line-height: 1.25 !important;
   }
-  .arkan-pos-page .pos-floor-order-preview {
+  .egsoft-pos-page .pos-floor-order-preview {
     min-height: 0 !important;
     height: 100% !important;
     padding: 9px !important;
@@ -802,31 +802,31 @@
     flex-direction: column;
     overflow: hidden !important;
   }
-  .arkan-pos-page .pos-floor-order-preview h3 {
+  .egsoft-pos-page .pos-floor-order-preview h3 {
     flex: 0 0 auto;
     margin-bottom: 5px !important;
     font-size: 16px !important;
   }
-  .arkan-pos-page .pos-floor-order-preview .floor-preview-wrap {
+  .egsoft-pos-page .pos-floor-order-preview .floor-preview-wrap {
     flex: 1 1 auto;
     min-height: 0 !important;
     max-height: none !important;
     overflow: auto !important;
     scrollbar-width: thin;
   }
-  .arkan-pos-page .pos-floor-order-preview th,
-  .arkan-pos-page .pos-floor-order-preview td {
+  .egsoft-pos-page .pos-floor-order-preview th,
+  .egsoft-pos-page .pos-floor-order-preview td {
     padding: 5px 6px !important;
     font-size: 13px !important;
     line-height: 1.35 !important;
   }
-  .arkan-pos-page .pos-floor-order-preview tfoot {
+  .egsoft-pos-page .pos-floor-order-preview tfoot {
     position: sticky;
     bottom: 0;
   }
 }
 @media (max-width: 920px) {
-  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+  .egsoft-pos-page:has(.pos-floor-order-preview-grid) {
     overflow-x: hidden;
   }
 }
@@ -834,81 +834,81 @@
 
 /* Use the remaining viewport height for larger action tiles and readable ticket details */
 @media (min-width: 921px) {
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     grid-template-rows: minmax(0, auto) minmax(270px, 1fr) !important;
     align-content: stretch !important;
   }
-  .arkan-pos-page .pos-floor-order-preview-grid {
+  .egsoft-pos-page .pos-floor-order-preview-grid {
     height: 100% !important;
     min-height: 270px !important;
     max-height: none !important;
     align-self: stretch !important;
   }
-  .arkan-pos-page .pos-floor-action-panel {
+  .egsoft-pos-page .pos-floor-action-panel {
     padding: 11px !important;
     gap: 8px !important;
   }
-  .arkan-pos-page .pos-floor-action-panel h3 {
+  .egsoft-pos-page .pos-floor-action-panel h3 {
     font-size: 17px !important;
   }
-  .arkan-pos-page .pos-floor-action-grid button {
+  .egsoft-pos-page .pos-floor-action-grid button {
     padding: 8px 6px !important;
     gap: 7px !important;
   }
-  .arkan-pos-page .pos-floor-action-grid .pos-action-icon {
+  .egsoft-pos-page .pos-floor-action-grid .pos-action-icon {
     font-size: 30px !important;
   }
-  .arkan-pos-page .pos-floor-action-grid b {
+  .egsoft-pos-page .pos-floor-action-grid b {
     font-size: 15px !important;
     line-height: 1.35 !important;
   }
-  .arkan-pos-page .pos-floor-order-preview h3 {
+  .egsoft-pos-page .pos-floor-order-preview h3 {
     font-size: 19px !important;
   }
-  .arkan-pos-page .pos-floor-order-preview th,
-  .arkan-pos-page .pos-floor-order-preview td {
+  .egsoft-pos-page .pos-floor-order-preview th,
+  .egsoft-pos-page .pos-floor-order-preview td {
     font-size: 16px !important;
     line-height: 1.5 !important;
     padding: 8px 7px !important;
   }
-  .arkan-pos-page .pos-floor-order-preview tfoot th {
+  .egsoft-pos-page .pos-floor-order-preview tfoot th {
     font-size: 17px !important;
   }
 }
 
 
 /* Readability: enlarge text in the All Orders table only */
-.arkan-pos-page .ordersTable th {
+.egsoft-pos-page .ordersTable th {
   font-size: 16px !important;
   line-height: 1.6 !important;
   padding: 15px 11px !important;
 }
-.arkan-pos-page .ordersTable td {
+.egsoft-pos-page .ordersTable td {
   font-size: 16px !important;
   line-height: 1.65 !important;
   padding: 14px 11px !important;
 }
-.arkan-pos-page .ordersTable td b {
+.egsoft-pos-page .ordersTable td b {
   font-size: 17px !important;
   font-weight: 850 !important;
 }
-.arkan-pos-page .ordersTable td button {
+.egsoft-pos-page .ordersTable td button {
   font-size: 15px !important;
   padding: 10px 12px !important;
 }
 @media (max-width: 600px) {
-  .arkan-pos-page .ordersTable th,
-  .arkan-pos-page .ordersTable td {
+  .egsoft-pos-page .ordersTable th,
+  .egsoft-pos-page .ordersTable td {
     font-size: 15px !important;
     padding: 11px 9px !important;
   }
-  .arkan-pos-page .ordersTable td b { font-size: 16px !important; }
+  .egsoft-pos-page .ordersTable td b { font-size: 16px !important; }
 }
 
 
 /* POS sales summary screen */
-.arkan-pos-page > .tabs { grid-template-columns: repeat(5,minmax(0,1fr)) !important; }
-.arkan-pos-page .pos-sales-page {
+.egsoft-pos-page > .tabs { grid-template-columns: repeat(5,minmax(0,1fr)) !important; }
+.egsoft-pos-page .pos-sales-page {
   display: grid;
   gap: 16px;
   padding: 18px;
@@ -917,24 +917,24 @@
   background: #fff;
   box-shadow: var(--pos-shadow);
 }
-.arkan-pos-page .pos-sales-heading,
-.arkan-pos-page .pos-sales-close {
+.egsoft-pos-page .pos-sales-heading,
+.egsoft-pos-page .pos-sales-close {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
 }
-.arkan-pos-page .pos-sales-heading h2 { margin: 0 0 4px; }
-.arkan-pos-page .pos-sales-heading p,
-.arkan-pos-page .pos-sales-close small {
+.egsoft-pos-page .pos-sales-heading h2 { margin: 0 0 4px; }
+.egsoft-pos-page .pos-sales-heading p,
+.egsoft-pos-page .pos-sales-close small {
   display: block;
   margin: 0;
   color: var(--pos-muted);
   font-size: 13px;
 }
-.arkan-pos-page .pos-sales-heading button,
-.arkan-pos-page .pos-sales-presets button {
+.egsoft-pos-page .pos-sales-heading button,
+.egsoft-pos-page .pos-sales-presets button {
   min-height: 42px;
   padding: 9px 14px !important;
   border: 1px solid var(--pos-border) !important;
@@ -943,7 +943,7 @@
   color: #554635 !important;
   font-weight: 800;
 }
-.arkan-pos-page .pos-sales-filter-card {
+.egsoft-pos-page .pos-sales-filter-card {
   display: grid;
   gap: 12px;
   padding: 15px;
@@ -951,25 +951,25 @@
   border-radius: 12px;
   background: #faf9f6;
 }
-.arkan-pos-page .pos-sales-presets {
+.egsoft-pos-page .pos-sales-presets {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-.arkan-pos-page .pos-sales-dates {
+.egsoft-pos-page .pos-sales-dates {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
   gap: 12px;
   max-width: 620px;
 }
-.arkan-pos-page .pos-sales-dates label {
+.egsoft-pos-page .pos-sales-dates label {
   display: grid;
   gap: 6px;
   color: #5d554b;
   font-size: 14px;
   font-weight: 800;
 }
-.arkan-pos-page .pos-sales-dates input {
+.egsoft-pos-page .pos-sales-dates input {
   width: 100%;
   min-width: 0;
   border: 1px solid var(--pos-border);
@@ -977,13 +977,13 @@
   background: #fff;
   color: #292622;
 }
-.arkan-pos-page .pos-sales-filter-card > small { color: var(--pos-muted); }
-.arkan-pos-page .pos-sales-grid {
+.egsoft-pos-page .pos-sales-filter-card > small { color: var(--pos-muted); }
+.egsoft-pos-page .pos-sales-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(190px,1fr));
   gap: 12px;
 }
-.arkan-pos-page .pos-sales-card {
+.egsoft-pos-page .pos-sales-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -994,34 +994,34 @@
   border-radius: 12px;
   background: #fff;
 }
-.arkan-pos-page .pos-sales-card span {
+.egsoft-pos-page .pos-sales-card span {
   color: #6d665c;
   font-size: 14px;
   font-weight: 800;
 }
-.arkan-pos-page .pos-sales-card strong {
+.egsoft-pos-page .pos-sales-card strong {
   color: #292622;
   font-size: 24px;
   font-weight: 900;
   overflow-wrap: anywhere;
 }
-.arkan-pos-page .pos-sales-card small {
+.egsoft-pos-page .pos-sales-card small {
   color: var(--pos-muted);
   font-size: 12px;
 }
-.arkan-pos-page .pos-sales-card.pos-sales-total {
+.egsoft-pos-page .pos-sales-card.pos-sales-total {
   border-color: #d6c09e;
   background: #fbf5eb;
 }
-.arkan-pos-page .pos-sales-card.pos-sales-total strong { color: #79552e; font-size: 28px; }
-.arkan-pos-page .pos-sales-close {
+.egsoft-pos-page .pos-sales-card.pos-sales-total strong { color: #79552e; font-size: 28px; }
+.egsoft-pos-page .pos-sales-close {
   padding: 16px;
   border: 1px solid #ead5d1;
   border-radius: 12px;
   background: #fff7f5;
 }
-.arkan-pos-page .pos-sales-close b { display: block; margin-bottom: 5px; color: #8f352d; font-size: 16px; }
-.arkan-pos-page .pos-sales-close button {
+.egsoft-pos-page .pos-sales-close b { display: block; margin-bottom: 5px; color: #8f352d; font-size: 16px; }
+.egsoft-pos-page .pos-sales-close button {
   min-width: 145px;
   padding: 11px 18px !important;
   border: 0 !important;
@@ -1030,7 +1030,7 @@
   color: #fff !important;
   font-weight: 850;
 }
-.arkan-pos-page .pos-sales-warning {
+.egsoft-pos-page .pos-sales-warning {
   margin: 0;
   padding: 12px;
   border-radius: 9px;
@@ -1038,20 +1038,20 @@
   color: #8b681b;
 }
 @media (max-width: 700px) {
-  .arkan-pos-page .pos-sales-page { padding: 12px; }
-  .arkan-pos-page .pos-sales-dates { grid-template-columns: minmax(0,1fr); }
-  .arkan-pos-page .pos-sales-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .arkan-pos-page .pos-sales-card { min-height: 100px; padding: 12px; }
-  .arkan-pos-page .pos-sales-card strong { font-size: 19px; }
-  .arkan-pos-page .pos-sales-card.pos-sales-total strong { font-size: 23px; }
+  .egsoft-pos-page .pos-sales-page { padding: 12px; }
+  .egsoft-pos-page .pos-sales-dates { grid-template-columns: minmax(0,1fr); }
+  .egsoft-pos-page .pos-sales-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .egsoft-pos-page .pos-sales-card { min-height: 100px; padding: 12px; }
+  .egsoft-pos-page .pos-sales-card strong { font-size: 19px; }
+  .egsoft-pos-page .pos-sales-card.pos-sales-total strong { font-size: 23px; }
 }
 @media (max-width: 420px) {
-  .arkan-pos-page .pos-sales-grid { grid-template-columns: minmax(0,1fr); }
-  .arkan-pos-page > .tabs .tab { padding: 9px 3px !important; font-size: 12px !important; }
+  .egsoft-pos-page .pos-sales-grid { grid-template-columns: minmax(0,1fr); }
+  .egsoft-pos-page > .tabs .tab { padding: 9px 3px !important; font-size: 12px !important; }
 }
 
 /* Match POS cashier screens to the unified ARKAN floor palette */
-.arkan-pos-page {
+.egsoft-pos-page {
   --pos-ink:#29251F;
   --pos-muted:#62594f;
   --pos-border:#E8E0D4;
@@ -1060,17 +1060,17 @@
   --pos-gold:#91672f;
   --pos-gold-light:#F5EFE4;
 }
-.arkan-pos-page { background:var(--pos-bg)!important; color:var(--pos-ink)!important; }
+.egsoft-pos-page { background:var(--pos-bg)!important; color:var(--pos-ink)!important; }
 /* Keep form text readable without overriding button, badge or status colors */
-.arkan-pos-page input,
-.arkan-pos-page select,
-.arkan-pos-page textarea { color: #29251F; background-color: #FFFFFF; }
-.arkan-pos-page input::placeholder,
-.arkan-pos-page textarea::placeholder { color: #62594F; opacity: 1; }
+.egsoft-pos-page input,
+.egsoft-pos-page select,
+.egsoft-pos-page textarea { color: #29251F; background-color: #FFFFFF; }
+.egsoft-pos-page input::placeholder,
+.egsoft-pos-page textarea::placeholder { color: #62594F; opacity: 1; }
 
 /* Responsive viewport sizing: avoid clipping and collisions on short displays */
 @media (min-width: 921px) {
-  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+  .egsoft-pos-page:has(.pos-floor-order-preview-grid) {
     height: auto !important;
     min-height: 100dvh !important;
     max-height: none !important;
@@ -1078,42 +1078,42 @@
     display: flex !important;
     flex-direction: column !important;
   }
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     flex: 1 0 auto !important;
     min-height: 0 !important;
     overflow: visible !important;
     grid-template-rows: auto auto !important;
     align-content: start !important;
   }
-  .arkan-pos-page .arkan-floor-dashboard > aside:first-child,
-  .arkan-pos-page .arkan-floor-dashboard > aside:last-child {
+  .egsoft-pos-page .arkan-floor-dashboard > aside:first-child,
+  .egsoft-pos-page .arkan-floor-dashboard > aside:last-child {
     position: static !important;
     top: auto !important;
     max-height: none !important;
     overflow: visible !important;
   }
-  .arkan-pos-page .pos-floor-order-preview-grid {
+  .egsoft-pos-page .pos-floor-order-preview-grid {
     height: auto !important;
     min-height: clamp(270px, 34vh, 390px) !important;
     max-height: none !important;
     overflow: visible !important;
     align-self: stretch !important;
   }
-  .arkan-pos-page .pos-floor-action-panel,
-  .arkan-pos-page .pos-floor-order-preview {
+  .egsoft-pos-page .pos-floor-action-panel,
+  .egsoft-pos-page .pos-floor-order-preview {
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
   }
-  .arkan-pos-page .pos-floor-action-grid {
+  .egsoft-pos-page .pos-floor-action-grid {
     grid-template-rows: repeat(3, minmax(76px, auto)) !important;
     grid-auto-rows: minmax(76px, auto) !important;
   }
-  .arkan-pos-page .pos-floor-action-grid button {
+  .egsoft-pos-page .pos-floor-action-grid button {
     min-height: 76px !important;
     height: auto !important;
   }
-  .arkan-pos-page .pos-floor-order-preview .floor-preview-wrap {
+  .egsoft-pos-page .pos-floor-order-preview .floor-preview-wrap {
     max-height: clamp(150px, 24vh, 280px) !important;
     overflow: auto !important;
   }
@@ -1121,135 +1121,135 @@
 
 /* Short desktop/laptop displays: compact the chrome, but let the page scroll */
 @media (min-width: 921px) and (max-height: 820px) {
-  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+  .egsoft-pos-page:has(.pos-floor-order-preview-grid) {
     padding: 7px 12px !important;
   }
-  .arkan-pos-page > header {
+  .egsoft-pos-page > header {
     padding-bottom: 5px !important;
     margin-bottom: 6px !important;
   }
-  .arkan-pos-page .tabs {
+  .egsoft-pos-page .tabs {
     margin-bottom: 7px !important;
     padding: 3px !important;
   }
-  .arkan-pos-page .tabs .tab {
+  .egsoft-pos-page .tabs .tab {
     min-height: 36px !important;
     padding: 7px 13px !important;
   }
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     row-gap: 8px !important;
   }
-  .arkan-pos-page .arkan-floor-dashboard > div:nth-child(2) {
+  .egsoft-pos-page .arkan-floor-dashboard > div:nth-child(2) {
     padding: 11px !important;
   }
-  .arkan-pos-page .floor-table-grid {
+  .egsoft-pos-page .floor-table-grid {
     gap: 7px !important;
   }
-  .arkan-pos-page .floor-table-tile {
+  .egsoft-pos-page .floor-table-tile {
     min-height: clamp(82px, 13vh, 108px) !important;
     padding: 8px 5px !important;
     gap: 3px !important;
   }
-  .arkan-pos-page .floor-table-tile b {
+  .egsoft-pos-page .floor-table-tile b {
     font-size: clamp(19px, 2.2vh, 25px) !important;
   }
-  .arkan-pos-page .pos-floor-order-preview-grid {
+  .egsoft-pos-page .pos-floor-order-preview-grid {
     min-height: clamp(235px, 32vh, 280px) !important;
   }
-  .arkan-pos-page .pos-floor-action-panel {
+  .egsoft-pos-page .pos-floor-action-panel {
     padding: 8px !important;
     gap: 6px !important;
   }
-  .arkan-pos-page .pos-floor-action-panel h3 {
+  .egsoft-pos-page .pos-floor-action-panel h3 {
     font-size: 15px !important;
   }
-  .arkan-pos-page .pos-floor-action-grid {
+  .egsoft-pos-page .pos-floor-action-grid {
     grid-template-rows: repeat(3, minmax(65px, auto)) !important;
     gap: 6px !important;
   }
-  .arkan-pos-page .pos-floor-action-grid button {
+  .egsoft-pos-page .pos-floor-action-grid button {
     min-height: 65px !important;
     padding: 5px 4px !important;
     gap: 4px !important;
   }
-  .arkan-pos-page .pos-floor-action-grid .pos-action-icon {
+  .egsoft-pos-page .pos-floor-action-grid .pos-action-icon {
     font-size: 23px !important;
   }
-  .arkan-pos-page .pos-floor-action-grid b {
+  .egsoft-pos-page .pos-floor-action-grid b {
     font-size: 12px !important;
     line-height: 1.25 !important;
   }
-  .arkan-pos-page .pos-floor-order-preview .floor-preview-wrap {
+  .egsoft-pos-page .pos-floor-order-preview .floor-preview-wrap {
     max-height: 22vh !important;
   }
 }
 
 /* Very short windows: keep every section in normal document flow */
 @media (min-width: 921px) and (max-height: 620px) {
-  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+  .egsoft-pos-page:has(.pos-floor-order-preview-grid) {
     min-height: 100vh !important;
   }
-  .arkan-pos-page .pos-floor-order-preview-grid {
+  .egsoft-pos-page .pos-floor-order-preview-grid {
     min-height: 220px !important;
   }
-  .arkan-pos-page .floor-table-grid {
+  .egsoft-pos-page .floor-table-grid {
     grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)) !important;
   }
 }
 
 /* Narrow screens: stack panels instead of squeezing their contents */
 @media (max-width: 920px) {
-  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+  .egsoft-pos-page:has(.pos-floor-order-preview-grid) {
     height: auto !important;
     min-height: 100dvh !important;
     max-height: none !important;
     overflow: visible !important;
     padding: 10px !important;
   }
-  .arkan-pos-page .arkan-floor-dashboard {
+  .egsoft-pos-page .arkan-floor-dashboard {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: auto !important;
     overflow: visible !important;
   }
-  .arkan-pos-page .pos-floor-order-preview-grid {
+  .egsoft-pos-page .pos-floor-order-preview-grid {
     grid-template-columns: minmax(0, 1fr) !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
   }
-  .arkan-pos-page .pos-floor-action-panel,
-  .arkan-pos-page .pos-floor-order-preview {
+  .egsoft-pos-page .pos-floor-action-panel,
+  .egsoft-pos-page .pos-floor-order-preview {
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
   }
-  .arkan-pos-page .pos-floor-action-grid {
+  .egsoft-pos-page .pos-floor-action-grid {
     grid-template-rows: none !important;
     grid-auto-rows: minmax(92px, auto) !important;
   }
-  .arkan-pos-page .pos-floor-action-grid button {
+  .egsoft-pos-page .pos-floor-action-grid button {
     min-height: 92px !important;
     height: auto !important;
   }
 }
 @media (max-width: 600px) {
-  .arkan-pos-page .pos-floor-action-grid {
+  .egsoft-pos-page .pos-floor-action-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
-  .arkan-pos-page .floor-table-grid {
+  .egsoft-pos-page .floor-table-grid {
     grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)) !important;
   }
 }
 
 /* Compact management/payment buttons so all actions remain visible */
 @media (min-width: 921px) {
- .arkan-pos-page .pos-floor-order-preview-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr) minmax(0,1fr)!important;align-items:stretch!important}
- .arkan-pos-page .pos-floor-action-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(2,minmax(64px,auto))!important;grid-auto-rows:minmax(64px,auto)!important;gap:7px!important}
- .arkan-pos-page .pos-floor-action-grid button{min-height:64px!important;height:auto!important;aspect-ratio:auto!important;padding:6px 4px!important}
- .arkan-pos-page .pos-floor-action-grid .pos-action-icon{font-size:22px!important}
- .arkan-pos-page .pos-floor-action-grid b{font-size:12px!important;line-height:1.3!important}
+ .egsoft-pos-page .pos-floor-order-preview-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.35fr) minmax(0,1fr)!important;align-items:stretch!important}
+ .egsoft-pos-page .pos-floor-action-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(2,minmax(64px,auto))!important;grid-auto-rows:minmax(64px,auto)!important;gap:7px!important}
+ .egsoft-pos-page .pos-floor-action-grid button{min-height:64px!important;height:auto!important;aspect-ratio:auto!important;padding:6px 4px!important}
+ .egsoft-pos-page .pos-floor-action-grid .pos-action-icon{font-size:22px!important}
+ .egsoft-pos-page .pos-floor-action-grid b{font-size:12px!important;line-height:1.3!important}
 }
 .pos-channel-panel{display:grid;gap:14px;padding:18px;background:#fff;border:1px solid var(--pos-border,#e9e5dd);border-radius:14px}
 .pos-channel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
