@@ -1258,3 +1258,43 @@
 .pos-channel-card.done{opacity:.55}
 .pos-channel-card.done button{background:#e7f5e9}
 @media(max-width:920px){.pos-channel-grid{grid-template-columns:minmax(0,1fr)}}
+
+
+/* Requested floor layout: channel navigation first and compact Egsoft brand tile */
+.egsoft-pos-page > .tabs {
+  order: -1;
+  width: 100% !important;
+  margin: 0 0 12px !important;
+  justify-content: flex-start;
+}
+.egsoft-pos-page .pos-brand-tile {
+  width: 100%;
+  min-height: 54px;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  border: 1px solid var(--pos-border, #e8e0d4);
+  border-radius: 12px;
+  background: #29251f;
+  color: #fff;
+  font-size: clamp(22px, 2vw, 30px);
+  font-weight: 900;
+  letter-spacing: .04em;
+  box-shadow: 0 3px 12px rgba(45,35,22,.08);
+}
+.egsoft-pos-page .pos-floor-summary-sidebar {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.egsoft-pos-page .pos-floor-refresh {
+  margin-top: 0 !important;
+  min-height: 54px;
+}
+@media (max-width: 920px) {
+  .egsoft-pos-page .pos-brand-tile {
+    aspect-ratio: auto;
+    min-height: 72px;
+  }
+}
