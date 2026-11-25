@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src http://127.0.0.1:4317; style-src 'self' 'unsafe-inline';">
+  <title>ARKAN - شاشة المطبخ</title>
+  <style>
+    :root { color-scheme: dark; font-family: Tahoma, Arial, sans-serif; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#101820; color:#f4f7fa; }
+    header { padding:20px 26px; display:flex; justify-content:space-between; align-items:center; background:#182630; border-bottom:1px solid #344451; }
+    h1 { margin:0; font-size:24px; }
+    #orders { padding:20px; display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+    .order { background:#1b2d37; border:1px solid #425560; border-radius:12px; padding:16px; }
+    .order h2 { margin:0 0 8px; font-size:20px; }
+    .meta { color:#aabac4; font-size:13px; margin-bottom:14px; }
+    .line { padding:9px 0; border-bottom:1px solid #344451; display:flex; justify-content:space-between; gap:12px; }
+    .notes { color:#edbd75; margin:12px 0; white-space:pre-wrap; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    button { border:0; border-radius:7px; padding:9px 12px; background:#bd8740; color:#111; font-weight:bold; cursor:pointer; }
+    button.secondary { background:#344c59; color:#fff; }
+    .empty { grid-column:1/-1; text-align:center; padding:80px 10px; color:#9fb0bb; font-size:20px; }
+    #status { color:#9fbca8; font-size:13px; }
+  </style>
+</head>
+<body>
+  <header><h1>ARKAN · شاشة المطبخ</h1><div id="status">متصل بالسيرفر المحلي</div></header>
+  <section id="orders"><div class="empty">جاري تحميل الطلبات...</div></section>
+  <script src="./kitchen.js"></script>
+</body>
+</html>
