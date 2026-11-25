@@ -55,7 +55,7 @@ function renderPreview(){
  if(!t){box.innerHTML="<p>اضغط على أي طاولة لعرض الأوردر هنا.</p>";return;}
  const area=t.area==="indoor"?"داخلية":"خارجية";
  if(!o){box.innerHTML=`<h3>الطاولة ${t.number} — ${area}</h3><p>الطاولة ${isReserved(t)?"محجوزة":"متاحة"} — لا يوجد طلب حالي.</p>`;return;}
- box.innerHTML=`<h3>أوردر الطاولة ${o.number} <span class="status-pill">ARK-${o.id}</span></h3>
+ box.innerHTML=`<h3>أوردر الطاولة ${o.number} <span class="status-pill">EGS-${o.id}</span></h3>
  <div class="floor-preview-wrap"><table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
  <tbody>${o.items.map(i=>`<tr><td>${i.name}</td><td>${fmt(i.qty)}</td><td>${fmt(i.price)} ج.م</td><td>${fmt(i.qty*i.price)} ج.م</td></tr>`).join("")}</tbody>
  <tfoot><tr><th colspan="3">الإجمالي</th><th>${fmt(o.total)} ج.م</th></tr></tfoot></table></div>`;
@@ -143,12 +143,12 @@ async function loadConnectedMenu(){
   const status=await fetch("http://127.0.0.1:4317/api/cloud/status").then(r=>r.json()).catch(()=>null);
   const eyebrow=document.querySelector(".pos-header .eyebrow");
   if(eyebrow){
-   eyebrow.textContent=status?.connected?"ARKAN CAFE • متصل بـ Supabase":data.source==="local"?"ARKAN CAFE • وضع محلي":"ARKAN CAFE";
+   eyebrow.textContent=status?.connected?"Egsoft • متصل بـ Supabase":data.source==="local"?"Egsoft • وضع محلي":"Egsoft";
    eyebrow.title=data.cloudError||status?.message||"";
   }
  }catch(error){
   const eyebrow=document.querySelector(".pos-header .eyebrow");
-  if(eyebrow){eyebrow.textContent="ARKAN CAFE • وضع محلي";eyebrow.title=error.message;}
+  if(eyebrow){eyebrow.textContent="Egsoft • وضع محلي";eyebrow.title=error.message;}
  }
 }
 loadConnectedMenu();
