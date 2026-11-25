@@ -30,7 +30,8 @@ The app starts an embedded local Express service on `127.0.0.1:4317` and stores 
 - Electron desktop shell with context isolation and Node integration disabled
 - Local Express API and Socket.IO event server
 - SQLite database and initial local schema
-- Arabic POS screen with category filter, product search, cart, order type and notes
+- Redesigned Arabic cashier screen inspired by the existing ARKAN POS layout: category chips, searchable product cards, order cart, dine-in/takeaway/delivery, customer fields and payment method
+- First-run demo menu with TEST-labelled pastries, pasta, main dishes and drinks; these are sample-only prices and are replaced by a later menu import
 - Local order creation in a single SQLite transaction
 - Local outbox record created with every order for later cloud synchronization
 - Separate kitchen display window; open it with **Ctrl+K**
