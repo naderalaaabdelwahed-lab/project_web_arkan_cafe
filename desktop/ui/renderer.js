@@ -18,7 +18,7 @@ const orders=[
  ]}
 ];
 const reservations=[{area:"indoor",number:3},{area:"outdoor",number:4}];
-const products=[{name:"فطير سادة",price:55},{name:"فطير جبنة",price:85},{name:"مكرونة بشاميل",price:95},{name:"كفتة مشوية",price:160},{name:"شاي",price:10},{name:"عصير مانجو",price:35}];
+let products=[{name:"فطير سادة",price:55},{name:"فطير جبنة",price:85},{name:"مكرونة بشاميل",price:95},{name:"كفتة مشوية",price:160},{name:"شاي",price:10},{name:"عصير مانجو",price:35}];
 let selectedKey="";
 const $=id=>document.getElementById(id);
 const key=t=>t.area+":"+t.number;
@@ -128,3 +128,27 @@ function renderChannel(tab){
 document.querySelectorAll(".tabs .tab").forEach(tab=>tab.addEventListener("click",()=>{
  document.querySelectorAll(".tabs .tab").forEach(x=>x.classList.remove("active"));tab.classList.add("active");renderChannel(tab.textContent.trim());
 }));
+
+
+// Load the current menu through the local API. The API refreshes its SQLite
+// cache from Supabase when cloud access and read policies are available.
+async function loadConnectedMenu(){
+ try{
+  const response=await fetch("http://127.0.0.1:4317/api/menu");
+  if(!response.ok)throw new Error("Menu API returned "+response.status);
+  const data=await response.json();
+  if(Array.isArray(data.items)&&data.items.length){
+   products=data.items.map(item=>({id:item.id,name:item.name,price:Number(item.price_minor)/100}));
+  }
+  const status=await fetch("http://127.0.0.1:4317/api/cloud/status").then(r=>r.json()).catch(()=>null);
+  const eyebrow=document.querySelector(".pos-header .eyebrow");
+  if(eyebrow){
+   eyebrow.textContent=status?.connected?"ARKAN CAFE • متصل بـ Supabase":data.source==="local"?"ARKAN CAFE • وضع محلي":"ARKAN CAFE";
+   eyebrow.title=data.cloudError||status?.message||"";
+  }
+ }catch(error){
+  const eyebrow=document.querySelector(".pos-header .eyebrow");
+  if(eyebrow){eyebrow.textContent="ARKAN CAFE • وضع محلي";eyebrow.title=error.message;}
+ }
+}
+loadConnectedMenu();
