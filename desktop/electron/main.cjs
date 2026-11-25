@@ -1,9 +1,32 @@
-const { app, BrowserWindow, dialog } = require("electron");
+const { app, BrowserWindow, dialog, globalShortcut } = require("electron");
 const path = require("node:path");
 const { startLocalServer } = require("../server/index.cjs");
 
 let mainWindow;
+let kitchenWindow;
 let localServer;
+
+async function createKitchenWindow() {
+  if (kitchenWindow && !kitchenWindow.isDestroyed()) {
+    kitchenWindow.focus();
+    return;
+  }
+  kitchenWindow = new BrowserWindow({
+    width: 1100,
+    height: 760,
+    minWidth: 800,
+    minHeight: 600,
+    backgroundColor: "#101820",
+    title: "ARKAN - شاشة المطبخ",
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  kitchenWindow.on("closed", () => { kitchenWindow = null; });
+  await kitchenWindow.loadFile(path.join(__dirname, "../ui/kitchen.html"));
+}
 
 async function createWindow() {
   mainWindow = new BrowserWindow({
@@ -27,10 +50,9 @@ async function createWindow() {
 
 app.whenReady().then(async () => {
   try {
-    localServer = await startLocalServer({
-      userDataPath: app.getPath("userData")
-    });
+    localServer = await startLocalServer({ userDataPath: app.getPath("userData") });
     await createWindow();
+    globalShortcut.register("CommandOrControl+K", createKitchenWindow);
   } catch (error) {
     dialog.showErrorBox(
       "ARKAN POS could not start",
@@ -40,11 +62,11 @@ app.whenReady().then(async () => {
   }
 
   app.on("activate", async () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      await createWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) await createWindow();
   });
 });
+
+app.on("will-quit", () => globalShortcut.unregisterAll());
 
 app.on("before-quit", async () => {
   if (localServer) {
