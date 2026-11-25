@@ -3,82 +3,120 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
-<title>ARKAN CAFE | شاشة الصالة</title>
+<title>ARKAN CAFE | نظام نقاط البيع</title>
 <style>
-:root{font-family:Tahoma,Arial,sans-serif;color:#30291f;background:#f6f4f0;font-synthesis:none}
-*{box-sizing:border-box}body{margin:0;background:#f6f4f0;min-height:100vh}button{font:inherit;cursor:pointer}
-.page{padding:22px 26px;max-width:1800px;margin:auto}
-.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.brand{display:flex;align-items:center;gap:13px}.logo{width:48px;height:48px;border-radius:13px;background:#b88946;color:#fff;display:grid;place-items:center;font-size:25px;font-weight:900}
-.eyebrow{font-size:12px;letter-spacing:2px;color:#9a713c;font-weight:800}.brand h1{font-size:22px;margin:4px 0 0}
-.header-right{display:flex;align-items:center;gap:12px}.demo{background:#fff4d9;border:1px solid #e9cb7a;color:#8b681b;padding:9px 13px;border-radius:9px;font-size:12px;font-weight:800}
-.refresh{background:#fff;border:1px solid #e4ddd2;color:#604c32;border-radius:9px;padding:10px 15px;font-weight:800}
-.tabs{display:flex;gap:9px;margin-bottom:17px;flex-wrap:wrap}.tab{border:1px solid #e7e0d6;background:#fff;color:#665b4d;border-radius:10px;padding:12px 25px;font-weight:800}.tab.active{background:#29251f;color:#fff;border-color:#29251f}
-.error{padding:10px 14px;background:#fff4f2;border:1px solid #edc9c2;border-radius:9px;color:#a12c2c}
-.arkan-floor-dashboard{display:grid;grid-template-columns:285px minmax(380px,1.35fr) minmax(320px,1fr);grid-template-areas:"side tables summary" "side details details";gap:17px;align-items:start}
-.pos-open-tables-sidebar,.pos-floor-summary-sidebar,.floorTables,.pos-floor-action-panel,.pos-floor-order-preview{background:#fff;border:1px solid #e9e4dc;border-radius:14px;box-shadow:0 3px 12px rgba(45,35,22,.045)}
-.pos-open-tables-sidebar{grid-area:side;padding:17px;position:sticky;top:15px}.pos-sidebar-total{background:#29251f;color:#fff;border-radius:12px;padding:18px;margin-bottom:12px}.pos-sidebar-total small,.pos-floor-total-card small{display:block;color:#d7c8b2;font-size:12px}.pos-sidebar-total strong{display:block;font-size:25px;margin-top:9px}.pos-sidebar-count{background:#f8f3eb;border:1px solid #eee4d5;border-radius:11px;padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.pos-sidebar-count b{font-size:25px;color:#8a612d}.pos-sidebar-count span{font-size:13px;color:#776b5c}
-.pos-sidebar-refresh,.pos-floor-refresh{width:100%;border:1px solid #e7dfd3;background:#f8f4ee;color:#604c32;border-radius:9px;padding:11px;font-weight:800;margin-bottom:15px}
-.pos-open-table-list h3,.floorTables h3,.pos-floor-action-panel h3{font-size:16px;margin:0 0 12px}.pos-open-table-list>button{width:100%;display:flex;justify-content:space-between;align-items:center;padding:11px 12px;margin-top:7px;border:1px solid #eee7dd;border-radius:9px;background:#fff;color:#493d2d}.pos-open-table-list>button.active{border-color:#b88946;background:#fff7e9}.pos-open-table-list>button span{font-size:12px;color:#827565}.pos-no-open-tables{color:#9a9083;font-size:12px}
-.floorTables{grid-area:tables;padding:18px;min-width:0}.floor-table-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:11px}
-.floor-table-tile{min-height:145px;padding:15px 10px;border:2px solid #cde5d4;border-radius:14px;background:#eaf7ee;color:#246c45;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;box-shadow:0 2px 7px rgba(45,35,22,.05);transition:.15s}
-.floor-table-tile:hover{transform:translateY(-2px);box-shadow:0 5px 13px #00000012}.floor-table-tile b{font-size:25px}.floor-table-tile small{font-size:12px}.floor-table-tile .table-amount{font-size:12px;font-weight:800}
-.floor-table-tile.occupied{background:#fdeaea;border-color:#efc1c1;color:#a12c2c}.floor-table-tile.printed{background:#fff0d8;border-color:#e7c27e;color:#805a2a}.floor-table-tile.reserved{background:#fff4d9;border-color:#e9cb7a;color:#8b681b}.floor-table-tile.selected{outline:3px solid #d28c2c;outline-offset:2px}
-.floor-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;padding-top:13px;border-top:1px solid #f0ece6;color:#766b5e;font-size:12px}.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px}.green{background:#61a875}.red{background:#d56c6c}.yellow{background:#d5a43e}
-.pos-floor-summary-sidebar{grid-area:summary;padding:17px}.pos-floor-total-card{background:#29251f;color:#fff;padding:18px;border-radius:12px;margin-bottom:12px}.pos-floor-total-card strong{display:block;margin:8px 0}.pos-floor-total-card small:last-child{color:#d7c8b2}
-.pos-floor-order-preview-grid{grid-area:details;display:grid;grid-template-columns:minmax(260px,.9fr) minmax(320px,1.1fr) minmax(260px,.9fr);gap:15px}
-.pos-floor-action-panel{padding:16px;min-width:0}.pos-floor-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.pos-floor-action-grid button{min-height:104px;padding:11px 8px;border:1px solid #e8e1d7;border-radius:11px;background:#fff;color:#514431;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;line-height:1.5;font-size:12px}
-.pos-floor-action-grid button:disabled{opacity:.42;cursor:not-allowed}.pos-floor-action-grid button:not(:disabled):hover{border-color:#c49a5e;background:#fffaf2}.pos-floor-action-grid button.is-primary{background:#edf7ef;border-color:#cde5d4;color:#246c45}.pos-floor-action-grid button.is-danger{background:#fff2f0;border-color:#efc9c3;color:#a12c2c}.pos-action-icon{font-size:24px}
-.pos-floor-order-preview{padding:17px;min-width:0}.pos-floor-order-preview h3{margin:0 0 12px;font-size:16px}.pos-floor-order-preview p{color:#8c8174;font-size:13px;line-height:1.8}.floor-preview-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}th,td{padding:12px 9px;border-bottom:1px solid #eee9e1;text-align:right}th{background:#faf8f4;color:#786c5e}tfoot th{color:#805a2a;font-size:14px}
-.status-pill{font-size:11px;border-radius:20px;padding:5px 9px;background:#f5f0e8;color:#805a2a}
-@media(max-width:1180px){.arkan-floor-dashboard{grid-template-columns:minmax(240px,.75fr) minmax(0,1.25fr);grid-template-areas:"side tables" "summary summary" "details details"}.pos-floor-order-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pos-floor-order-preview{grid-column:1/-1}}
-@media(max-width:800px){.page{padding:13px}.arkan-floor-dashboard{grid-template-columns:1fr;grid-template-areas:"side" "tables" "summary" "details"}.pos-open-tables-sidebar{position:static}.pos-floor-order-preview-grid{grid-template-columns:1fr}.pos-floor-order-preview{grid-column:auto}.floor-table-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}.header{align-items:flex-start;gap:12px;flex-direction:column}.header-right{width:100%;justify-content:space-between}}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:#242424;font-family:Tahoma,Arial,sans-serif}
+.arkan-pos-page{min-height:100vh;padding:24px;background:#fff}
+.pos-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.eyebrow{color:#a7793d;font-weight:800;letter-spacing:2px}
+button,input,select{font-family:inherit}
+button{cursor:pointer;font-weight:700}
+.secondary{padding:9px 13px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#242424}
+.tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:12px 24px;border:1px solid #ddd;border-radius:9px;background:#fff;color:#242424;font-weight:700}
+.tab.active{background:#2c2823;color:#fff;border-color:#2c2823}
+.arkan-floor-dashboard{display:grid;grid-template-columns:320px minmax(420px,1.4fr) minmax(350px,1fr);gap:18px;align-items:start;direction:ltr}
+.pos-open-tables-sidebar{display:grid;gap:12px;min-width:0;direction:rtl;position:sticky;top:12px;background:#fff}
+.pos-sidebar-total{display:grid;gap:10px;padding:16px;background:#fff;color:#242424;border:1px solid #e9e4dc;border-radius:13px;box-shadow:0 2px 8px rgba(45,35,22,.05)}
+.pos-sidebar-total small{font-size:13px;color:#75664f}.pos-sidebar-total strong{font-size:22px}
+.pos-sidebar-count{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:#f7f0e5;color:#805a2a;border:1px solid #e9e4dc;border-radius:10px}
+.pos-sidebar-count b{font-size:24px}.pos-sidebar-count span{font-size:13px;font-weight:700}
+.pos-sidebar-refresh,.pos-floor-refresh{padding:10px 12px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#242424}
+.pos-open-table-list{padding:14px;background:#fff;border:1px solid #e9e4dc;border-radius:13px;min-width:0}
+.pos-open-table-list h3{font-size:16px;margin:0 0 10px}
+.pos-open-table-list>button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;margin-top:7px;border:1px solid #eee8df;border-radius:9px;background:#fff;color:#302d29}
+.pos-open-table-list>button.active{border-color:#b88946;background:#fffaf1}
+.pos-open-table-list>button span{font-size:12px;color:#75664f}
+.pos-no-open-tables{font-size:12px;color:#888}
+.floorTables{padding:16px;background:#fff;border:1px solid #e9e4dc;border-radius:13px;min-width:0;direction:rtl;display:grid;gap:12px}
+.floorTables h3{margin:0 0 8px;font-size:19px}
+.floor-table-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+.floor-table-tile{min-height:145px;padding:16px 10px;border:1px solid #cde5d4;border-radius:14px;background:#eaf7ee;color:#246c45;display:grid;place-content:center;gap:8px;text-align:center;font-size:18px;box-shadow:0 2px 7px rgba(45,35,22,.05);transition:transform .15s ease,box-shadow .15s ease}
+.floor-table-tile b{font-size:24px}.floor-table-tile small{font-size:12px;line-height:1.5}.floor-table-tile .table-amount{font-size:12px;font-weight:800}
+.floor-table-tile.occupied{background:#fdeaea;border-color:#efc1c1;color:#a12c2c}
+.floor-table-tile.printed{background:#e3f0ff;border-color:#8bb9e8;color:#1e5b94}
+.floor-table-tile.reserved{background:#fff4d9;border-color:#e9cb7a;color:#8b681b}
+.floor-table-tile.selected{outline:3px solid #d28c2c;box-shadow:0 0 0 3px #fff2dc}
+.floor-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:4px;padding-top:14px;border-top:1px solid #eee9e1;color:#666;font-size:13px}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-left:6px}.green{background:#61a875}.red{background:#d56c6c}.blue{background:#6d9ed0}.yellow{background:#d5a43e}
+.pos-floor-summary-sidebar{min-width:0;direction:rtl;position:sticky;top:12px;background:#fff}
+.floor-action-card{display:grid;gap:10px;padding:16px;background:#fff;color:#242424;border:1px solid #e9e4dc;border-radius:13px;box-shadow:0 3px 12px rgba(45,35,22,.05)}
+.floor-action-card small{color:#75664f;font-size:13px}.floor-action-card strong{font-size:22px;color:#8b622e}
+.pos-floor-refresh{width:100%;margin-top:10px}
+.pos-floor-order-preview-grid{grid-column:2/4;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr) minmax(0,1fr);gap:12px;min-width:0;direction:rtl}
+.pos-floor-action-panel,.pos-floor-order-preview{display:grid;gap:12px;padding:14px;background:#fff;border:1px solid #e9e4dc;border-radius:13px;min-width:0}
+.pos-floor-action-panel h3,.pos-floor-order-preview h3{margin:0;font-size:17px}
+.pos-floor-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.pos-floor-action-grid button{min-width:0;min-height:0;aspect-ratio:1/1;padding:10px;border:1px solid #e5dfd6;border-radius:10px;background:#fff;color:#302d29;display:grid;place-content:center;justify-items:center;gap:8px;text-align:center;white-space:normal;line-height:1.5;font-size:13px}
+.pos-floor-action-grid button:disabled{opacity:.45;cursor:not-allowed}
+.pos-floor-action-grid button:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,35,22,.1)}
+.pos-floor-action-grid button.is-primary{background:#eaf7ee;border-color:#cde5d4;color:#246c45}
+.pos-floor-action-grid button.is-danger{background:#fff0f0;border-color:#efc1c1;color:#a12c2c}
+.pos-action-icon{font-size:24px}
+.pos-floor-order-preview{min-height:260px}
+.pos-floor-order-preview p{margin:0;color:#777;font-size:13px;line-height:1.8}
+.floor-preview-wrap{width:100%;overflow-x:auto;border:1px solid #e7dfd3;border-radius:9px}
+.floor-preview-wrap table{width:100%;min-width:480px;border-collapse:collapse;text-align:right;font-size:13px;background:#fff}
+.floor-preview-wrap th{padding:12px 9px;background:#29251f;color:#fff;white-space:nowrap;border-bottom:2px solid #b88946}
+.floor-preview-wrap td{padding:11px 9px;border-bottom:1px solid #eee9e1;white-space:nowrap}
+.floor-preview-wrap tfoot th{background:#faf6ef;color:#8b622e}
+.status-pill{display:inline-block;padding:5px 9px;border-radius:20px;background:#f5f0e8;color:#805a2a;font-size:11px}
+.demo-note{margin:12px 0 0;color:#999;font-size:11px}
+@media(max-width:1180px){.arkan-floor-dashboard{grid-template-columns:minmax(250px,.75fr) minmax(0,1.25fr)}.arkan-floor-dashboard>.pos-floor-order-preview-grid{grid-column:1/-1;position:static}.pos-floor-order-preview-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.arkan-pos-page{padding:12px}.arkan-floor-dashboard{grid-template-columns:minmax(0,1fr)}.arkan-floor-dashboard>*{grid-column:1/-1;position:static}.pos-floor-order-preview-grid{grid-template-columns:minmax(0,1fr)}.floor-table-grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr))}.pos-header{gap:12px;align-items:flex-start}.tabs{gap:10px}.tab{flex:1 1 auto;min-width:0;padding:12px 14px}}
 </style>
 </head>
 <body>
-<div class="page">
-<header class="header">
- <div class="brand"><div class="logo">A</div><div><div class="eyebrow">ARKAN CAFE</div><h1>نظام نقاط البيع</h1></div></div>
- <div class="header-right"><span class="demo">وضع تجريبي — بيانات وهمية للعرض فقط</span><button class="refresh" id="refresh">↻ تحديث</button></div>
+<main class="arkan-pos-page">
+<header class="pos-header">
+ <div><div class="eyebrow">ARKAN CAFE</div><div style="font-weight:800;font-size:18px">نظام نقاط البيع</div></div>
+ <button type="button" class="secondary" id="switch-user">تبديل المستخدم</button>
 </header>
-<nav class="tabs"><button class="tab active">صالة المطعم</button><button class="tab" disabled>تيك أواي</button><button class="tab" disabled>الكل</button><button class="tab" disabled>دليفري</button><button class="tab" disabled>المبيعات</button></nav>
-<div id="notice" class="error" hidden></div>
+<nav class="tabs">
+ <button class="tab active">صالة المطعم</button><button class="tab">تيك أواي</button><button class="tab">الكل</button><button class="tab">دليفري</button><button class="tab">المبيعات</button>
+</nav>
 <section class="arkan-floor-dashboard">
-<aside class="pos-open-tables-sidebar">
- <div class="pos-sidebar-total"><small>إجمالي الفلوس</small><strong id="sidebar-total">0.00 <span>ج.م</span></strong></div>
- <div class="pos-sidebar-count"><b id="open-count">0</b><span>طاولات مفتوحة</span></div>
- <button class="pos-sidebar-refresh" id="side-refresh">↻ تحديث</button>
- <div class="pos-open-table-list"><h3>الطاولات المفتوحة</h3><div id="open-list"></div></div>
-</aside>
-<div class="floorTables">
- <h3>الطاولات (<span id="table-count">0</span>)</h3>
- <div class="floor-table-grid" id="table-grid"></div>
- <div class="floor-legend"><span><i class="legend-dot green"></i>متاحة</span><span><i class="legend-dot red"></i>مشغولة</span><span><i class="legend-dot yellow"></i>محجوزة / تم طباعة الفاتورة</span></div>
-</div>
-<aside class="pos-floor-summary-sidebar">
- <div class="pos-floor-total-card"><small>إجمالي الطاولات</small><strong id="floor-total">0.00 ج.م</strong><small id="floor-open-count">0 طاولة مفتوحة</small></div>
- <button class="pos-floor-refresh" id="summary-refresh">↻ تحديث البيانات</button>
- <div style="font-size:12px;color:#84796b;line-height:1.9">اختار طاولة من المنتصف علشان تشوف تفاصيل الأوردر والعمليات المتاحة.</div>
-</aside>
-<div class="pos-floor-order-preview-grid">
- <section class="pos-floor-action-panel"><h3>إدارة الأوردر</h3><div class="pos-floor-action-grid">
- <button disabled><span class="pos-action-icon">🔀</span><b>نقل الطلب لطاولة أخرى</b></button>
- <button disabled><span class="pos-action-icon">📦</span><b>نقل صنف لطاولة أخرى</b></button>
- <button disabled><span class="pos-action-icon">🗑️</span><b>مسح صنف من الطاولة</b></button>
- <button disabled><span class="pos-action-icon">🧩</span><b>دمج طاولة في طاولة</b></button>
- <button id="add-item" disabled><span class="pos-action-icon">➕</span><b>إضافة منتج</b></button>
- </div></section>
- <section class="pos-floor-order-preview" id="order-preview"><h3>تفاصيل الطاولة</h3><p>اضغط على أي طاولة لعرض الأوردر هنا.</p></section>
- <section class="pos-floor-action-panel"><h3>الحساب والدفع</h3><div class="pos-floor-action-grid">
- <button class="is-primary" disabled><span class="pos-action-icon">💵</span><b>سداد نقدي</b></button>
- <button disabled><span class="pos-action-icon">🏷️</span><b>تطبيق خصم</b></button>
- <button disabled><span class="pos-action-icon">✅</span><b>إنهاء الطلب</b></button>
- <button class="is-danger" disabled><span class="pos-action-icon">🧹</span><b>إفراغ الطاولة</b></button>
- <button disabled><span class="pos-action-icon">🧾</span><b>طباعة الفاتورة</b></button>
- </div></section>
-</div>
+ <aside class="pos-open-tables-sidebar">
+  <div class="pos-sidebar-total"><small>إجمالي الفلوس</small><strong id="sidebar-total">0 ج.م</strong></div>
+  <div class="pos-sidebar-count"><b id="open-count">0</b><span>طاولات مفتوحة</span></div>
+  <button class="pos-sidebar-refresh" id="side-refresh">↻ تحديث</button>
+  <div class="pos-open-table-list"><h3>الطاولات المفتوحة</h3><div id="open-list"></div></div>
+ </aside>
+ <div class="floorTables">
+  <h3>الطاولات (<span id="table-count">0</span>)</h3>
+  <div class="floor-table-grid" id="table-grid"></div>
+  <div class="floor-legend">
+   <span><i class="legend-dot green"></i>متاحة</span><span><i class="legend-dot red"></i>مشغولة</span><span><i class="legend-dot blue"></i>تم طباعة الفاتورة</span><span><i class="legend-dot yellow"></i>محجوزة</span>
+  </div>
+ </div>
+ <aside class="pos-floor-summary-sidebar">
+  <div class="floor-action-card"><small>إجمالي الطاولات</small><strong id="floor-total">0 ج.م</strong><small id="floor-open-count">0 طاولة مفتوحة</small></div>
+  <button class="pos-floor-refresh secondary" id="summary-refresh">↻ تحديث البيانات</button>
+ </aside>
+ <div class="pos-floor-order-preview-grid">
+  <section class="pos-floor-action-panel pos-floor-order-actions" aria-label="عمليات إدارة الأوردر">
+   <h3>إدارة الأوردر</h3><div class="pos-floor-action-grid">
+    <button data-action="transfer" disabled><span class="pos-action-icon">🔀</span><b>نقل الطلب لطاولة أخرى</b></button>
+    <button data-action="transfer-item" disabled><span class="pos-action-icon">📦</span><b>نقل صنف لطاولة أخرى</b></button>
+    <button data-action="remove-item" disabled><span class="pos-action-icon">🗑️</span><b>مسح صنف من الطاولة</b></button>
+    <button data-action="merge" disabled><span class="pos-action-icon">🧩</span><b>دمج طاولة في طاولة</b></button>
+    <button data-action="add" disabled><span class="pos-action-icon">➕</span><b>إضافة منتج</b></button>
+   </div>
+  </section>
+  <section class="pos-floor-order-preview" id="order-preview"><p>اضغط على أي طاولة لعرض الأوردر هنا.</p></section>
+  <section class="pos-floor-action-panel pos-floor-payment-actions" aria-label="عمليات الحساب والدفع">
+   <h3>الحساب والدفع</h3><div class="pos-floor-action-grid">
+    <button class="is-primary" data-action="cash" disabled><span class="pos-action-icon">💵</span><b>سداد نقدي</b></button>
+    <button data-action="discount" disabled><span class="pos-action-icon">🏷️</span><b>تطبيق خصم</b></button>
+    <button data-action="finish" disabled><span class="pos-action-icon">✅</span><b>إنهاء الطلب</b></button>
+    <button class="is-danger" data-action="empty" disabled><span class="pos-action-icon">🧹</span><b>إفراغ الطاولة</b></button>
+    <button data-action="print" disabled><span class="pos-action-icon">🧾</span><b>طباعة الفاتورة</b></button>
+   </div>
+  </section>
+ </div>
 </section>
-</div>
+<p class="demo-note">* بيانات تجريبية للعرض فقط — لا يتم حفظ أي تغييرات.</p>
+</main>
 <script src="./renderer.js"></script>
 </body></html>
