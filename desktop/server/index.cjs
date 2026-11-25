@@ -3,10 +3,12 @@ const express = require("express");
 const { Server } = require("socket.io");
 const { randomUUID } = require("node:crypto");
 const { openDatabase } = require("./database.cjs");
+const { createSupabaseRestClient } = require("./supabase.cjs");
 
 function startLocalServer({ userDataPath, port = 4317 }) {
   const { db, databasePath } = openDatabase(userDataPath);
   const app = express();
+  const supabase = createSupabaseRestClient();
 
   app.disable("x-powered-by");
   app.use(express.json({ limit: "1mb" }));
@@ -21,14 +23,56 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     });
   });
 
-  app.get("/api/menu", (_req, res) => {
+  app.get("/api/cloud/status", async (_req, res) => {
+    const status = await supabase.getStatus();
+    res.status(status.connected || !status.configured ? 200 : 503).json(status);
+  });
+
+  app.get("/api/menu", async (_req, res) => {
+    let source = "local";
+    let cloudError = null;
+    if (supabase.configured) {
+      try {
+        const remote = await supabase.getMenu();
+        const syncMenu = db.transaction(() => {
+          const addCategory = db.prepare(
+            "INSERT INTO menu_categories (id, name, sort_order, is_active, updated_at) VALUES (?, ?, ?, 1, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, sort_order=excluded.sort_order, is_active=1, updated_at=excluded.updated_at"
+          );
+          const addItem = db.prepare(
+            "INSERT INTO menu_items (id, category_id, name, description, price_minor, is_available, updated_at) VALUES (?, ?, ?, ?, ?, 1, ?) ON CONFLICT(id) DO UPDATE SET category_id=excluded.category_id, name=excluded.name, description=excluded.description, price_minor=excluded.price_minor, is_available=1, updated_at=excluded.updated_at"
+          );
+          const now = new Date().toISOString();
+          remote.categories.forEach((category, index) => addCategory.run(
+            String(category.id), String(category.name), index, now
+          ));
+          remote.products.forEach((product) => addItem.run(
+            String(product.id), String(product.category_id), String(product.name),
+            product.description || null, Math.round(Number(product.price) * 100), now
+          ));
+          const categoryIds = remote.categories.map((category) => String(category.id));
+          if (categoryIds.length) {
+            const placeholders = categoryIds.map(() => "?").join(",");
+            db.prepare("UPDATE menu_categories SET is_active=0 WHERE id NOT IN (" + placeholders + ")").run(...categoryIds);
+          }
+          const productIds = remote.products.map((product) => String(product.id));
+          if (productIds.length) {
+            const placeholders = productIds.map(() => "?").join(",");
+            db.prepare("UPDATE menu_items SET is_available=0 WHERE id NOT IN (" + placeholders + ")").run(...productIds);
+          }
+        });
+        syncMenu();
+        source = "supabase";
+      } catch (error) {
+        cloudError = error.message;
+      }
+    }
     const categories = db.prepare(
       "SELECT id, name, sort_order FROM menu_categories WHERE is_active = 1 ORDER BY sort_order, name"
     ).all();
     const items = db.prepare(
       "SELECT id, category_id, name, description, price_minor, is_available FROM menu_items WHERE is_available = 1 ORDER BY name"
     ).all();
-    res.json({ categories, items });
+    res.json({ categories, items, source, cloudError });
   });
 
   // Import a menu snapshot exported from the existing ARKAN admin system.
