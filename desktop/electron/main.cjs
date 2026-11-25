@@ -28,7 +28,7 @@ async function createKitchenWindow() {
     minWidth: 800,
     minHeight: 600,
     backgroundColor: "#101820",
-    title: "ARKAN - شاشة المطبخ",
+    title: "Egsoft - شاشة المطبخ",
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -66,7 +66,7 @@ app.whenReady().then(async () => {
     globalShortcut.register("CommandOrControl+K", createKitchenWindow);
   } catch (error) {
     dialog.showErrorBox(
-      "ARKAN POS could not start",
+      "Egsoft POS could not start",
       error && error.message ? error.message : String(error)
     );
     app.quit();
