@@ -1,11 +1,11 @@
 const DEFAULT_URL = "https://elbantrhzbpojhmwodbl.supabase.co";
 
 function createSupabaseRestClient() {
-  const url = (process.env.ARKAN_SUPABASE_URL || DEFAULT_URL).replace(/\\/$/, "");
-  const key = process.env.ARKAN_SUPABASE_PUBLISHABLE_KEY || "";
+  const url = (process.env.EGSOFT_SUPABASE_URL || process.env.ARKAN_SUPABASE_URL || DEFAULT_URL).replace(/\\/$/, "");
+  const key = process.env.EGSOFT_SUPABASE_PUBLISHABLE_KEY || process.env.ARKAN_SUPABASE_PUBLISHABLE_KEY || "";
 
   async function request(path) {
-    if (!key) throw new Error("ARKAN_SUPABASE_PUBLISHABLE_KEY is not configured.");
+    if (!key) throw new Error("EGSOFT_SUPABASE_PUBLISHABLE_KEY is not configured.");
     const response = await fetch(url + path, {
       headers: {
         apikey: key,
