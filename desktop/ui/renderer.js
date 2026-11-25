@@ -140,15 +140,8 @@ async function loadConnectedMenu(){
   if(Array.isArray(data.items)&&data.items.length){
    products=data.items.map(item=>({id:item.id,name:item.name,price:Number(item.price_minor)/100}));
   }
-  const status=await fetch("http://127.0.0.1:4317/api/cloud/status").then(r=>r.json()).catch(()=>null);
-  const eyebrow=document.querySelector(".pos-header .eyebrow");
-  if(eyebrow){
-   eyebrow.textContent=status?.connected?"Egsoft • متصل بـ Supabase":data.source==="local"?"Egsoft • وضع محلي":"Egsoft";
-   eyebrow.title=data.cloudError||status?.message||"";
-  }
  }catch(error){
-  const eyebrow=document.querySelector(".pos-header .eyebrow");
-  if(eyebrow){eyebrow.textContent="Egsoft • وضع محلي";eyebrow.title=error.message;}
+  console.error("Could not load menu:",error);
  }
 }
 loadConnectedMenu();
