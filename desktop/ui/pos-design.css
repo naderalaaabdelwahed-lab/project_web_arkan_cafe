@@ -1067,3 +1067,178 @@
 .arkan-pos-page textarea { color: #29251F; background-color: #FFFFFF; }
 .arkan-pos-page input::placeholder,
 .arkan-pos-page textarea::placeholder { color: #62594F; opacity: 1; }
+
+/* Responsive viewport sizing: avoid clipping and collisions on short displays */
+@media (min-width: 921px) {
+  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+    height: auto !important;
+    min-height: 100dvh !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .arkan-pos-page .arkan-floor-dashboard {
+    flex: 1 0 auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    grid-template-rows: auto auto !important;
+    align-content: start !important;
+  }
+  .arkan-pos-page .arkan-floor-dashboard > aside:first-child,
+  .arkan-pos-page .arkan-floor-dashboard > aside:last-child {
+    position: static !important;
+    top: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview-grid {
+    height: auto !important;
+    min-height: clamp(270px, 34vh, 390px) !important;
+    max-height: none !important;
+    overflow: visible !important;
+    align-self: stretch !important;
+  }
+  .arkan-pos-page .pos-floor-action-panel,
+  .arkan-pos-page .pos-floor-order-preview {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid {
+    grid-template-rows: repeat(3, minmax(76px, auto)) !important;
+    grid-auto-rows: minmax(76px, auto) !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid button {
+    min-height: 76px !important;
+    height: auto !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview .floor-preview-wrap {
+    max-height: clamp(150px, 24vh, 280px) !important;
+    overflow: auto !important;
+  }
+}
+
+/* Short desktop/laptop displays: compact the chrome, but let the page scroll */
+@media (min-width: 921px) and (max-height: 820px) {
+  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+    padding: 7px 12px !important;
+  }
+  .arkan-pos-page > header {
+    padding-bottom: 5px !important;
+    margin-bottom: 6px !important;
+  }
+  .arkan-pos-page .tabs {
+    margin-bottom: 7px !important;
+    padding: 3px !important;
+  }
+  .arkan-pos-page .tabs .tab {
+    min-height: 36px !important;
+    padding: 7px 13px !important;
+  }
+  .arkan-pos-page .arkan-floor-dashboard {
+    row-gap: 8px !important;
+  }
+  .arkan-pos-page .arkan-floor-dashboard > div:nth-child(2) {
+    padding: 11px !important;
+  }
+  .arkan-pos-page .floor-table-grid {
+    gap: 7px !important;
+  }
+  .arkan-pos-page .floor-table-tile {
+    min-height: clamp(82px, 13vh, 108px) !important;
+    padding: 8px 5px !important;
+    gap: 3px !important;
+  }
+  .arkan-pos-page .floor-table-tile b {
+    font-size: clamp(19px, 2.2vh, 25px) !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview-grid {
+    min-height: clamp(235px, 32vh, 280px) !important;
+  }
+  .arkan-pos-page .pos-floor-action-panel {
+    padding: 8px !important;
+    gap: 6px !important;
+  }
+  .arkan-pos-page .pos-floor-action-panel h3 {
+    font-size: 15px !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid {
+    grid-template-rows: repeat(3, minmax(65px, auto)) !important;
+    gap: 6px !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid button {
+    min-height: 65px !important;
+    padding: 5px 4px !important;
+    gap: 4px !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid .pos-action-icon {
+    font-size: 23px !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid b {
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview .floor-preview-wrap {
+    max-height: 22vh !important;
+  }
+}
+
+/* Very short windows: keep every section in normal document flow */
+@media (min-width: 921px) and (max-height: 620px) {
+  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+    min-height: 100vh !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview-grid {
+    min-height: 220px !important;
+  }
+  .arkan-pos-page .floor-table-grid {
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)) !important;
+  }
+}
+
+/* Narrow screens: stack panels instead of squeezing their contents */
+@media (max-width: 920px) {
+  .arkan-pos-page:has(.pos-floor-order-preview-grid) {
+    height: auto !important;
+    min-height: 100dvh !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 10px !important;
+  }
+  .arkan-pos-page .arkan-floor-dashboard {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto !important;
+    overflow: visible !important;
+  }
+  .arkan-pos-page .pos-floor-order-preview-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .arkan-pos-page .pos-floor-action-panel,
+  .arkan-pos-page .pos-floor-order-preview {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid {
+    grid-template-rows: none !important;
+    grid-auto-rows: minmax(92px, auto) !important;
+  }
+  .arkan-pos-page .pos-floor-action-grid button {
+    min-height: 92px !important;
+    height: auto !important;
+  }
+}
+@media (max-width: 600px) {
+  .arkan-pos-page .pos-floor-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .arkan-pos-page .floor-table-grid {
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)) !important;
+  }
+}
