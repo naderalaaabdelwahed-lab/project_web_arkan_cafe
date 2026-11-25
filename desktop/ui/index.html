@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src http://127.0.0.1:4317; style-src 'self' 'unsafe-inline';">
+  <title>ARKAN POS</title>
+  <style>
+    :root { color-scheme: dark; font-family: Segoe UI, Arial, sans-serif; }
+    body { margin: 0; min-height: 100vh; background: #101820; color: #f4f7fa; display: grid; place-items: center; }
+    main { width: min(680px, calc(100% - 48px)); padding: 36px; border: 1px solid #344451; border-radius: 18px; background: #182630; }
+    h1 { margin: 0 0 8px; letter-spacing: 2px; }
+    p { color: #b9c7d1; line-height: 1.6; }
+    .status { margin-top: 28px; padding: 16px; border-radius: 10px; background: #223640; }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #e0a23b; margin-right: 8px; }
+    .small { font-size: 13px; color: #8fa3b1; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>ARKAN POS</h1>
+    <p>Offline desktop foundation</p>
+    <section class="status">
+      <div id="status"><span class="dot"></span>Checking local service…</div>
+      <p id="details" class="small">Local database initialization</p>
+    </section>
+  </main>
+  <script src="./renderer.js"></script>
+</body>
+</html>
