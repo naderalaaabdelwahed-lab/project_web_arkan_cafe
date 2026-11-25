@@ -64,7 +64,8 @@ function openDatabase(userDataPath) {
 
   // Seed clearly labelled demo data only when no menu has been imported yet.
   const menuCount = db.prepare("SELECT COUNT(*) AS count FROM menu_items").get().count;
-  if (menuCount === 0) {
+  const categoryCount = db.prepare("SELECT COUNT(*) AS count FROM menu_categories").get().count;
+  if (menuCount === 0 && categoryCount === 0) {
     const categories = [
       ["test-pastry", "فطائر TEST", 1],
       ["test-pasta", "مكرونات TEST", 2],
