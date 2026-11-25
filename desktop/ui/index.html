@@ -1,29 +1,76 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src http://127.0.0.1:4317; style-src 'self' 'unsafe-inline';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src http://127.0.0.1:4317 ws://127.0.0.1:4317; style-src 'self' 'unsafe-inline';">
   <title>ARKAN POS</title>
   <style>
-    :root { color-scheme: dark; font-family: Segoe UI, Arial, sans-serif; }
-    body { margin: 0; min-height: 100vh; background: #101820; color: #f4f7fa; display: grid; place-items: center; }
-    main { width: min(680px, calc(100% - 48px)); padding: 36px; border: 1px solid #344451; border-radius: 18px; background: #182630; }
-    h1 { margin: 0 0 8px; letter-spacing: 2px; }
-    p { color: #b9c7d1; line-height: 1.6; }
-    .status { margin-top: 28px; padding: 16px; border-radius: 10px; background: #223640; }
-    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #e0a23b; margin-right: 8px; }
-    .small { font-size: 13px; color: #8fa3b1; }
+    :root { color-scheme: dark; font-family: Tahoma, Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #101820; color: #f4f7fa; }
+    header { height: 70px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; background:#182630; border-bottom:1px solid #344451; }
+    header h1 { font-size:21px; margin:0; letter-spacing:1px; }
+    .connection { color:#a9c3b2; font-size:13px; }
+    main { display:grid; grid-template-columns:minmax(0,1fr) 370px; gap:18px; padding:18px; height:calc(100vh - 70px); }
+    .catalog,.cart { min-height:0; background:#182630; border:1px solid #344451; border-radius:14px; padding:18px; }
+    .catalog { overflow:auto; }
+    .toolbar { display:flex; gap:10px; align-items:center; margin-bottom:16px; }
+    input,select,textarea { background:#101820; color:#fff; border:1px solid #435662; border-radius:8px; padding:11px; font:inherit; }
+    #search { flex:1; min-width:100px; }
+    .categories { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+    button { cursor:pointer; border:0; border-radius:8px; padding:10px 14px; font:inherit; color:#fff; background:#2c4654; }
+    button.active,.primary { background:#bd8740; color:#111; font-weight:bold; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .products { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; }
+    .product { text-align:right; min-height:110px; background:#223640; border:1px solid #344b57; }
+    .product strong { display:block; margin-bottom:10px; }
+    .product span { color:#e7b76e; }
+    .cart { display:flex; flex-direction:column; }
+    .cart h2 { margin:0 0 14px; }
+    #cart-items { flex:1; overflow:auto; }
+    .cart-row { display:grid; grid-template-columns:1fr auto; gap:8px; padding:12px 0; border-bottom:1px solid #344451; }
+    .cart-row small { display:block; color:#9fb0bb; margin-top:5px; }
+    .qty { display:flex; align-items:center; gap:6px; }
+    .qty button { padding:5px 9px; }
+    .total { border-top:1px solid #435662; padding:16px 0; display:flex; justify-content:space-between; font-size:19px; }
+    .cart textarea { width:100%; min-height:65px; margin-bottom:10px; resize:vertical; }
+    #place-order { width:100%; padding:14px; }
+    #message { min-height:22px; color:#e7b76e; font-size:13px; }
+    .empty { color:#93a6b3; text-align:center; padding:30px 8px; }
+    @media(max-width:850px) { main { grid-template-columns:1fr; height:auto; } .cart { min-height:450px; } }
   </style>
 </head>
 <body>
-  <main>
+  <header>
     <h1>ARKAN POS</h1>
-    <p>Offline desktop foundation</p>
-    <section class="status">
-      <div id="status"><span class="dot"></span>Checking local service…</div>
-      <p id="details" class="small">Local database initialization</p>
+    <div class="connection" id="connection">● جاري فحص الاتصال المحلي</div>
+  </header>
+  <main>
+    <section class="catalog">
+      <div class="toolbar">
+        <h2>المنيو</h2>
+        <input id="search" placeholder="ابحث عن صنف...">
+        <button id="reload">تحديث</button>
+      </div>
+      <nav class="categories" id="categories"></nav>
+      <div class="products" id="products"><div class="empty">جاري تحميل المنيو...</div></div>
     </section>
+    <aside class="cart">
+      <h2>الطلب الحالي</h2>
+      <div class="toolbar">
+        <select id="order-type">
+          <option value="takeaway">تيك أواي</option>
+          <option value="dine_in">داخل المطعم</option>
+          <option value="delivery">دليفري</option>
+        </select>
+      </div>
+      <div id="cart-items"><div class="empty">اختار أصناف من المنيو</div></div>
+      <div class="total"><span>الإجمالي</span><strong id="total">0.00 ج.م</strong></div>
+      <textarea id="notes" placeholder="ملاحظات الطلب (اختياري)"></textarea>
+      <div id="message"></div>
+      <button class="primary" id="place-order" disabled>تأكيد وحفظ الطلب</button>
+    </aside>
   </main>
   <script src="./renderer.js"></script>
 </body>
