@@ -1,5 +1,5 @@
 {
-  "name": "arkan-desktop",
+  "name": "egsoft-desktop",
   "version": "0.1.0",
   "private": true,
   "description": "ARKAN offline-first Windows POS desktop application",
@@ -23,8 +23,8 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.arkan.pos",
-    "productName": "ARKAN POS",
+    "appId": "com.egsoft.pos",
+    "productName": "Egsoft POS",
     "directories": {
       "output": "release"
     },
