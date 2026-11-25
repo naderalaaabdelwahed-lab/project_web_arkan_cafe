@@ -105,7 +105,6 @@ function runAction(action){
 document.querySelectorAll("[data-action]").forEach(b=>b.addEventListener("click",()=>runAction(b.dataset.action)));
 $("side-refresh").addEventListener("click",refresh);
 $("summary-refresh").addEventListener("click",refresh);
-$("switch-user").addEventListener("click",()=>alert("تبديل المستخدم غير متاح في نسخة العرض التجريبية."));
 render();
 /* Demo order channels: take-away, delivery, and all active tickets */
 const channelOrders=[
