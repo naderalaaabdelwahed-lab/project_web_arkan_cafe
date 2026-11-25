@@ -107,3 +107,24 @@ $("side-refresh").addEventListener("click",refresh);
 $("summary-refresh").addEventListener("click",refresh);
 $("switch-user").addEventListener("click",()=>alert("تبديل المستخدم غير متاح في نسخة العرض التجريبية."));
 render();
+/* Demo order channels: take-away, delivery, and all active tickets */
+const channelOrders=[
+ {id:2041,channel:"takeaway",customer:"طلب تيك أواي 1",total:210,items:["فطير جبنة","شاي","عصير مانجو"]},
+ {id:2042,channel:"takeaway",customer:"طلب تيك أواي 2",total:165,items:["مكرونة بشاميل","كانز"]},
+ {id:3041,channel:"delivery",customer:"عميل دليفري (تجريبي)",total:320,items:["كفتة مشوية","فطير سادة","عصير مانجو"]},
+ {id:3042,channel:"delivery",customer:"عميل دليفري 2",total:245,items:["وجبة فراخ","شاي"]}
+];
+function renderChannel(tab){
+ const dashboard=document.querySelector(".arkan-floor-dashboard"),note=document.querySelector(".demo-note");
+ let panel=document.getElementById("channel-demo-panel");
+ if(tab==="صالة المطعم"){dashboard.style.display="";if(panel)panel.remove();note.style.display="";return;}
+ dashboard.style.display="none";note.style.display="";
+ if(!panel){panel=document.createElement("section");panel.id="channel-demo-panel";panel.className="pos-channel-panel";dashboard.after(panel);}
+ let list=tab==="تيك أواي"?channelOrders.filter(o=>o.channel==="takeaway"):tab==="دليفري"?channelOrders.filter(o=>o.channel==="delivery"):channelOrders;
+ panel.innerHTML=`<h2>${tab==="تيك أواي"?"طلبات التيك أواي":tab==="دليفري"?"طلبات الدليفري":"كل الطلبات التجريبية"}</h2>
+ <div class="pos-channel-grid">${list.map(o=>`<article class="pos-channel-card"><h3>${o.customer}</h3><small>رقم الطلب: ${o.id}</small><ul>${o.items.map(i=>`<li>${i}</li>`).join("")}</ul><strong>${fmt(o.total)} ج.م</strong><button data-channel-done="${o.id}">إنهاء الطلب (تجريبي)</button></article>`).join("")||"<p>لا توجد طلبات.</p>"}</div>`;
+ panel.querySelectorAll("[data-channel-done]").forEach(b=>b.addEventListener("click",()=>{b.closest(".pos-channel-card").classList.add("done");b.textContent="تم إنهاؤه";b.disabled=true;}));
+}
+document.querySelectorAll(".tabs .tab").forEach(tab=>tab.addEventListener("click",()=>{
+ document.querySelectorAll(".tabs .tab").forEach(x=>x.classList.remove("active"));tab.classList.add("active");renderChannel(tab.textContent.trim());
+}));
