@@ -16,7 +16,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   app.get("/api/health", (_req, res) => {
     res.json({
       ok: true,
-      service: "arkan-local",
+      service: "egsoft-local",
       version: "0.2.0",
       database: "connected",
       timestamp: new Date().toISOString()
@@ -75,7 +75,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     res.json({ categories, items, source, cloudError });
   });
 
-  // Import a menu snapshot exported from the existing ARKAN admin system.
+  // Import a menu snapshot exported from the existing menu admin system.
   // The import is transactional: a malformed snapshot never leaves a partial menu.
   app.put("/api/menu/import", (req, res) => {
     const categories = req.body?.categories;
@@ -250,7 +250,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   const httpServer = http.createServer(app);
   const io = new Server(httpServer, { cors: { origin: false }, maxHttpBufferSize: 1e6 });
   io.on("connection", (socket) => {
-    socket.emit("server:ready", { service: "arkan-local", timestamp: new Date().toISOString() });
+    socket.emit("server:ready", { service: "egsoft-local", timestamp: new Date().toISOString() });
   });
 
   return new Promise((resolve, reject) => {
