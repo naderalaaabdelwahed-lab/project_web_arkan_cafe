@@ -1353,3 +1353,74 @@
  .admin-sidebar { min-height:130px; }
  .admin-workspace { min-height:45vh; }
 }
+
+
+/* Final desktop composition: use the whole lower viewport without resizing table tiles. */
+@media (min-width: 921px) {
+  .egsoft-pos-page:has(.pos-floor-order-preview-grid) {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 8px 14px !important;
+  }
+  .egsoft-pos-page > .tabs {
+    flex: 0 0 auto !important;
+  }
+  .egsoft-pos-page .arkan-floor-dashboard {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 168px !important;
+    grid-template-rows: minmax(0, 1fr) clamp(220px, 31vh, 290px) !important;
+    align-items: stretch !important;
+    align-content: stretch !important;
+    overflow: hidden !important;
+    row-gap: 10px !important;
+  }
+  .egsoft-pos-page .floorTables {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    align-self: stretch !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    overflow: auto !important;
+  }
+  .egsoft-pos-page .floor-table-grid {
+    align-content: start !important;
+    grid-auto-rows: auto !important;
+  }
+  .egsoft-pos-page .pos-floor-summary-sidebar {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    align-self: stretch !important;
+    justify-content: space-between !important;
+    position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .egsoft-pos-page .pos-floor-order-preview-grid {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    align-self: stretch !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+  }
+  .egsoft-pos-page .pos-floor-action-panel,
+  .egsoft-pos-page .pos-floor-order-preview {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: auto !important;
+  }
+  .egsoft-pos-page .demo-note { display: none !important; }
+}
