@@ -123,7 +123,7 @@ function renderChannel(tab){
  let list=tab==="تيك أواي"?channelOrders.filter(o=>o.channel==="takeaway"):tab==="دليفري"?channelOrders.filter(o=>o.channel==="delivery"):channelOrders;
  panel.innerHTML=`<h2>${tab==="تيك أواي"?"طلبات التيك أواي":tab==="دليفري"?"طلبات الدليفري":"كل الطلبات التجريبية"}</h2>
  <div class="pos-channel-grid">${list.map(o=>`<article class="pos-channel-card"><h3>${o.customer}</h3><small>رقم الطلب: ${o.id}</small><ul>${o.items.map(i=>`<li>${i}</li>`).join("")}</ul><strong>${fmt(o.total)} ج.م</strong><button data-channel-done="${o.id}">إنهاء الطلب (تجريبي)</button></article>`).join("")||"<p>لا توجد طلبات.</p>"}</div>`;
- panel.querySelectorAll("[data-channel-done]").forEach(b=>b.addEventListener("click",()=>{b.closest(".pos-channel-card").classList.add("done");b.textContent="تم إنهاؤه";b.disabled=true;}));
+ panel.querySelectorAll("[data-channel-done]").forEach(b=>b.addEventListener("click",()=>{const card=b.closest(".pos-channel-card");if(card)card.classList.add("done");b.textContent="تم إنهاؤه";b.disabled=true;}));
 }
 document.querySelectorAll(".tabs .tab").forEach(tab=>tab.addEventListener("click",()=>{
  document.querySelectorAll(".tabs .tab").forEach(x=>x.classList.remove("active"));tab.classList.add("active");renderChannel(tab.textContent.trim());
