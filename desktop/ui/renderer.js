@@ -144,3 +144,24 @@ async function loadConnectedMenu(){
  }
 }
 loadConnectedMenu();
+
+
+// Switch between the POS floor and the blank comprehensive administration shell.
+const posNav=document.querySelector(".egsoft-pos-page > .tabs");
+const posDashboard=document.querySelector(".arkan-floor-dashboard");
+const posNote=document.querySelector(".demo-note");
+const adminPage=document.getElementById("admin-page");
+document.getElementById("open-admin").addEventListener("click",()=>{
+  posNav.hidden=true;
+  posDashboard.hidden=true;
+  posNote.hidden=true;
+  adminPage.hidden=false;
+  window.scrollTo(0,0);
+});
+document.getElementById("back-to-pos").addEventListener("click",()=>{
+  adminPage.hidden=true;
+  posNav.hidden=false;
+  posDashboard.hidden=false;
+  posNote.hidden=false;
+  window.scrollTo(0,0);
+});
