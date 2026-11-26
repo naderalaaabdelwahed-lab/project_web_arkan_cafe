@@ -396,7 +396,10 @@ function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
         const localRows=pending.map(o=>({...o,items:getLocalItems.all(o.id)}));
         const merged=new Map(remoteRows.map(order=>[String(order.id),order]));
         for(const order of localRows) merged.set(String(order.id),order);
-        return res.json([...merged.values()]);
+        const allOrders=[...merged.values()].sort((a,b)=>
+          String(b.created_at||"").localeCompare(String(a.created_at||"")) || String(b.id||"").localeCompare(String(a.id||""))
+        );
+        return res.json(allOrders);
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
     // The All tab is a history view, not an active-orders view. Return
