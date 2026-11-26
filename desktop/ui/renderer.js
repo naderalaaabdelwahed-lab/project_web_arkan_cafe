@@ -364,7 +364,7 @@ shifts:{title:"الورديات",db:"hr_shifts",fields:[["name","اسم الور
   const d=await api("/api/admin/menu"),cat=kind==="categories",list=cat?d.categories:d.products;
   const stationLabel=value=>({kitchen:"المطبخ",hall:"الصالة",bar:"المشروبات"}[value]||"المطبخ");
   const rows=list.map(x=>cat
-   ? '<tr><td>'+esc(x.name)+'</td><td>'+Number(x.sort_order||0)+'</td><td><button class="admin-small-btn" data-edit="'+esc(x.id)+'">تعديل</button> <button class="admin-small-btn" data-delete="'+esc(x.id)+'">حذف</button></td></tr>'
+   ? '<tr><td>'+esc(x.name)+'</td><td>'+Number(x.sort_order||0)+'</td><td><button class="admin-small-btn" data-edit="'+esc(x.id)+'">تعديل</button> <button class="admin-small-btn" data-delete="'+esc(x.id)+'">'+(cat?"حذف":"إخفاء")+'</button></td></tr>'
    : '<tr><td>'+esc(x.name)+'</td><td>'+esc(d.categories.find(c=>String(c.id)===String(x.category_id))?.name||"—")+'</td><td>'+esc(stationLabel(x.preparation_station))+'</td><td>'+money(x.price_minor/100)+'</td><td><span class="admin-status '+(x.is_available===false?"is-off":"is-on")+'">'+(x.is_available===false?"غير متاح":"متاح")+'</span></td><td><button class="admin-small-btn" data-edit="'+esc(x.id)+'">تعديل</button> <button class="admin-small-btn" data-delete="'+esc(x.id)+'">حذف</button></td></tr>'
   ).join("");
   workspace.innerHTML=heading(cat?"أقسام المنيو":"أصناف المنيو",cat?"أضف أقسام المطعم ورتبها":"تحكم في الأصناف والأسعار والقسم ومكان التحضير لكل صنف بشكل مستقل",'<button class="admin-primary" id="new">+ إضافة '+(cat?"قسم":"صنف")+'</button>')+
