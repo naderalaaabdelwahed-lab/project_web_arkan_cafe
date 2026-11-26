@@ -1811,3 +1811,26 @@
 .admin-status.is-on { background: #e8f5ec !important; color: #247342 !important; }
 .admin-status.is-off { background: #fff0ee !important; color: #b42318 !important; }
 
+/* Compact hierarchical admin navigation: main groups and nested module menu. */
+.admin-nav { gap:8px !important; }
+.admin-nav-item { min-height:46px; transition:background .15s ease,color .15s ease,border-color .15s ease; }
+.admin-nav-item > span { display:inline-grid; place-items:center; width:26px; }
+.admin-nav-group-label {
+  padding:12px 13px 6px;
+  color:#8b612e;
+  font-size:12px;
+  font-weight:800;
+}
+.admin-nav-back {
+  background:#fff !important;
+  border:1px solid #e9e5dd !important;
+  color:#51483d !important;
+  margin-bottom:5px;
+}
+.admin-nav-back:hover { background:#f3eadc !important; color:#8b612e !important; }
+.admin-nav-item.active {
+  background:#f3eadc !important;
+  border-color:#e8d7bd !important;
+  color:#8b612e !important;
+}
+
