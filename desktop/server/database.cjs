@@ -59,7 +59,8 @@ function openDatabase(userDataPath) {
   const columns = new Set(db.prepare("PRAGMA table_info(orders)").all().map((column) => column.name));
   for (const [name, type] of [
     ["customer_name", "TEXT"], ["phone", "TEXT"], ["address", "TEXT"],
-    ["payment_method", "TEXT NOT NULL DEFAULT 'cash'"]
+    ["payment_method", "TEXT NOT NULL DEFAULT 'cash'"],
+    ["table_id", "TEXT"], ["table_number", "INTEGER"], ["table_area", "TEXT"]
   ]) {
     if (!columns.has(name)) db.exec(`ALTER TABLE orders ADD COLUMN ${name} ${type}`);
   }
