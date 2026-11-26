@@ -1,0 +1,28 @@
+name: Desktop syntax checks
+
+on:
+  push:
+    branches: [offline-desktop]
+    paths:
+      - "desktop/**"
+      - ".github/workflows/desktop-check.yml"
+  pull_request:
+    branches: [offline-desktop]
+    paths:
+      - "desktop/**"
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: |
+          node --check desktop/electron/main.cjs
+          node --check desktop/server/index.cjs
+          node --check desktop/server/database.cjs
+          node --check desktop/server/supabase.cjs
+          node --check desktop/ui/renderer.js
