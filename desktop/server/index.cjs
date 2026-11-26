@@ -155,11 +155,13 @@ function startLocalServer({ userDataPath, port = 4317 }) {
       try {
         const remote=await supabase.listRecords(module);
         const replace=db.transaction(()=>{
-          db.prepare("DELETE FROM admin_records WHERE module=?").run(module);
-          const add=db.prepare("INSERT INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)");
+          const add=db.prepare("INSERT OR REPLACE INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)");
           for(const row of remote||[]) { const {id,created_at,updated_at,...data}=row; add.run(module,String(id),JSON.stringify(data),created_at||new Date().toISOString(),updated_at||new Date().toISOString()); }
         });
-        replace(); result=remote||[];
+        replace();
+        const remoteIds=new Set((remote||[]).map(row=>String(row.id)));
+        const offline= db.prepare("SELECT id,data_json,created_at,updated_at FROM admin_records WHERE module=?").all(module).filter(row=>!remoteIds.has(String(row.id))).map(row=>({id:row.id,...JSON.parse(row.data_json),created_at:row.created_at,updated_at:row.updated_at}));
+        result=[...(remote||[]),...offline];
       } catch(error) { if(error.status===401||error.status===403) return res.status(error.status).json({error:error.message}); }
     }
     res.json(result);
