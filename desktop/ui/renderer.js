@@ -169,7 +169,8 @@ document.getElementById("back-to-pos").addEventListener("click",()=>{
  async function api(path,opt={}){const r=await fetch("http://127.0.0.1:4317"+path,{headers:{"Content-Type":"application/json"},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"تعذر الاتصال بالخادم");return d;}
  const modules={
  employees:{title:"الموظفون",db:"hr_employees",fields:[["full_name","اسم الموظف"],["phone","رقم الهاتف"],["job_title","الوظيفة"],["hire_date","تاريخ التعيين"],["salary","الراتب الأساسي"],["status","الحالة"]]},
- suppliers:{title:"الموردون",db:"inventory_suppliers",fields:[["name","اسم المورد"],["phone","رقم الهاتف"],["email","البريد الإلكتروني"],["address","العنوان"],["notes","ملاحظات"]]},
+suppliers:{title:"الموردون",db:"inventory_suppliers",fields:[["name","اسم المورد"],["phone","رقم الهاتف"],["email","البريد الإلكتروني"],["address","العنوان"],["notes","ملاحظات"]]},
+ cash:{title:"الخزينة وحركة النقدية",db:"cash_transactions",fields:[["transaction_type","نوع الحركة"],["amount","المبلغ"],["description","البيان"],["reference_number","رقم المرجع"],["transaction_date","التاريخ"]]},
  reservations:{title:"الحجوزات",db:"reservations",fields:[["customer_name","اسم العميل"],["phone","رقم الهاتف"],["reservation_date","التاريخ والوقت"],["party_size","عدد الأفراد"],["area","الصالة"],["status","الحالة"],["notes","ملاحظات"]]},
  daily:{title:"إقفال اليومية",db:"business_days",fields:[["business_date","تاريخ اليومية"],["opening_cash","رصيد بداية اليوم"],["closing_cash","النقدية عند الإغلاق"],["status","الحالة"],["notes","ملاحظات"]]},
  inventory:{title:"المخزون والخامات",db:"inventory_items",fields:[["name","اسم الصنف"],["sku","كود الصنف"],["unit","وحدة القياس"],["quantity","الرصيد الحالي"],["minimum_quantity","حد إعادة الطلب"],["cost_price","تكلفة الوحدة"]]},
