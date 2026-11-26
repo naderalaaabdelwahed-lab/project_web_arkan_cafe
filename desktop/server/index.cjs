@@ -346,7 +346,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     if(supabase.getSession().authenticated) {
       try {
         const remote=await supabase.getOrders();
-        const remoteRows=(remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,menu_item_id:i.product_id||i.menu_item_id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total ?? (Number(i.unit_price||0)*Number(i.quantity||0)))*100),notes:i.item_note||i.notes||""}))}));
+        const remoteRows=(remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),payment_method:o.payment_method||"cash",payment_status:(o.payments||[]).some(p=>p.payment_status==="paid")?"paid":"unpaid",paid_at:(o.payments||[]).find(p=>p.payment_status==="paid")?.paid_at||null,closed_at:o.closed_at,created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,menu_item_id:i.product_id||i.menu_item_id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total ?? (Number(i.unit_price||0)*Number(i.quantity||0)))*100),notes:i.item_note||i.notes||""}))}));
         const remoteIds=new Set(remoteRows.map(o=>String(o.id)));
         const pending=db.prepare("SELECT * FROM orders WHERE sync_status <> 'synced' ORDER BY created_at DESC").all();
         const getLocalItems=db.prepare("SELECT * FROM order_items WHERE order_id=?");
@@ -460,11 +460,11 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   app.post("/api/orders/:id/pay", async (req, res) => {
     const order=db.prepare("SELECT * FROM orders WHERE id=?").get(req.params.id);
     if(!order) return res.status(404).json({error:"الطلب غير موجود."});
-    if(["cancelled","delivered"].includes(order.status)) {
-      return res.status(409).json({error:"لا يمكن تحصيل طلب ملغي أو تم تحصيله بالفعل."});
+    if(order.status==="cancelled") {
+      return res.status(409).json({error:"لا يمكن تحصيل طلب ملغي."});
     }
     const existing=db.prepare("SELECT id FROM payments WHERE order_id=?").get(order.id);
-    if(existing) return res.status(409).json({error:"تم تسجيل دفعة لهذا الطلب بالفعل."});
+    if(existing || order.payment_status==="paid") return res.status(409).json({error:"تم تسجيل دفعة لهذا الطلب بالفعل."});
     const method=req.body?.payment_method || order.payment_method || "cash";
     if(!["cash","card","wallet"].includes(method)) return res.status(400).json({error:"طريقة الدفع غير صحيحة."});
     const amount=req.body?.amount_minor===undefined ? order.total_minor : Number(req.body.amount_minor);
@@ -473,13 +473,13 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     }
 
     const id=randomUUID(),paidAt=new Date().toISOString();
-    const payment={id,order_id:order.id,amount_minor:amount,payment_method:method,payment_status:"paid",paid_at:paidAt,sync_status:"pending"};
+    const payment={id,order_id:order.id,amount_minor:amount,payment_method:method,payment_status:"paid",paid_at:paidAt,order_status:order.status,sync_status:"pending"};
     try {
       const savePayment=db.transaction(()=>{
         db.prepare(`INSERT INTO payments(id,order_id,amount_minor,payment_method,payment_status,paid_at,sync_status)
           VALUES(@id,@order_id,@amount_minor,@payment_method,@payment_status,@paid_at,@sync_status)`).run(payment);
-        db.prepare("UPDATE orders SET status='delivered',payment_method=?,closed_at=?,updated_at=?,sync_status='pending' WHERE id=?")
-          .run(method,paidAt,paidAt,order.id);
+        db.prepare("UPDATE orders SET payment_status='paid',payment_method=?,paid_at=?,closed_at=?,updated_at=?,sync_status='pending' WHERE id=?")
+          .run(method,paidAt,paidAt,paidAt,order.id);
         db.prepare(`INSERT INTO sync_outbox(id,aggregate_type,aggregate_id,operation,payload_json,created_at)
           VALUES(?,'payment',?,'create',?,?)`).run(randomUUID(),id,JSON.stringify(payment),paidAt);
       });
@@ -698,8 +698,9 @@ function startLocalServer({ userDataPath, port = 4317 }) {
             payment_method:payment.payment_method,payment_status:payment.payment_status,paid_at:payment.paid_at
           });
           await supabase.updateRecord("orders",payment.order_id,{
-            status:"delivered",payment_method:payment.payment_method,
-            closed_at:payment.paid_at,updated_at:payment.paid_at
+            status:payment.order_status||remoteOrder.status,
+            payment_method:payment.payment_method,closed_at:payment.paid_at,
+            updated_at:payment.paid_at
           });
           db.prepare("UPDATE payments SET sync_status='synced' WHERE id=?").run(payment.id);
           db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(payment.order_id);
