@@ -49,3 +49,19 @@ BEGIN
     );
   END LOOP;
 END $$;
+
+-- Single-row restaurant floor settings used by the desktop administration.
+CREATE TABLE IF NOT EXISTS public.restaurant_settings (
+  id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  indoor_tables integer NOT NULL DEFAULT 10 CHECK (indoor_tables >= 0),
+  outdoor_tables integer NOT NULL DEFAULT 6 CHECK (outdoor_tables >= 0),
+  seats_per_table integer NOT NULL DEFAULT 4 CHECK (seats_per_table >= 1),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO public.restaurant_settings(id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+ALTER TABLE public.restaurant_settings ENABLE ROW LEVEL SECURITY;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.restaurant_settings TO authenticated;
+CREATE POLICY "Egsoft admins only" ON public.restaurant_settings
+  FOR ALL TO authenticated
+  USING ((SELECT public.is_egsoft_admin()))
+  WITH CHECK ((SELECT public.is_egsoft_admin()));
