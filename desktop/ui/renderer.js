@@ -209,7 +209,22 @@ shifts:{title:"الورديات",db:"hr_shifts",fields:[["name","اسم الور
  }
  async function dashboard(){const d=await api("/api/admin/summary"),cloud=await api("/api/cloud/status").catch(()=>({connected:false}));workspace.innerHTML=heading("لوحة الإدارة","ملخص تشغيل النظام")+'<div class="admin-kpis"><article><small>الفئات</small><strong>'+d.categories+'</strong></article><article><small>المنتجات</small><strong>'+d.products+'</strong></article><article><small>الطلبات</small><strong>'+d.orders+'</strong></article><article><small>إجمالي المبيعات</small><strong>'+money(d.sales_minor/100)+'</strong></article></div><div class="admin-panel"><h2>حالة النظام</h2><p>قاعدة البيانات المحلية متصلة — Supabase: '+(cloud.connected?"متصل":"غير متصل أو يحتاج إعداد مفتاح ومصادقة")+'</p><p>واجهة نقطة البيع لم يتم تعديل تصميمها.</p></div>';}
  async function render(section="dashboard"){workspace.innerHTML='<div class="admin-loading">جاري التحميل...</div>';try{if(section==="dashboard")await dashboard();else if(["menu","products","categories"].includes(section))await menuPage(section==="categories"?"categories":"products");else if(modules[section])await recordsPage(section);else await simplePage(section);}catch(e){workspace.innerHTML=heading("تعذر تحميل القسم",esc(e.message))+'<button class="admin-primary" id="retry">إعادة المحاولة</button>';workspace.querySelector("#retry").onclick=()=>render(section);}}
- document.querySelectorAll("[data-admin-section]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-admin-section]").forEach(x=>x.classList.toggle("active",x===b));render(b.dataset.adminSection);}));
- document.getElementById("open-admin")?.addEventListener("click",()=>render("dashboard"));
- render();
+
+ async function guardedRender(section="dashboard"){
+  try{
+   const session=await api("/api/auth/session");
+   if(!session.authenticated){
+    workspace.innerHTML=heading("تسجيل الدخول","استخدم حسابك الإداري في نظام أركان")+'<form id="admin-login" class="admin-panel" style="max-width:460px;display:grid;gap:14px"><label>البريد الإلكتروني<input name="email" type="email" required autocomplete="username" style="width:100%;padding:12px;margin-top:6px"></label><label>كلمة المرور<input name="password" type="password" required autocomplete="current-password" style="width:100%;padding:12px;margin-top:6px"></label><button class="admin-primary" type="submit">دخول</button><p id="login-error" class="admin-error"></p></form>';
+    workspace.querySelector("#admin-login").onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.currentTarget);try{await api("/api/auth/login",{method:"POST",body:JSON.stringify({email:fd.get("email"),password:fd.get("password")})});guardedRender(section);}catch(err){workspace.querySelector("#login-error").textContent=err.message;}};
+    return;
+   }
+   await render(section);
+   const bar=document.createElement("div");bar.style.cssText="display:flex;justify-content:flex-end;margin-bottom:12px";
+   bar.innerHTML='<button class="admin-small-btn" id="admin-logout">تسجيل الخروج</button>';workspace.prepend(bar);
+   workspace.querySelector("#admin-logout").onclick=async()=>{await api("/api/auth/logout",{method:"POST"});guardedRender("dashboard");};
+  }catch(e){workspace.innerHTML=heading("تعذر التحقق من الدخول",esc(e.message));}
+ }
+ document.querySelectorAll("[data-admin-section]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-admin-section]").forEach(x=>x.classList.toggle("active",x===b));guardedRender(b.dataset.adminSection);}));
+ document.getElementById("open-admin")?.addEventListener("click",()=>guardedRender("dashboard"));
+ guardedRender();
 })();
