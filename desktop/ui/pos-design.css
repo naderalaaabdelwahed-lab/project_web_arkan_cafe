@@ -1612,3 +1612,13 @@
 .admin-nav-item.active { box-shadow:inset -3px 0 #c79a5d; }
 .admin-workspace { grid-column:1 !important; height:100%; min-height:0; background:#fff; border:1px solid #e8e0d4; border-radius:14px; }
 @media(max-width:700px){ .admin-page{min-width:760px !important;} .admin-layout{grid-template-columns:minmax(0,1fr) 230px !important;} }
+
+/* Management dashboard is the parent screen: sidebar reaches the page bottom. */
+.admin-page { padding:12px 14px 0 !important; }
+.admin-header { flex:0 0 auto; padding:4px 0 10px !important; min-height:54px !important; }
+.admin-layout { flex:1 1 auto !important; min-height:0 !important; height:calc(100dvh - 70px) !important; padding-top:8px !important; padding-bottom:0 !important; grid-template-columns:minmax(0,1fr) 260px !important; gap:12px !important; }
+.admin-sidebar { height:100% !important; min-height:0 !important; margin:0 !important; border-radius:14px 14px 0 0 !important; }
+.admin-nav-spacer { flex:1 1 auto; min-height:20px; }
+.admin-pos-return { border-top:1px solid rgba(255,255,255,.15) !important; margin-top:8px; color:#f3d7b2 !important; }
+.admin-pos-return:hover { background:#514638 !important; }
+.admin-workspace { height:100% !important; min-height:0 !important; }
