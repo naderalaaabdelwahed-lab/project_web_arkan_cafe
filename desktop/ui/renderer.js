@@ -165,8 +165,9 @@ let channelOrders=[];
 let activeChannel="صالة المطعم";
 let channelCart=[];
 let channelCustomer={name:"",phone:"",address:""};
-const channelTypeLabel=type=>({dine_in:"صالة",takeaway:"تيك أواي",delivery:"دليفري"}[type]||type||"—");
-const channelStatusLabel=status=>({pending:"جديد",preparing:"قيد التحضير",ready:"جاهز",delivered:"تم التسليم",cancelled:"ملغي",canceled:"ملغي"}[String(status||"").toLowerCase()]||status||"—");
+const normalizeChannelType=type=>String(type||"").toLowerCase().replace(/-/g,"_");
+const channelTypeLabel=type=>({dine_in:"صالة",takeaway:"تيك أواي",delivery:"دليفري"}[normalizeChannelType(type)]||type||"—");
+const channelStatusLabel=status=>({pending:"جديد",confirmed:"مؤكد",preparing:"قيد التحضير",ready:"جاهز",delivered:"تم التسليم",cancelled:"ملغي",canceled:"ملغي"}[String(status||"").toLowerCase()]||status||"—");
 function renderChannel(tab=activeChannel){
  activeChannel=tab;
  const dashboard=document.querySelector(".arkan-floor-dashboard");
@@ -193,7 +194,7 @@ function renderChannel(tab=activeChannel){
     <tbody>${channelOrders.map(o=>`<tr>
      <td>${esc(o.number||o.id)}</td><td>${esc(channelTypeLabel(o.channel))}</td>
      <td>${esc(o.customer||"—")}</td><td>${esc(o.phone||"—")}</td>
-     <td>${o.channel==="dine_in"?esc(o.tableNumber||"—"):"—"}</td>
+     <td>${normalizeChannelType(o.channel)==="dine_in"?esc(o.tableNumber||"—"):"—"}</td>
      <td>${o.items.map(i=>esc(i.name)+" × "+fmt(i.qty)).join("، ")||"—"}</td>
      <td>${fmt(o.total)} ج.م</td><td>${esc(channelStatusLabel(o.status))}</td>
      <td>${o.payment_status==="paid"?"مدفوع":"غير مدفوع"}</td>
@@ -300,7 +301,7 @@ async function loadConnectedFloorData(){
    const active=remoteOrders.filter(o=>!["cancelled","canceled"].includes(String(o.status||"").toLowerCase()));
    const dineIn=active.filter(o=>o.order_type==="dine_in"&&o.table_number!=null);
    orders.splice(0,orders.length,...dineIn.map(o=>({id:o.id,area:o.table_area||"indoor",number:Number(o.table_number),total:Number(o.total_minor||0)/100,discount_minor:Number(o.discount_minor||0),payment_method:o.payment_method||"cash",payment_status:o.payment_status||"unpaid",paid_at:o.paid_at||null,printed:["ready","delivered"].includes(o.status),closed:false,status:o.status,items:(o.items||[]).map(i=>({id:i.id,menu_item_id:i.menu_item_id,name:i.item_name_snapshot,qty:Number(i.quantity),price:Number(i.unit_price_minor||0)/100,notes:i.notes||""}))})));
-   channelOrders.splice(0,channelOrders.length,...remoteOrders.map(o=>({id:o.id,number:o.order_number||o.id,channel:String(o.order_type||"").toLowerCase(),customer:o.customer_name||({takeaway:"طلب تيك أواي",delivery:"طلب دليفري",dine_in:"طلب صالة"}[o.order_type]||"طلب"),phone:o.phone||"",address:o.address||"",tableNumber:o.table_number,total:Number(o.total_minor||0)/100,status:o.status,payment_status:o.payment_status||"unpaid",items:(o.items||[]).map(i=>({name:i.item_name_snapshot||i.product_name||"صنف",qty:Number(i.quantity||1),price:Number(i.unit_price_minor||0)/100}))})));
+   channelOrders.splice(0,channelOrders.length,...remoteOrders.map(o=>({id:o.id,number:o.order_number||o.id,channel:String(o.order_type||"").toLowerCase(),customer:o.customer_name||({takeaway:"طلب تيك أواي",delivery:"طلب دليفري",dine_in:"طلب صالة"}[normalizeChannelType(o.order_type)]||"طلب"),phone:o.phone||"",address:o.address||"",tableNumber:o.table_number,total:Number(o.total_minor||0)/100,status:o.status,payment_status:o.payment_status||"unpaid",items:(o.items||[]).map(i=>({name:i.item_name_snapshot||i.product_name||"صنف",qty:Number(i.quantity||1),price:Number(i.unit_price_minor||0)/100}))})));
   }
   if(Array.isArray(remoteReservations)){
    reservations.splice(0,reservations.length,...remoteReservations.filter(r=>["pending","confirmed"].includes(r.status)).map(r=>({area:r.area||"indoor",number:Number(r.table_number)})));
