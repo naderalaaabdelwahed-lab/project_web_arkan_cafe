@@ -130,9 +130,15 @@ async function runAction(action){
    else await saveOrder(o.id,{status:"cancelled"},false);
    await loadConnectedFloorData();select(key(target));
   }else if(action==="cash"||action==="finish"){
-   if(!confirm("تأكيد إنهاء الطلب؟"))return;
-   const paymentMethod=action==="cash"?"cash":o.payment_method||"cash";
-   await saveOrder(o.id,{status:"delivered",payment_method:paymentMethod});
+   if(!confirm("تأكيد تحصيل كامل قيمة الطلب؟"))return;
+   const paymentMethod=action==="cash"?"cash":(prompt("طريقة الدفع: cash أو card أو wallet",o.payment_method||"cash")||"");
+   if(!["cash","card","wallet"].includes(paymentMethod)){alert("طريقة الدفع غير صحيحة.");return;}
+   const response=await fetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(o.id)+"/pay",{
+    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method:paymentMethod})
+   });
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok)throw new Error(result.error||"تعذر تسجيل الدفع.");
+   await loadConnectedFloorData();
   }else if(action==="discount"){
    const n=Number(prompt("قيمة الخصم بالجنيه:",String(Number(o.discount_minor||0)/100)));
    if(!Number.isFinite(n)||n<0)return;
@@ -162,7 +168,7 @@ function renderChannel(tab){
  panel.querySelectorAll("[data-channel-done]").forEach(b=>b.addEventListener("click",async()=>{
   b.disabled=true;b.textContent="جاري التحديث...";
   try{
-   const response=await fetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(b.dataset.channelDone)+"/status",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"delivered"})});
+   const response=await fetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(b.dataset.channelDone)+"/pay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method:"cash"})});
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(result.error||"تعذر تحديث حالة الطلب.");
    await loadConnectedFloorData();renderChannel(tab);
