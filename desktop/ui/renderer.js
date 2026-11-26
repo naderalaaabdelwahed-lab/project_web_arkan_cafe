@@ -12,7 +12,7 @@ const $=id=>document.getElementById(id);
 const key=t=>t.area+":"+t.number;
 const fmt=n=>Number(n||0).toLocaleString("ar-EG",{maximumFractionDigits:2});
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const activeOrders=()=>orders.filter(o=>!o.closed&&!["delivered","cancelled"].includes(o.status));
+const activeOrders=()=>orders.filter(o=>!o.closed&&o.status!=="cancelled"&&o.payment_status!=="paid");
 const orderFor=t=>orders.find(o=>!o.closed&&o.area===t.area&&o.number===t.number);
 const selectedTable=()=>tables.find(t=>key(t)===selectedKey);
 const selectedOrder=()=>{const t=selectedTable();return t?orderFor(t):null};
@@ -164,7 +164,7 @@ function renderChannel(tab){
  if(!panel){panel=document.createElement("section");panel.id="channel-demo-panel";panel.className="pos-channel-panel";dashboard.after(panel);}
  let list=tab==="تيك أواي"?channelOrders.filter(o=>o.channel==="takeaway"):tab==="دليفري"?channelOrders.filter(o=>o.channel==="delivery"):channelOrders;
  panel.innerHTML=`<h2>${tab==="تيك أواي"?"طلبات التيك أواي":tab==="دليفري"?"طلبات الدليفري":"كل الطلبات"}</h2>
- <div class="pos-channel-grid">${list.map(o=>`<article class="pos-channel-card"><h3>${esc(o.customer)}</h3><small>رقم الطلب: ${esc(o.id)} · الحالة: ${esc(o.status||"pending")}</small><ul>${o.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul><strong>${fmt(o.total)} ج.م</strong><button data-channel-done="${o.id}" ${["delivered","cancelled"].includes(o.status)?"disabled":""}>إنهاء الطلب</button></article>`).join("")||"<p>لا توجد طلبات حاليًا.</p>"}</div>`;
+ <div class="pos-channel-grid">${list.map(o=>`<article class="pos-channel-card"><h3>${esc(o.customer)}</h3><small>رقم الطلب: ${esc(o.id)} · الحالة: ${esc(o.status||"pending")}</small><ul>${o.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul><strong>${fmt(o.total)} ج.م</strong><button data-channel-done="${o.id}" ${o.payment_status==="paid"||o.status==="cancelled"?"disabled":""}>إنهاء الطلب</button></article>`).join("")||"<p>لا توجد طلبات حاليًا.</p>"}</div>`;
  panel.querySelectorAll("[data-channel-done]").forEach(b=>b.addEventListener("click",async()=>{
   b.disabled=true;b.textContent="جاري التحديث...";
   try{
@@ -211,8 +211,8 @@ async function loadConnectedFloorData(){
   if(Array.isArray(remoteOrders)){
    const active=remoteOrders.filter(o=>!["cancelled","canceled"].includes(String(o.status||"").toLowerCase()));
    const dineIn=active.filter(o=>o.order_type==="dine_in"&&o.table_number!=null);
-   orders.splice(0,orders.length,...dineIn.map(o=>({id:o.id,area:o.table_area||"indoor",number:Number(o.table_number),total:Number(o.total_minor||0)/100,discount_minor:Number(o.discount_minor||0),payment_method:o.payment_method||"cash",printed:["ready","delivered"].includes(o.status),closed:false,status:o.status,items:(o.items||[]).map(i=>({id:i.id,menu_item_id:i.menu_item_id,name:i.item_name_snapshot,qty:Number(i.quantity),price:Number(i.unit_price_minor||0)/100,notes:i.notes||""}))})));
-   channelOrders.splice(0,channelOrders.length,...active.map(o=>({id:o.id,channel:o.order_type,customer:o.customer_name||({takeaway:"طلب تيك أواي",delivery:"طلب دليفري",dine_in:"طلب صالة"}[o.order_type]||"طلب"),total:Number(o.total_minor||0)/100,status:o.status,items:(o.items||[]).map(i=>i.item_name_snapshot||"صنف")})));
+   orders.splice(0,orders.length,...dineIn.map(o=>({id:o.id,area:o.table_area||"indoor",number:Number(o.table_number),total:Number(o.total_minor||0)/100,discount_minor:Number(o.discount_minor||0),payment_method:o.payment_method||"cash",payment_status:o.payment_status||"unpaid",paid_at:o.paid_at||null,printed:["ready","delivered"].includes(o.status),closed:false,status:o.status,items:(o.items||[]).map(i=>({id:i.id,menu_item_id:i.menu_item_id,name:i.item_name_snapshot,qty:Number(i.quantity),price:Number(i.unit_price_minor||0)/100,notes:i.notes||""}))})));
+   channelOrders.splice(0,channelOrders.length,...active.map(o=>({id:o.id,channel:o.order_type,customer:o.customer_name||({takeaway:"طلب تيك أواي",delivery:"طلب دليفري",dine_in:"طلب صالة"}[o.order_type]||"طلب"),total:Number(o.total_minor||0)/100,status:o.status,payment_status:o.payment_status||"unpaid",items:(o.items||[]).map(i=>i.item_name_snapshot||"صنف")})));
   }
   if(Array.isArray(remoteReservations)){
    reservations.splice(0,reservations.length,...remoteReservations.filter(r=>["pending","confirmed"].includes(r.status)).map(r=>({area:r.area||"indoor",number:Number(r.table_number)})));
