@@ -11,6 +11,7 @@ let selectedKey="";
 const $=id=>document.getElementById(id);
 const key=t=>t.area+":"+t.number;
 const fmt=n=>Number(n||0).toLocaleString("ar-EG",{maximumFractionDigits:2});
+const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const activeOrders=()=>orders.filter(o=>!o.closed);
 const orderFor=t=>orders.find(o=>!o.closed&&o.area===t.area&&o.number===t.number);
 const selectedTable=()=>tables.find(t=>key(t)===selectedKey);
@@ -45,7 +46,7 @@ function renderPreview(){
  if(!o){box.innerHTML=`<h3>الطاولة ${t.number} — ${area}</h3><p>الطاولة ${isReserved(t)?"محجوزة":"متاحة"} — لا يوجد طلب حالي.</p>`;return;}
  box.innerHTML=`<h3>أوردر الطاولة ${o.number} <span class="status-pill">EGS-${o.id}</span></h3>
  <div class="floor-preview-wrap"><table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
- <tbody>${o.items.map(i=>`<tr><td>${i.name}</td><td>${fmt(i.qty)}</td><td>${fmt(i.price)} ج.م</td><td>${fmt(i.qty*i.price)} ج.م</td></tr>`).join("")}</tbody>
+ <tbody>${o.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${fmt(i.qty)}</td><td>${fmt(i.price)} ج.م</td><td>${fmt(i.qty*i.price)} ج.م</td></tr>`).join("")}</tbody>
  <tfoot><tr><th colspan="3">الإجمالي</th><th>${fmt(o.total)} ج.م</th></tr></tfoot></table></div>`;
 }
 function refresh(){render();}
@@ -116,7 +117,7 @@ function renderChannel(tab){
  if(!panel){panel=document.createElement("section");panel.id="channel-demo-panel";panel.className="pos-channel-panel";dashboard.after(panel);}
  let list=tab==="تيك أواي"?channelOrders.filter(o=>o.channel==="takeaway"):tab==="دليفري"?channelOrders.filter(o=>o.channel==="delivery"):channelOrders;
  panel.innerHTML=`<h2>${tab==="تيك أواي"?"طلبات التيك أواي":tab==="دليفري"?"طلبات الدليفري":"كل الطلبات"}</h2>
- <div class="pos-channel-grid">${list.map(o=>`<article class="pos-channel-card"><h3>${o.customer}</h3><small>رقم الطلب: ${o.id} · الحالة: ${o.status||"pending"}</small><ul>${o.items.map(i=>`<li>${i}</li>`).join("")}</ul><strong>${fmt(o.total)} ج.م</strong><button data-channel-done="${o.id}" ${["delivered","cancelled"].includes(o.status)?"disabled":""}>إنهاء الطلب</button></article>`).join("")||"<p>لا توجد طلبات حاليًا.</p>"}</div>`;
+ <div class="pos-channel-grid">${list.map(o=>`<article class="pos-channel-card"><h3>${esc(o.customer)}</h3><small>رقم الطلب: ${esc(o.id)} · الحالة: ${esc(o.status||"pending")}</small><ul>${o.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul><strong>${fmt(o.total)} ج.م</strong><button data-channel-done="${o.id}" ${["delivered","cancelled"].includes(o.status)?"disabled":""}>إنهاء الطلب</button></article>`).join("")||"<p>لا توجد طلبات حاليًا.</p>"}</div>`;
  panel.querySelectorAll("[data-channel-done]").forEach(b=>b.addEventListener("click",async()=>{
   b.disabled=true;b.textContent="جاري التحديث...";
   try{
