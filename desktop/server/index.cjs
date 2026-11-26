@@ -5,7 +5,7 @@ const { randomUUID } = require("node:crypto");
 const { openDatabase } = require("./database.cjs");
 const { createSupabaseRestClient } = require("./supabase.cjs");
 
-function startLocalServer({ userDataPath, port = 4317 }) {
+function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
   const { db, databasePath } = openDatabase(userDataPath);
   const app = express();
   const supabase = createSupabaseRestClient();
@@ -22,8 +22,14 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods","GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers","Content-Type");
+    res.setHeader("Access-Control-Allow-Headers","Content-Type, X-Egsoft-Api-Token");
     if(req.method==="OPTIONS") return res.sendStatus(204);
+    next();
+  });
+  app.use("/api", (req,res,next) => {
+    if(apiToken && req.headers["x-egsoft-api-token"] !== apiToken) {
+      return res.status(401).json({error:"Local application token is missing or invalid."});
+    }
     next();
   });
   app.use(express.json({ limit: "1mb" }));
