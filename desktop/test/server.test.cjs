@@ -183,6 +183,16 @@ test("takeaway and delivery orders preserve customer details and remain in the a
   assert.equal(takeaway.body.customer_name, "Takeaway Customer");
   assert.equal(takeaway.body.phone, "01000000000");
 
+  const invalidDelivery = await request("/api/orders", {
+    method: "POST",
+    body: JSON.stringify({
+      order_type: "delivery",
+      items: [{ menu_item_id: "test-tea", quantity: 1 }]
+    })
+  });
+  assert.equal(invalidDelivery.response.status, 400);
+  assert.match(invalidDelivery.body.error, /رقم الهاتف وعنوان التوصيل/);
+
   const delivery = await request("/api/orders", {
     method: "POST",
     body: JSON.stringify({
