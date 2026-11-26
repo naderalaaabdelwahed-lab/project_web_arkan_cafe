@@ -214,16 +214,16 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     res.json({ok:true});
   });
 
-  app.use("/api/admin", (req,res,next) => {
-    if(!supabase.getSession().authenticated) return res.status(401).json({error:"سجل الدخول أولاً."});
-    next();
-  });
-
   app.get("/api/admin/summary", (_req,res) => {
     const count = table => db.prepare("SELECT COUNT(*) AS n FROM "+table).get().n;
     const sales = db.prepare("SELECT COALESCE(SUM(total_minor),0) AS total FROM orders WHERE status <> 'cancelled'").get().total;
     res.json({categories:count("menu_categories"),products:count("menu_items"),orders:count("orders"),sales_minor:sales,cloud:supabase.configured});
   });
+  app.use("/api/admin", (req,res,next) => {
+    if(!supabase.getSession().authenticated) return res.status(401).json({error:"سجل الدخول أولاً."});
+    next();
+  });
+
   app.get("/api/admin/menu", async (_req,res) => {
     if(supabase.getSession().authenticated) {
       try {
