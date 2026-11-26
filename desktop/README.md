@@ -25,7 +25,7 @@ npm run dist
 
 The app starts an embedded local Express service on `127.0.0.1:4317` and stores its SQLite database under Electron's per-user application data directory.
 
-## Implemented in this milestone
+## Current desktop modules
 
 - Electron desktop shell with context isolation and Node integration disabled
 - Local Express API and Socket.IO event server
@@ -33,7 +33,10 @@ The app starts an embedded local Express service on `127.0.0.1:4317` and stores 
 - Redesigned Arabic cashier screen inspired by the existing ARKAN POS layout: category chips, searchable product cards, order cart, dine-in/takeaway/delivery, customer fields and payment method
 - First-run demo menu with TEST-labelled pastries, pasta, main dishes and drinks; these are sample-only prices and are replaced by a later menu import
 - Local order creation in a single SQLite transaction
-- Local outbox record created with every order for later cloud synchronization
+- Retryable order outbox: orders and line items synchronize to Supabase after sign-in / connectivity recovery
+- Supabase Auth sign-in for the administration workspace
+- Cloud-backed administration for menu categories/products, reservations, business days, cash transactions, suppliers, inventory items/units/movements/purchases/recipes, printers, preparation screens, employees, shifts, attendance, leave balances and payroll runs
+- Cloud-backed sales list and kitchen status updates, with SQLite cache for offline access
 - Separate kitchen display window; open it with **Ctrl+K**
 - Kitchen screen polls local orders and updates preparation status while offline
 - Local health endpoint: `GET /api/health`
@@ -71,13 +74,14 @@ Prices in the import payload are Egyptian pounds; they are stored locally as int
 - `POST /api/orders`
 - `PATCH /api/orders/:id/status`
 
-## Not implemented yet
+## Configuration and remaining production setup
 
-- A guided menu export/import screen from the existing ARKAN Supabase project
-- Employee login, roles and permissions for the local app
-- LAN pairing/authentication for kitchen screens on separate devices
-- Background outbox worker and safe Supabase synchronization
-- USB and network printer adapters
+1. Copy `.env.example` to `.env`.
+2. Set `ARKAN_SUPABASE_PUBLISHABLE_KEY` to the project's Supabase publishable key. Never put a service-role/secret key in this desktop app.
+3. Sign in to administration with an existing Supabase Auth account.
+4. Keep the app on the `offline-desktop` branch while testing.
+
+The desktop app binds its API to `127.0.0.1` only. A separate internal/LAN server still requires device pairing, request authentication, and firewall configuration before enabling network access. USB/network printer drivers and full per-role permissions still require deployment-specific setup. HR face-profile data is not exposed to the desktop client.
 
 The local service currently binds to loopback only. The kitchen window works on the POS computer. LAN access will be enabled after device pairing and request authentication are implemented, so unauthenticated order APIs are not exposed on the restaurant network.
 
