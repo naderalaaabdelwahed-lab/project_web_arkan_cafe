@@ -1,24 +1,12 @@
-// Screen-only demonstration. All state stays in memory; no API/database calls.
+// Floor data and products are loaded from the local SQLite-backed API.
 const tables=[
  ...Array.from({length:12},(_,i)=>({area:"indoor",number:i+1})),
  ...Array.from({length:6},(_,i)=>({area:"outdoor",number:i+1}))
 ];
-const orders=[
- {id:1042,area:"indoor",number:2,total:285,printed:false,items:[
-  {id:1,name:"فطير مشلتت بالجبنة",qty:1,price:85},
-  {id:2,name:"مكرونة بشاميل",qty:2,price:95},
-  {id:3,name:"شاي",qty:1,price:10}
- ]},
- {id:1043,area:"indoor",number:5,total:340,printed:true,items:[
-  {id:4,name:"كفتة مشوية",qty:2,price:160},
-  {id:5,name:"كانز",qty:1,price:20}
- ]},
- {id:1044,area:"outdoor",number:1,total:145,printed:false,items:[
-  {id:6,name:"وجبة فراخ",qty:1,price:145}
- ]}
-];
-const reservations=[{area:"indoor",number:3},{area:"outdoor",number:4}];
-let products=[{name:"فطير سادة",price:55},{name:"فطير جبنة",price:85},{name:"مكرونة بشاميل",price:95},{name:"كفتة مشوية",price:160},{name:"شاي",price:10},{name:"عصير مانجو",price:35}];
+const orders=[];
+const reservations=[];
+let products=[];
+let menuLoaded=false;
 let selectedKey="";
 const $=id=>document.getElementById(id);
 const key=t=>t.area+":"+t.number;
@@ -30,7 +18,7 @@ const selectedOrder=()=>{const t=selectedTable();return t?orderFor(t):null};
 const isReserved=t=>reservations.some(r=>r.area===t.area&&r.number===t.number);
 const total=()=>activeOrders().reduce((s,o)=>s+o.total,0);
 function updateActionState(){
- const has=!!selectedOrder(),canAdd=!!selectedTable();
+ const has=!!selectedOrder(),canAdd=!!selectedTable()&&menuLoaded&&products.length>0;
  document.querySelectorAll("[data-action]").forEach(b=>b.disabled=b.dataset.action==="add"?!canAdd:!has);
 }
 function render(){
@@ -151,14 +139,14 @@ async function loadConnectedMenu(){
   const response=await fetch("http://127.0.0.1:4317/api/menu");
   if(!response.ok)throw new Error("Menu API returned "+response.status);
   const data=await response.json();
-  if(Array.isArray(data.items)&&data.items.length){
-   products=data.items.map(item=>({id:item.id,name:item.name,price:Number(item.price_minor)/100}));
-  }
+  products=Array.isArray(data.items)?data.items.map(item=>({id:item.id,name:item.name,price:Number(item.price_minor)/100})): [];
+  menuLoaded=products.length>0;
+  render();
  }catch(error){
   console.error("Could not load menu:",error);
  }
 }
-loadConnectedMenu();
+loadConnectedMenu().then(()=>loadConnectedFloorData());
 
 async function loadConnectedFloorData(){
  try{
