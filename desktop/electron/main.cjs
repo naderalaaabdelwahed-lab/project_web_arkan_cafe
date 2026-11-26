@@ -81,12 +81,16 @@ app.whenReady().then(async () => {
 
 app.on("will-quit", () => globalShortcut.unregisterAll());
 
-app.on("before-quit", async () => {
-  if (localServer) {
-    const server = localServer;
-    localServer = null;
-    await server.close().catch(() => {});
-  }
+let isClosing = false;
+app.on("before-quit", (event) => {
+  if (!localServer || isClosing) return;
+  event.preventDefault();
+  isClosing = true;
+  const server = localServer;
+  localServer = null;
+  server.close()
+    .catch((error) => console.error("Failed to close local POS service:", error))
+    .finally(() => app.quit());
 });
 
 app.on("window-all-closed", () => {
