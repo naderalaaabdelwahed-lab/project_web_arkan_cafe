@@ -11,6 +11,7 @@ let server;
 let tempDir;
 let baseUrl;
 let createdOrderId;
+let paidOrderId;
 
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "egsoft-pos-test-"));
@@ -71,6 +72,12 @@ test("order creation validates items and persists money in integer piastres", as
   result = await request("/api/orders", {
     method: "POST",
     body: JSON.stringify({ items: [{ menu_item_id: "missing", quantity: 1 }] })
+  });
+  assert.equal(result.response.status, 400);
+
+  result = await request("/api/orders", {
+    method: "POST",
+    body: JSON.stringify({ items: [{ menu_item_id: "test-tea", quantity: 1.5 }] })
   });
   assert.equal(result.response.status, 400);
 
@@ -176,6 +183,45 @@ test("order status rejects invalid values and persists valid transitions", async
   assert.equal(listed.body.find((order) => order.id === created.body.id).status, "preparing");
 });
 
+test("full payments are validated, recorded once and close the order", async () => {
+  const created = await request("/api/orders", {
+    method: "POST",
+    body: JSON.stringify({ items: [{ menu_item_id: "test-tea", quantity: 2 }] })
+  });
+  assert.equal(created.response.status, 201);
+  paidOrderId = created.body.id;
+
+  let result = await request(`/api/orders/${paidOrderId}/pay`, {
+    method: "POST",
+    body: JSON.stringify({ payment_method: "cash", amount_minor: 1000 })
+  });
+  assert.equal(result.response.status, 400);
+
+  result = await request(`/api/orders/${paidOrderId}/pay`, {
+    method: "POST",
+    body: JSON.stringify({ payment_method: "bitcoin" })
+  });
+  assert.equal(result.response.status, 400);
+
+  result = await request(`/api/orders/${paidOrderId}/pay`, {
+    method: "POST",
+    body: JSON.stringify({ payment_method: "card" })
+  });
+  assert.equal(result.response.status, 201);
+  assert.equal(result.body.payment.amount_minor, 3000);
+  assert.equal(result.body.payment.payment_method, "card");
+  assert.equal(result.body.payment.payment_status, "paid");
+  assert.equal(result.body.order.status, "delivered");
+  assert.ok(result.body.order.closed_at);
+
+  const duplicate = await request(`/api/orders/${paidOrderId}/pay`, {
+    method: "POST",
+    body: JSON.stringify({ payment_method: "cash" })
+  });
+  assert.equal(duplicate.response.status, 409);
+  assert.equal(server.db.prepare("SELECT COUNT(*) AS count FROM payments WHERE order_id=?").get(paidOrderId).count, 1);
+});
+
 test("SQLite orders survive a complete local service restart", async () => {
   assert.ok(createdOrderId, "an order must have been created by the earlier integration test");
   await server.close();
@@ -186,6 +232,10 @@ test("SQLite orders survive a complete local service restart", async () => {
   assert.ok(saved, "the order must still exist after reopening SQLite");
   assert.equal(saved.total_minor, 16000);
   assert.equal(saved.status, "pending");
+  const paid = listed.body.find((order) => order.id === paidOrderId);
+  assert.ok(paid, "paid order must survive a database restart");
+  assert.equal(paid.status, "delivered");
+  assert.equal(server.db.prepare("SELECT COUNT(*) AS count FROM payments WHERE order_id=?").get(paidOrderId).count, 1);
 });
 
 test("invalid menu imports are rejected without damaging the existing menu", async () => {
