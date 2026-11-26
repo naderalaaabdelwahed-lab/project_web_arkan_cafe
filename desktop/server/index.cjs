@@ -146,7 +146,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
 
 
   const adminModules = new Set(["reservations","business_days","cash_transactions","printers","preparation_screens","inventory_units","inventory_suppliers","inventory_items","inventory_movements","inventory_recipes","inventory_purchases","hr_employees","hr_shifts","hr_attendance","hr_leave_balances","hr_payroll_runs","audit_logs"]);
-  app.get("/api/admin/records/:module", (req,res) => {
+  app.get("/api/admin/records/:module", async (req,res) => {
     const module=req.params.module;
     if(!adminModules.has(module)) return res.status(404).json({error:"القسم غير موجود."});
     const rows=db.prepare("SELECT id,data_json,created_at,updated_at FROM admin_records WHERE module=? ORDER BY updated_at DESC").all(module);
@@ -166,7 +166,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     }
     res.json(result);
   });
-  app.post("/api/admin/records/:module", (req,res) => {
+  app.post("/api/admin/records/:module", async (req,res) => {
     const module=req.params.module, data=req.body||{};
     if(!adminModules.has(module)) return res.status(404).json({error:"القسم غير موجود."});
     const id=randomUUID(), now=new Date().toISOString(), clean={};
@@ -180,7 +180,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     db.prepare("INSERT OR REPLACE INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)").run(module,String(saved.id||id),JSON.stringify(Object.fromEntries(Object.entries(saved).filter(([k])=>!["id","created_at","updated_at"].includes(k)))),saved.created_at||now,saved.updated_at||now);
     res.status(201).json(saved);
   });
-  app.patch("/api/admin/records/:module/:id", (req,res) => {
+  app.patch("/api/admin/records/:module/:id", async (req,res) => {
     const module=req.params.module, data=req.body||{};
     if(!adminModules.has(module)) return res.status(404).json({error:"القسم غير موجود."});
     const old=db.prepare("SELECT data_json FROM admin_records WHERE module=? AND id=?").get(module,req.params.id);
@@ -196,7 +196,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     db.prepare("UPDATE admin_records SET data_json=?,updated_at=? WHERE module=? AND id=?").run(JSON.stringify(clean),now,module,req.params.id);
     res.json(saved);
   });
-  app.delete("/api/admin/records/:module/:id", (req,res) => {
+  app.delete("/api/admin/records/:module/:id", async (req,res) => {
     if(!adminModules.has(req.params.module)) return res.status(404).json({error:"القسم غير موجود."});
     if(supabase.getSession().authenticated) {
       try { await supabase.deleteRecord(req.params.module,req.params.id); }
