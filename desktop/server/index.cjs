@@ -386,7 +386,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
       phone: String(body.phone || "").slice(0, 30),
       address: String(body.address || "").slice(0, 500),
       table_id: body.table_id ? String(body.table_id) : null,
-      table_number: Number.isInteger(Number(body.table_number)) && body.table_number !== "" ? Number(body.table_number) : null,
+      table_number: body.table_number != null && body.table_number !== "" && Number.isInteger(Number(body.table_number)) ? Number(body.table_number) : null,
       table_area: ["indoor","outdoor"].includes(body.table_area) ? body.table_area : null,
       payment_method: ["cash", "card", "wallet"].includes(body.payment_method) ? body.payment_method : "cash",
       created_at: createdAt, updated_at: createdAt, sync_status: "pending"
