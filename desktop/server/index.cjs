@@ -325,7 +325,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     try {
       const [reservations,tables]=await Promise.all([supabase.listRecords("reservations"),supabase.listRecords("restaurant_tables")]);
       const tableMap=new Map((tables||[]).map(t=>[String(t.id),t]));
-      return res.json((reservations||[]).map(r=>({...r,area:tableMap.get(String(r.table_id))?.area||"indoor"})));
+      return res.json((reservations||[]).map(r=>{const table=tableMap.get(String(r.table_id));return {...r,area:table?.area||"indoor",table_number:r.table_number||table?.table_number||null};}));
     } catch(error) { return res.status(error.status||503).json({error:error.message}); }
   });
 
