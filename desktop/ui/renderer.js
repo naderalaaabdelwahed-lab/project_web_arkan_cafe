@@ -160,29 +160,96 @@ document.querySelectorAll("[data-action]").forEach(b=>b.addEventListener("click"
 $("side-refresh").addEventListener("click",refresh);
 $("summary-refresh").addEventListener("click",refresh);
 render();
-/* Order channels are populated from the connected API, never from demo fixtures. */
+/* Order channels are backed by the same persisted order API as dine-in. */
 let channelOrders=[];
-function renderChannel(tab){
- const dashboard=document.querySelector(".arkan-floor-dashboard"),note=document.querySelector(".demo-note");
+let activeChannel="صالة المطعم";
+function renderChannel(tab=activeChannel){
+ activeChannel=tab;
+ const dashboard=document.querySelector(".arkan-floor-dashboard");
+ const note=document.querySelector(".demo-note");
  let panel=document.getElementById("channel-demo-panel");
- if(tab==="صالة المطعم"){dashboard.style.display="";if(panel)panel.remove();note.style.display="";return;}
- dashboard.style.display="none";note.style.display="";
- if(!panel){panel=document.createElement("section");panel.id="channel-demo-panel";panel.className="pos-channel-panel";dashboard.after(panel);}
- let list=tab==="تيك أواي"?channelOrders.filter(o=>o.channel==="takeaway"):tab==="دليفري"?channelOrders.filter(o=>o.channel==="delivery"):channelOrders;
- panel.innerHTML=`<h2>${tab==="تيك أواي"?"طلبات التيك أواي":tab==="دليفري"?"طلبات الدليفري":"كل الطلبات"}</h2>
- <div class="pos-channel-grid">${list.map(o=>`<article class="pos-channel-card"><h3>${esc(o.customer)}</h3><small>رقم الطلب: ${esc(o.id)} · الحالة: ${esc(o.status||"pending")}</small><ul>${o.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul><strong>${fmt(o.total)} ج.م</strong><button data-channel-done="${o.id}" ${o.payment_status==="paid"||o.status==="cancelled"?"disabled":""}>إنهاء الطلب</button></article>`).join("")||"<p>لا توجد طلبات حاليًا.</p>"}</div>`;
- panel.querySelectorAll("[data-channel-done]").forEach(b=>b.addEventListener("click",async()=>{
-  b.disabled=true;b.textContent="جاري التحديث...";
+ if(tab==="صالة المطعم"){
+  if(dashboard)dashboard.style.display="";
+  if(panel)panel.remove();
+  if(note)note.style.display="";
+  return;
+ }
+ if(dashboard)dashboard.style.display="none";
+ if(note)note.style.display="none";
+ if(!panel){
+  panel=document.createElement("section");
+  panel.id="channel-demo-panel";
+  panel.className="pos-channel-panel";
+  if(dashboard)dashboard.after(panel);
+  else document.querySelector(".egsoft-pos-page")?.append(panel);
+ }
+ const isTakeaway=tab==="تيك أواي";
+ const isDelivery=tab==="دليفري";
+ const list=isTakeaway?channelOrders.filter(o=>o.channel==="takeaway"):
+  isDelivery?channelOrders.filter(o=>o.channel==="delivery"):channelOrders;
+ const title=isTakeaway?"طلبات التيك أواي":isDelivery?"طلبات الدليفري":"كل الطلبات";
+ panel.innerHTML=`
+  <div class="pos-channel-header"><h2>${title}</h2>
+   <div><button type="button" data-channel-refresh>تحديث</button>
+   ${isTakeaway||isDelivery?'<button type="button" data-channel-new>+ طلب جديد</button>':""}</div>
+  </div>
+  <div class="pos-channel-grid">${list.map(o=>`
+   <article class="pos-channel-card">
+    <h3>${esc(o.customer)}</h3>
+    <small>رقم الطلب: ${esc(o.number||o.id)} · الحالة: ${esc(o.status||"pending")}</small>
+    ${o.phone?'<p>الهاتف: '+esc(o.phone)+'</p>':""}
+    ${o.address?'<p>العنوان: '+esc(o.address)+'</p>':""}
+    <ul>${o.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>
+    <strong>${fmt(o.total)} ج.م</strong>
+    <small>${o.payment_status==="paid"?"مدفوع":"غير مدفوع"}</small>
+    <button type="button" data-channel-done="${esc(o.id)}" ${o.payment_status==="paid"||o.status==="cancelled"?"disabled":""}>${o.payment_status==="paid"?"تم التحصيل":"تحصيل نقدي وإنهاء"}</button>
+   </article>`).join("")||'<p class="pos-channel-empty">لا توجد طلبات في هذا القسم حاليًا.</p>'}</div>`;
+ panel.querySelector("[data-channel-refresh]")?.addEventListener("click",async()=>{
+  const button=panel.querySelector("[data-channel-refresh]");button.disabled=true;
+  try{await loadConnectedFloorData();}finally{button.disabled=false;}
+ });
+ panel.querySelector("[data-channel-new]")?.addEventListener("click",()=>createChannelOrder(isDelivery?"delivery":"takeaway"));
+ panel.querySelectorAll("[data-channel-done]").forEach(button=>button.addEventListener("click",async()=>{
+  button.disabled=true;button.textContent="جاري التحصيل...";
   try{
-   const response=await apiFetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(b.dataset.channelDone)+"/pay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method:"cash"})});
+   const response=await apiFetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(button.dataset.channelDone)+"/pay",{
+    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method:"cash"})
+   });
    const result=await response.json().catch(()=>({}));
-   if(!response.ok)throw new Error(result.error||"تعذر تحديث حالة الطلب.");
-   await loadConnectedFloorData();renderChannel(tab);
-  }catch(error){alert(error.message);b.disabled=false;b.textContent="إنهاء الطلب";}
+   if(!response.ok)throw new Error(result.error||"تعذر تسجيل التحصيل.");
+   await loadConnectedFloorData();
+  }catch(error){alert(error.message);button.disabled=false;button.textContent="تحصيل نقدي وإنهاء";}
  }));
 }
+async function createChannelOrder(orderType){
+ if(!menuLoaded||!products.length){alert("المنيو لم يتم تحميله بعد. راجع الاتصال ثم اضغط تحديث.");return;}
+ const customer=prompt("اسم العميل (اختياري):","")||"";
+ const phone=prompt("رقم هاتف العميل:","")||"";
+ const address=orderType==="delivery"?(prompt("عنوان التوصيل:","")||""):"";
+ if(orderType==="delivery"&&(!phone.trim()||!address.trim())){alert("رقم الهاتف وعنوان التوصيل مطلوبان لطلب الدليفري.");return;}
+ const choices=products.map((p,i)=>(i+1)+") "+p.name+" — "+fmt(p.price)+" ج.م").join("\n");
+ const raw=prompt("اكتب أرقام الأصناف مفصولة بفاصلة (مثال: 1,2):\n"+choices,"1");
+ if(raw===null)return;
+ const indexes=raw.split(",").map(value=>Number(value.trim()));
+ if(!indexes.length||indexes.some(n=>!Number.isInteger(n)||n<1||n>products.length)){alert("اختيارات الأصناف غير صحيحة.");return;}
+ const quantities={};
+ for(const index of indexes)quantities[index]=(quantities[index]||0)+1;
+ const items=Object.entries(quantities).map(([index,quantity])=>({menu_item_id:products[Number(index)-1].id,quantity}));
+ try{
+  const response=await apiFetch("http://127.0.0.1:4317/api/orders",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({order_type:orderType,customer_name:customer,phone,address,items})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(result.error||"تعذر إنشاء الطلب.");
+  await loadConnectedFloorData();
+  alert("تم حفظ الطلب بنجاح.");
+ }catch(error){alert(error.message);}
+}
 document.querySelectorAll(".tabs .tab").forEach(tab=>tab.addEventListener("click",()=>{
- document.querySelectorAll(".tabs .tab").forEach(x=>x.classList.remove("active"));tab.classList.add("active");renderChannel(tab.textContent.trim());
+ document.querySelectorAll(".tabs .tab").forEach(x=>x.classList.remove("active"));
+ tab.classList.add("active");
+ renderChannel(tab.textContent.trim());
 }));
 
 
@@ -218,12 +285,13 @@ async function loadConnectedFloorData(){
    const active=remoteOrders.filter(o=>!["cancelled","canceled"].includes(String(o.status||"").toLowerCase()));
    const dineIn=active.filter(o=>o.order_type==="dine_in"&&o.table_number!=null);
    orders.splice(0,orders.length,...dineIn.map(o=>({id:o.id,area:o.table_area||"indoor",number:Number(o.table_number),total:Number(o.total_minor||0)/100,discount_minor:Number(o.discount_minor||0),payment_method:o.payment_method||"cash",payment_status:o.payment_status||"unpaid",paid_at:o.paid_at||null,printed:["ready","delivered"].includes(o.status),closed:false,status:o.status,items:(o.items||[]).map(i=>({id:i.id,menu_item_id:i.menu_item_id,name:i.item_name_snapshot,qty:Number(i.quantity),price:Number(i.unit_price_minor||0)/100,notes:i.notes||""}))})));
-   channelOrders.splice(0,channelOrders.length,...active.map(o=>({id:o.id,channel:o.order_type,customer:o.customer_name||({takeaway:"طلب تيك أواي",delivery:"طلب دليفري",dine_in:"طلب صالة"}[o.order_type]||"طلب"),total:Number(o.total_minor||0)/100,status:o.status,payment_status:o.payment_status||"unpaid",items:(o.items||[]).map(i=>i.item_name_snapshot||"صنف")})));
+   channelOrders.splice(0,channelOrders.length,...remoteOrders.map(o=>({id:o.id,number:o.order_number||o.id,channel:String(o.order_type||"").toLowerCase(),customer:o.customer_name||({takeaway:"طلب تيك أواي",delivery:"طلب دليفري",dine_in:"طلب صالة"}[o.order_type]||"طلب"),phone:o.phone||"",address:o.address||"",total:Number(o.total_minor||0)/100,status:o.status,payment_status:o.payment_status||"unpaid",items:(o.items||[]).map(i=>(i.item_name_snapshot||i.product_name||"صنف")+" × "+Number(i.quantity||1))})));
   }
   if(Array.isArray(remoteReservations)){
    reservations.splice(0,reservations.length,...remoteReservations.filter(r=>["pending","confirmed"].includes(r.status)).map(r=>({area:r.area||"indoor",number:Number(r.table_number)})));
   }
   render();
+  if(activeChannel!=="صالة المطعم")renderChannel(activeChannel);
  }catch(error){console.error("Could not load cloud floor data:",error);}
 }
 
