@@ -457,6 +457,42 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     }
   });
 
+  app.post("/api/orders/:id/pay", async (req, res) => {
+    const order=db.prepare("SELECT * FROM orders WHERE id=?").get(req.params.id);
+    if(!order) return res.status(404).json({error:"الطلب غير موجود."});
+    if(["cancelled","delivered"].includes(order.status)) {
+      return res.status(409).json({error:"لا يمكن تحصيل طلب ملغي أو تم تحصيله بالفعل."});
+    }
+    const existing=db.prepare("SELECT id FROM payments WHERE order_id=?").get(order.id);
+    if(existing) return res.status(409).json({error:"تم تسجيل دفعة لهذا الطلب بالفعل."});
+    const method=req.body?.payment_method || order.payment_method || "cash";
+    if(!["cash","card","wallet"].includes(method)) return res.status(400).json({error:"طريقة الدفع غير صحيحة."});
+    const amount=req.body?.amount_minor===undefined ? order.total_minor : Number(req.body.amount_minor);
+    if(!Number.isSafeInteger(amount)||amount!==order.total_minor) {
+      return res.status(400).json({error:"المبلغ المدفوع يجب أن يساوي إجمالي الطلب بالكامل."});
+    }
+
+    const id=randomUUID(),paidAt=new Date().toISOString();
+    const payment={id,order_id:order.id,amount_minor:amount,payment_method:method,payment_status:"paid",paid_at:paidAt,sync_status:"pending"};
+    try {
+      const savePayment=db.transaction(()=>{
+        db.prepare(`INSERT INTO payments(id,order_id,amount_minor,payment_method,payment_status,paid_at,sync_status)
+          VALUES(@id,@order_id,@amount_minor,@payment_method,@payment_status,@paid_at,@sync_status)`).run(payment);
+        db.prepare("UPDATE orders SET status='delivered',payment_method=?,closed_at=?,updated_at=?,sync_status='pending' WHERE id=?")
+          .run(method,paidAt,paidAt,order.id);
+        db.prepare(`INSERT INTO sync_outbox(id,aggregate_type,aggregate_id,operation,payload_json,created_at)
+          VALUES(?,'payment',?,'create',?,?)`).run(randomUUID(),id,JSON.stringify(payment),paidAt);
+      });
+      savePayment();
+      if(supabase.getSession().authenticated) await syncPendingOrders();
+      const saved=db.prepare("SELECT * FROM payments WHERE id=?").get(id);
+      io.emit("kitchen:order-updated",{id:order.id,status:"delivered"});
+      res.status(201).json({payment:saved,order:db.prepare("SELECT * FROM orders WHERE id=?").get(order.id)});
+    } catch(error) {
+      res.status(500).json({error:"تعذر تسجيل الدفع: "+error.message});
+    }
+  });
+
   app.patch("/api/orders/:id", async (req, res) => {
     const current = db.prepare("SELECT * FROM orders WHERE id=?").get(req.params.id);
     if (!current) return res.status(404).json({ error: "الطلب غير موجود." });
@@ -620,7 +656,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
             customer_name:order.customer_name||null,customer_phone:order.phone||null,
             delivery_address:order.address||null,payment_method:order.payment_method||"cash",
             table_id:order.table_id||null,table_number:order.table_number||null,table_area:order.table_area||null,
-            created_at:order.created_at,updated_at:order.updated_at
+            closed_at:order.closed_at||null,created_at:order.created_at,updated_at:order.updated_at
           });
           const remoteItems=await supabase.getOrderItems(task.aggregate_id);
           if(!remoteItems.length && payload.items?.length) await supabase.insertMany("order_items",payload.items.map(item=>({
@@ -650,6 +686,23 @@ function startLocalServer({ userDataPath, port = 4317 }) {
             quantity:item.quantity,item_note:item.notes||null
           })));
           db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(task.aggregate_id);
+        } else if(task.aggregate_type==="payment" && task.operation==="create") {
+          const payment=payload;
+          const pendingCreate=db.prepare("SELECT id FROM sync_outbox WHERE aggregate_type='order' AND aggregate_id=? AND operation='create' AND synced_at IS NULL").get(payment.order_id);
+          if(pendingCreate) throw new Error("Order creation is still waiting to sync.");
+          const remoteOrder=await supabase.getRecord("orders",payment.order_id);
+          if(!remoteOrder) throw new Error("Cloud order does not exist yet.");
+          const existingPayment=await supabase.getRecord("payments",payment.id);
+          if(!existingPayment) await supabase.insertRecord("payments",{
+            id:payment.id,order_id:payment.order_id,amount:Number(payment.amount_minor||0)/100,
+            payment_method:payment.payment_method,payment_status:payment.payment_status,paid_at:payment.paid_at
+          });
+          await supabase.updateRecord("orders",payment.order_id,{
+            status:"delivered",payment_method:payment.payment_method,
+            closed_at:payment.paid_at,updated_at:payment.paid_at
+          });
+          db.prepare("UPDATE payments SET sync_status='synced' WHERE id=?").run(payment.id);
+          db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(payment.order_id);
         } else if(task.operation==="update_status") {
           const localOrder=db.prepare("SELECT sync_status FROM orders WHERE id=?").get(task.aggregate_id);
           // Do not mark a status update as synced while the order itself has
