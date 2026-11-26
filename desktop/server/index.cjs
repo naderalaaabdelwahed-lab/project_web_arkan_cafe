@@ -385,6 +385,9 @@ function startLocalServer({ userDataPath, port = 4317 }) {
       customer_name: String(body.customer_name || "").slice(0, 120),
       phone: String(body.phone || "").slice(0, 30),
       address: String(body.address || "").slice(0, 500),
+      table_id: body.table_id ? String(body.table_id) : null,
+      table_number: Number.isInteger(Number(body.table_number)) && body.table_number !== "" ? Number(body.table_number) : null,
+      table_area: ["indoor","outdoor"].includes(body.table_area) ? body.table_area : null,
       payment_method: ["cash", "card", "wallet"].includes(body.payment_method) ? body.payment_method : "cash",
       created_at: createdAt, updated_at: createdAt, sync_status: "pending"
     };
@@ -392,11 +395,11 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const saveOrder = db.transaction(() => {
       db.prepare(`INSERT INTO orders
         (id, order_number, order_type, status, subtotal_minor, discount_minor,
-         total_minor, notes, customer_name, phone, address, payment_method,
-         created_at, updated_at, sync_status)
+         total_minor, notes, customer_name, phone, address, table_id, table_number,
+         table_area, payment_method, created_at, updated_at, sync_status)
         VALUES (@id, @order_number, @order_type, @status, @subtotal_minor,
          @discount_minor, @total_minor, @notes, @customer_name, @phone, @address,
-         @payment_method, @created_at, @updated_at, @sync_status)`
+         @table_id, @table_number, @table_area, @payment_method, @created_at, @updated_at, @sync_status)`
       ).run(order);
 
       const addLine = db.prepare(`INSERT INTO order_items
