@@ -168,6 +168,40 @@ test("order creation validates items and persists money in integer piastres", as
   assert.equal(saved.items[0].line_total_minor, 17000);
 });
 
+test("offline all-orders endpoint returns all historical order types and statuses beyond 200 rows", async () => {
+  const insert = server.db.prepare(`
+    INSERT INTO orders (
+      id, order_number, order_type, status, subtotal_minor, discount_minor,
+      total_minor, notes, created_at, updated_at, sync_status, customer_name,
+      phone, address, payment_method, payment_status
+    ) VALUES (?, ?, ?, ?, 0, 0, 0, '', ?, ?, 'synced', ?, '', '', 'cash', ?)
+  `);
+  const now = new Date().toISOString();
+  for (let index = 0; index < 205; index += 1) {
+    const type = ["dine_in", "takeaway", "delivery"][index % 3];
+    const status = ["pending", "delivered", "cancelled"][index % 3];
+    insert.run(
+      "history-order-" + index,
+      "HISTORY-" + index,
+      type,
+      status,
+      now,
+      now,
+      "History customer " + index,
+      index % 2 === 0 ? "paid" : "unpaid"
+    );
+  }
+
+  const listed = await request("/api/orders");
+  assert.equal(listed.response.status, 200);
+  assert.ok(listed.body.length >= 205, "the endpoint must not stop at the previous 200-order limit");
+  for (const id of ["history-order-0", "history-order-1", "history-order-2", "history-order-204"]) {
+    assert.ok(listed.body.some(order => order.id === id), id + " must be included in the all-orders feed");
+  }
+  assert.ok(listed.body.some(order => order.order_type === "delivery" && order.status === "cancelled"));
+  assert.ok(listed.body.some(order => order.order_type === "takeaway" && order.payment_status === "paid"));
+});
+
 test("takeaway and delivery orders preserve customer details and remain in the all-orders feed", async () => {
   const takeaway = await request("/api/orders", {
     method: "POST",
