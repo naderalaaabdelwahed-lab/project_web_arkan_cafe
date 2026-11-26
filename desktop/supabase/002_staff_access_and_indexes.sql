@@ -38,23 +38,23 @@ for all to authenticated using ((SELECT public.is_egsoft_admin())) with check ((
 
 drop policy if exists "Staff full access products" on public.products;
 create policy "Staff full access products" on public.products
-for all to authenticated using (true) with check (true);
+for all to authenticated using ((SELECT public.is_egsoft_admin())) with check ((SELECT public.is_egsoft_admin()));
 
 drop policy if exists "Staff full access restaurant_tables" on public.restaurant_tables;
 create policy "Staff full access restaurant_tables" on public.restaurant_tables
-for all to authenticated using (true) with check (true);
+for all to authenticated using ((SELECT public.is_egsoft_admin())) with check ((SELECT public.is_egsoft_admin()));
 
 drop policy if exists "Staff full access orders" on public.orders;
 create policy "Staff full access orders" on public.orders
-for all to authenticated using (true) with check (true);
+for all to authenticated using ((SELECT public.is_egsoft_admin())) with check ((SELECT public.is_egsoft_admin()));
 
 drop policy if exists "Staff full access order_items" on public.order_items;
 create policy "Staff full access order_items" on public.order_items
-for all to authenticated using (true) with check (true);
+for all to authenticated using ((SELECT public.is_egsoft_admin())) with check ((SELECT public.is_egsoft_admin()));
 
 drop policy if exists "Staff full access payments" on public.payments;
 create policy "Staff full access payments" on public.payments
-for all to authenticated using (true) with check (true);
+for all to authenticated using ((SELECT public.is_egsoft_admin())) with check ((SELECT public.is_egsoft_admin()));
 
 -- Covering indexes for foreign keys.
 create index if not exists idx_order_items_product_id on public.order_items(product_id);
