@@ -358,7 +358,43 @@ shifts:{title:"الورديات",db:"hr_shifts",fields:[["name","اسم الور
    workspace.querySelector("#admin-logout").onclick=async()=>{await api("/api/auth/logout",{method:"POST"});guardedRender("dashboard");};
   }catch(e){workspace.innerHTML=heading("تعذر التحقق من الدخول",esc(e.message));}
  }
- document.querySelectorAll("[data-admin-section]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-admin-section]").forEach(x=>x.classList.toggle("active",x===b));guardedRender(b.dataset.adminSection);}));
- document.getElementById("open-admin")?.addEventListener("click",()=>guardedRender("dashboard"));
+ const nav=document.getElementById("admin-nav");
+ const sidebarTitle=document.getElementById("admin-sidebar-title");
+ const groups={
+  sales:{title:"المبيعات",items:[["orders","الطلبات","🧾"],["sales","المبيعات","💰"],["reports","التقارير","📊"],["cash","الخزينة","💳"],["daily","إقفال اليومية","📒"]]},
+  menu:{title:"إدارة المنيو",items:[["menu","إدارة المنيو","🍽"],["products","المنتجات","📦"],["categories","الفئات","▤"]]},
+  inventory:{title:"إدارة المخزن",items:[["inventory","أصناف المخزون","📦"],["movements","حركة المخزون","🔄"],["units","وحدات القياس","⚖"],["purchases","المشتريات","🚚"],["purchase-items","تفاصيل المشتريات","🧾"],["suppliers","الموردون","🏭"],["recipes","الوصفات والتكلفة","📋"],["recipe-items","مكونات الوصفات","🧩"]]},
+  hr:{title:"الموارد البشرية",items:[["employees","الموظفون","👥"],["attendance","الحضور والانصراف","⏱"],["shifts","الورديات","🗓"],["employee-shifts","توزيع الورديات","📅"],["leave","أرصدة الإجازات","🏖"],["payroll","المرتبات","💵"],["payroll-items","تفاصيل كشوف المرتبات","🧾"],["payroll-adjustments","إضافات وخصومات الرواتب","➕"]]},
+  operations:{title:"إدارة التشغيل",items:[["tables","إعدادات الطاولات","🪑"],["reservations","الحجوزات","📅"],["kitchen","شاشة المطبخ والبار","👨‍🍳"],["prep","شاشات التحضير","🍳"],["screen-categories","فئات شاشات التحضير","🧩"],["printers","الطابعات","🖨"]]}
+ };
+ function showMainNavigation(){
+  sidebarTitle.textContent="القائمة الرئيسية";
+  nav.innerHTML='<button type="button" data-admin-home="dashboard" class="admin-nav-item"><span>▦</span> لوحة الإدارة</button>'+
+   Object.entries(groups).map(([key,g])=>'<button type="button" data-admin-group="'+key+'" class="admin-nav-item"><span>'+({sales:"💰",menu:"🍽",inventory:"📦",hr:"👥",operations:"⚙"}[key])+'</span> '+g.title+'</button>').join("")+
+   '<button type="button" data-admin-home="settings" class="admin-nav-item"><span>🔧</span> الإعدادات</button><div class="admin-nav-spacer"></div><button type="button" id="back-to-pos" class="admin-nav-item admin-pos-return"><span>↩</span> نقطة البيع</button>';
+  nav.querySelectorAll("[data-admin-group]").forEach(b=>b.onclick=()=>showGroup(b.dataset.adminGroup));
+  nav.querySelectorAll("[data-admin-home]").forEach(b=>b.onclick=()=>{showMainNavigation();setActiveHome(b.dataset.adminHome);guardedRender(b.dataset.adminHome);});
+  document.getElementById("back-to-pos").onclick=()=>{adminPage.hidden=true;posPage.hidden=false;window.scrollTo(0,0);};
+ }
+ function setActiveHome(section){
+  nav.querySelectorAll(".admin-nav-item").forEach(x=>x.classList.toggle("active",x.dataset.adminHome===section));
+ }
+ function showGroup(key){
+  const group=groups[key];if(!group)return;
+  sidebarTitle.textContent=group.title;
+  nav.innerHTML='<button type="button" class="admin-nav-item admin-nav-back" id="admin-nav-back"><span>→</span> القائمة الرئيسية</button>'+
+   '<div class="admin-nav-group-label">'+group.title+'</div>'+
+   group.items.map(([section,label,icon],i)=>'<button type="button" data-admin-section="'+section+'" class="admin-nav-item '+(i===0?"active":"")+'"><span>'+icon+'</span> '+label+'</button>').join("")+
+   '<div class="admin-nav-spacer"></div><button type="button" id="back-to-pos" class="admin-nav-item admin-pos-return"><span>↩</span> نقطة البيع</button>';
+  document.getElementById("admin-nav-back").onclick=showMainNavigation;
+  nav.querySelectorAll("[data-admin-section]").forEach(b=>b.onclick=()=>{
+   nav.querySelectorAll("[data-admin-section]").forEach(x=>x.classList.toggle("active",x===b));
+   guardedRender(b.dataset.adminSection);
+  });
+  document.getElementById("back-to-pos").onclick=()=>{adminPage.hidden=true;posPage.hidden=false;window.scrollTo(0,0);};
+  guardedRender(group.items[0][0]);
+ }
+ showMainNavigation();
+ document.getElementById("open-admin")?.addEventListener("click",()=>{showMainNavigation();guardedRender("dashboard");});
  guardedRender();
 })();
