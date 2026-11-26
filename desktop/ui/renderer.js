@@ -373,7 +373,7 @@ shifts:{title:"الورديات",db:"hr_shifts",fields:[["name","اسم الور
   workspace.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editMenu(kind,list.find(x=>String(x.id)===b.dataset.edit),d));
   workspace.querySelectorAll("[data-delete]").forEach(b=>b.onclick=async()=>{
    const item=list.find(x=>String(x.id)===b.dataset.delete);
-   if(!item||!confirm(cat?"حذف القسم؟ لا يمكن حذف قسم يحتوي على أصناف.":"حذف الصنف من المنيو؟"))return;
+   if(!item||!confirm(cat?"حذف القسم؟ لا يمكن حذف قسم يحتوي على أصناف.":"إخفاء الصنف من البيع؟ يمكنك إتاحته مرة أخرى بالتعديل."))return;
    try{await api("/api/admin/"+(cat?"categories/":"products/")+encodeURIComponent(item.id),{method:"DELETE"});await menuPage(kind);}
    catch(error){alert(error.message);}
   });
