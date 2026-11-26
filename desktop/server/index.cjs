@@ -333,7 +333,12 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     if(supabase.getSession().authenticated) {
       try {
         const remote=await supabase.getOrders();
-        return res.json((remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total||0)*100),notes:i.item_note||i.notes||""}))})));
+        const remoteRows=(remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total||0)*100),notes:i.item_note||i.notes||""}))}));
+        const remoteIds=new Set(remoteRows.map(o=>String(o.id)));
+        const pending=db.prepare("SELECT * FROM orders WHERE sync_status <> 'synced' ORDER BY created_at DESC").all();
+        const getLocalItems=db.prepare("SELECT * FROM order_items WHERE order_id=?");
+        const localRows=pending.filter(o=>!remoteIds.has(String(o.id))).map(o=>({...o,items:getLocalItems.all(o.id)}));
+        return res.json([...remoteRows,...localRows]);
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
     const orders = db.prepare(
