@@ -163,6 +163,11 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   // Protect every administration endpoint before registering any /api/admin route.
   // Previously this guard was registered after summary and CRUD routes, leaving
   // sensitive business data and records publicly readable on the local API.
+  app.use("/api/admin", (req,res,next) => {
+    if(!supabase.getSession().authenticated) return res.status(401).json({error:"سجل الدخول أولاً."});
+    next();
+  });
+
   const adminModules = new Set(["reservations","business_days","cash_transactions","printers","preparation_screens","inventory_units","inventory_suppliers","inventory_items","inventory_movements","inventory_recipes","inventory_purchases","hr_employees","hr_shifts","hr_attendance","hr_leave_balances","hr_payroll_runs","hr_payroll_adjustments","hr_payroll_items","hr_employee_shift_assignments","inventory_purchase_items","inventory_recipe_items","restaurant_tables","preparation_screen_categories","audit_logs"]);
   app.get("/api/admin/records/:module", async (req,res) => {
     const module=req.params.module;
