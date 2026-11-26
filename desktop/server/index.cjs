@@ -134,6 +134,44 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     }
   });
 
+
+  app.get("/api/admin/summary", (_req,res) => {
+    const count = table => db.prepare("SELECT COUNT(*) AS n FROM "+table).get().n;
+    const sales = db.prepare("SELECT COALESCE(SUM(total_minor),0) AS total FROM orders WHERE status <> 'cancelled'").get().total;
+    res.json({categories:count("menu_categories"),products:count("menu_items"),orders:count("orders"),sales_minor:sales,cloud:supabase.configured});
+  });
+  app.get("/api/admin/menu", (_req,res) => res.json({
+    categories:db.prepare("SELECT id,name,sort_order,is_active FROM menu_categories ORDER BY sort_order,name").all(),
+    products:db.prepare("SELECT id,category_id,name,description,price_minor,is_available FROM menu_items ORDER BY name").all()
+  }));
+  app.post("/api/admin/categories", (req,res) => {
+    const name=String(req.body?.name||"").trim().slice(0,100);
+    if(!name)return res.status(400).json({error:"اسم الفئة مطلوب."});
+    const id=randomUUID();
+    try{db.prepare("INSERT INTO menu_categories(id,name,sort_order,is_active) VALUES(?,?,?,1)").run(id,name,Number(req.body?.sort_order||0));res.status(201).json({id,name});}
+    catch(e){res.status(400).json({error:e.message});}
+  });
+  app.patch("/api/admin/categories/:id", (req,res) => {
+    const name=String(req.body?.name||"").trim().slice(0,100);
+    if(!name)return res.status(400).json({error:"اسم الفئة مطلوب."});
+    const r=db.prepare("UPDATE menu_categories SET name=?,sort_order=?,is_active=? WHERE id=?").run(name,Number(req.body?.sort_order||0),req.body?.is_active===false?0:1,req.params.id);
+    if(!r.changes)return res.status(404).json({error:"الفئة غير موجودة."});res.json({ok:true});
+  });
+  app.post("/api/admin/products", (req,res) => {
+    const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price);
+    if(!name||!category||!Number.isFinite(price)||price<0)return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
+    const id=randomUUID();
+    try{db.prepare("INSERT INTO menu_items(id,category_id,name,description,price_minor,is_available) VALUES(?,?,?,?,?,1)").run(id,category,name,String(req.body?.description||"").slice(0,500),Math.round(price*100));res.status(201).json({id,name});}
+    catch(e){res.status(400).json({error:e.message});}
+  });
+  app.patch("/api/admin/products/:id", (req,res) => {
+    const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price);
+    if(!name||!category||!Number.isFinite(price)||price<0)return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
+    const r=db.prepare("UPDATE menu_items SET name=?,category_id=?,description=?,price_minor=?,is_available=? WHERE id=?").run(name,category,String(req.body?.description||"").slice(0,500),Math.round(price*100),req.body?.is_available===false?0:1,req.params.id);
+    if(!r.changes)return res.status(404).json({error:"المنتج غير موجود."});res.json({ok:true});
+  });
+  app.get("/api/admin/orders", (_req,res) => res.json(db.prepare("SELECT id,order_number,order_type,status,total_minor,created_at,sync_status FROM orders ORDER BY created_at DESC LIMIT 300").all()));
+
   app.get("/api/orders", (_req, res) => {
     const orders = db.prepare(
       "SELECT * FROM orders ORDER BY created_at DESC LIMIT 200"
