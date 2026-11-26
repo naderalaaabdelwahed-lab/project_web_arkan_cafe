@@ -27,9 +27,7 @@ RETURNS boolean
 LANGUAGE sql
 STABLE
 SET search_path = pg_catalog, public
-AS $
-  SELECT COALESCE(auth.jwt() -> 'app_metadata' ->> 'egsoft_role', '') = 'admin';
-$;
+AS 'SELECT COALESCE(auth.jwt() -> ''app_metadata'' ->> ''egsoft_role'', '''') = ''admin'';';
 REVOKE ALL ON FUNCTION public.is_egsoft_admin() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_egsoft_admin() TO authenticated;
 drop policy if exists "Staff full access categories" on public.categories;
