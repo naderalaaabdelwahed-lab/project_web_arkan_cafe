@@ -34,6 +34,7 @@ The app starts an embedded local Express service on `127.0.0.1:4317` and stores 
 ## Current desktop modules
 
 - Electron desktop shell with context isolation and Node integration disabled
+- Local API protected by a random per-launch token shared only with isolated Electron windows
 - Local Express API and Socket.IO event server
 - SQLite database and initial local schema
 - Redesigned Arabic cashier screen inspired by the existing ARKAN POS layout: category chips, searchable product cards, order cart, dine-in/takeaway/delivery, customer fields and payment method
