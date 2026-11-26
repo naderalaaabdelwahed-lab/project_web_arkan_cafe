@@ -110,3 +110,6 @@ The desktop app binds its API to `127.0.0.1` only. A separate internal/LAN serve
 The local service currently binds to loopback only. The kitchen window works on the POS computer. LAN access will be enabled after device pairing and request authentication are implemented, so unauthenticated order APIs are not exposed on the restaurant network.
 
 The existing public website and production Supabase project are not changed by this desktop app. All work remains on the `offline-desktop` branch.
+
+
+Installed Windows configuration: place the runtime environment file at `%APPDATA%\\egsoft-desktop\\.env`. The installer excludes `.env` files to avoid bundling credentials; use only the Supabase URL and publishable key, never a service-role key.
