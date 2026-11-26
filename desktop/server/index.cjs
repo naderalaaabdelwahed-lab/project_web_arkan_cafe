@@ -230,7 +230,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     let id=randomUUID();
     try {
       if(supabase.getSession().authenticated) { const saved=await supabase.insertRecord("categories",{name,display_order:Number(req.body?.sort_order||0),is_active:true}); id=saved.id; }
-      db.prepare("INSERT OR REPLACE INTO menu_categories(id,name,sort_order,is_active) VALUES(?,?,?,1)").run(id,name,Number(req.body?.sort_order||0));
+      if(!supabase.getSession().authenticated) db.prepare("INSERT OR REPLACE INTO menu_categories(id,name,sort_order,is_active) VALUES(?,?,?,1)").run(id,name,Number(req.body?.sort_order||0));
       res.status(201).json({id,name});
     } catch(e){res.status(e.status||400).json({error:e.message});}
   });
@@ -250,7 +250,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     let id=randomUUID();
     try {
       if(supabase.getSession().authenticated) { const saved=await supabase.insertRecord("products",{category_id:category,name,description:String(req.body?.description||""),price,is_available:true}); id=saved.id; }
-      db.prepare("INSERT OR REPLACE INTO menu_items(id,category_id,name,description,price_minor,is_available) VALUES(?,?,?,?,?,1)").run(id,category,name,String(req.body?.description||""),Math.round(price*100));
+      if(!supabase.getSession().authenticated) db.prepare("INSERT OR REPLACE INTO menu_items(id,category_id,name,description,price_minor,is_available) VALUES(?,?,?,?,?,1)").run(id,category,name,String(req.body?.description||""),Math.round(price*100));
       res.status(201).json({id,name});
     } catch(e){res.status(e.status||400).json({error:e.message});}
   });
