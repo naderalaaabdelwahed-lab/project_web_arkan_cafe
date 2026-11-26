@@ -30,6 +30,10 @@ function createSupabaseRestClient() {
 
   return {
     configured: Boolean(key),
+    async getAdminMenu() {
+      const [categories,products]=await Promise.all([request('/rest/v1/categories?select=id,name,is_active,department,display_order&order=display_order.asc'),request('/rest/v1/products?select=id,category_id,name,description,price,is_available,preparation_station,sku,cost_price&order=name.asc')]);
+      return {categories,products};
+    },
     async listRecords(table) { return await request("/rest/v1/" + encodeURIComponent(table) + "?select=*&order=created_at.desc"); },
     async insertRecord(table, data) {
       const rows=await request("/rest/v1/"+encodeURIComponent(table),{method:"POST",headers:{"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify(data)});
