@@ -22,8 +22,6 @@ function loadDesktopEnv() {
   }
 }
 
-loadDesktopEnv();
-
 async function createKitchenWindow() {
   if (kitchenWindow && !kitchenWindow.isDestroyed()) {
     kitchenWindow.focus();
@@ -68,6 +66,7 @@ async function createWindow() {
 
 app.whenReady().then(async () => {
   try {
+    loadDesktopEnv();
     localServer = await startLocalServer({ userDataPath: app.getPath("userData") });
     await createWindow();
     globalShortcut.register("CommandOrControl+K", createKitchenWindow);
