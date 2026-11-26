@@ -24,7 +24,7 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "com.egsoft.pos",
+    "appId": "com.arkan.egsoft",
     "productName": "Egsoft POS",
     "directories": {
       "output": "release"
@@ -33,20 +33,22 @@
       "electron/**/*",
       "server/**/*",
       "ui/**/*",
-      "package.json"
+      "package.json",
+      "!**/.env",
+      "!**/.env.*",
+      "!**/test/**/*",
+      "!**/supabase/**/*",
+      "!**/README.md"
     ],
     "win": {
       "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
+        "nsis"
+      ],
+      "artifactName": "Egsoft-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
