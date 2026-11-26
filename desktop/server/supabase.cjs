@@ -53,15 +53,6 @@ function createSupabaseRestClient() {
       if (!result?.access_token) throw new Error("لم يتم استلام جلسة تسجيل الدخول.");
       accessToken = result.access_token;
       currentUser = result.user || null;
-      try {
-        const admin = await request("/rest/v1/rpc/is_admin", {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
-        });
-        if (admin !== true) throw new Error("هذا الحساب ليس لديه صلاحية مدير النظام.");
-      } catch (error) {
-        accessToken = null; currentUser = null;
-        throw error;
-      }
       return { authenticated: true, user: currentUser };
     },
     async signOut() {
