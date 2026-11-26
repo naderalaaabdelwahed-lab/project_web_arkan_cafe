@@ -40,6 +40,20 @@ test("health endpoint reports a working local service", async () => {
   assert.equal(body.database, "connected");
 });
 
+test("Electron token header is allowed by the local CORS preflight", async () => {
+  const response = await fetch(baseUrl + "/api/health", {
+    method: "OPTIONS",
+    headers: {
+      Origin: "null",
+      "Access-Control-Request-Method": "GET",
+      "Access-Control-Request-Headers": "x-egsoft-api-token"
+    }
+  });
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get("access-control-allow-origin"), "null");
+  assert.match(response.headers.get("access-control-allow-headers"), /X-Egsoft-Api-Token/i);
+});
+
 test("local API rejects requests without the per-launch Electron token", async () => {
   const response = await fetch(baseUrl + "/api/health");
   assert.equal(response.status, 401);
