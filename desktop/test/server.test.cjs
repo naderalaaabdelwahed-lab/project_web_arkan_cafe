@@ -108,8 +108,46 @@ test("order creation validates items and persists money in integer piastres", as
   const listed = await request("/api/orders");
   const saved = listed.body.find((order) => order.id === result.body.id);
   assert.ok(saved, "created order must be returned by the orders endpoint");
-  assert.equal(saved.total_minor, 16000);
+  assert.equal(saved.total_minor, 11000);
+  assert.equal(saved.table_number, 9);
   assert.equal(saved.items[0].line_total_minor, 17000);
+});
+
+test("order edits persist items, discounts and table transfers atomically", async () => {
+  assert.ok(createdOrderId);
+  const edited = await request(`/api/orders/${createdOrderId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      items: [
+        { menu_item_id: "test-fatir-cheese", quantity: 1 },
+        { menu_item_id: "test-tea", quantity: 2, notes: "بدون سكر" }
+      ],
+      discount_minor: 500,
+      table_id: "table-9",
+      table_number: 9,
+      table_area: "outdoor"
+    })
+  });
+  assert.equal(edited.response.status, 200);
+  assert.equal(edited.body.subtotal_minor, 11500);
+  assert.equal(edited.body.discount_minor, 500);
+  assert.equal(edited.body.total_minor, 11000);
+  assert.equal(edited.body.table_number, 9);
+  assert.equal(edited.body.table_area, "outdoor");
+  assert.equal(edited.body.items.length, 2);
+  assert.equal(edited.body.items[1].line_total_minor, 3000);
+
+  const invalid = await request(`/api/orders/${createdOrderId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ items: [{ menu_item_id: "missing-product", quantity: 1 }] })
+  });
+  assert.equal(invalid.response.status, 400);
+
+  const listed = await request("/api/orders");
+  const saved = listed.body.find((order) => order.id === createdOrderId);
+  assert.equal(saved.total_minor, 11000);
+  assert.equal(saved.table_number, 9);
+  assert.equal(saved.items.length, 2);
 });
 
 test("order status rejects invalid values and persists valid transitions", async () => {
