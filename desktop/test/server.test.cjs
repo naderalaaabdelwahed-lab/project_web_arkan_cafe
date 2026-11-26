@@ -46,6 +46,10 @@ test("loopback API rejects browser requests from untrusted origins", async () =>
   });
   assert.equal(response.status, 403);
   assert.equal(body.error, "Origin is not allowed.");
+
+  const local = await request("/api/health", { headers: { Origin: "null" } });
+  assert.equal(local.response.status, 200);
+  assert.equal(local.response.headers.get("access-control-allow-origin"), "null");
 });
 
 test("all administration routes require an authenticated admin session", async () => {
@@ -311,4 +315,20 @@ test("invalid menu imports are rejected without damaging the existing menu", asy
   assert.equal(unsafePrice.response.status, 400);
   const finalMenu = await request("/api/menu");
   assert.ok(finalMenu.body.items.some((item) => item.id === "test-fatir-cheese"));
+
+  const validImport = await request("/api/menu/import", {
+    method: "PUT",
+    body: JSON.stringify({
+      categories: [{ id: "integration-category", name: "Integration test", sort_order: 1 }],
+      items: [{
+        id: "integration-product", category_id: "integration-category",
+        name: "Imported product", price: 12.34, is_available: true
+      }]
+    })
+  });
+  assert.equal(validImport.response.status, 200);
+  const importedMenu = await request("/api/menu");
+  const imported = importedMenu.body.items.find((item) => item.id === "integration-product");
+  assert.ok(imported);
+  assert.equal(imported.price_minor, 1234);
 });
