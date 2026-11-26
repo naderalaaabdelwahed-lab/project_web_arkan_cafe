@@ -77,6 +77,15 @@ test("order creation validates items and persists money in integer piastres", as
   result = await request("/api/orders", {
     method: "POST",
     body: JSON.stringify({
+      discount_minor: Number.MAX_SAFE_INTEGER + 100,
+      items: [{ menu_item_id: "test-tea", quantity: 1 }]
+    })
+  });
+  assert.equal(result.response.status, 400);
+
+  result = await request("/api/orders", {
+    method: "POST",
+    body: JSON.stringify({
       order_type: "dine_in",
       table_id: "table-test",
       table_number: 7,
@@ -155,4 +164,15 @@ test("invalid menu imports are rejected without damaging the existing menu", asy
   const afterMenu = await request("/api/menu");
   assert.equal(afterMenu.body.items.length, beforeMenu.body.items.length);
   assert.ok(afterMenu.body.items.some((item) => item.id === "test-fatir-cheese"));
+
+  const unsafePrice = await request("/api/menu/import", {
+    method: "PUT",
+    body: JSON.stringify({
+      categories: [{ id: "safe-category", name: "Safe category" }],
+      items: [{ id: "unsafe-price", category_id: "safe-category", name: "Unsafe", price: 1e100 }]
+    })
+  });
+  assert.equal(unsafePrice.response.status, 400);
+  const finalMenu = await request("/api/menu");
+  assert.ok(finalMenu.body.items.some((item) => item.id === "test-fatir-cheese"));
 });
