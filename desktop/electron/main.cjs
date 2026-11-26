@@ -1,10 +1,12 @@
 const { app, BrowserWindow, dialog, globalShortcut } = require("electron");
 const path = require("node:path");
+const { randomBytes } = require("node:crypto");
 const { startLocalServer } = require("../server/index.cjs");
 
 let mainWindow;
 let kitchenWindow;
 let localServer;
+const apiToken = randomBytes(32).toString("hex");
 
 function loadDesktopEnv() {
   const fs = require("node:fs");
@@ -35,6 +37,8 @@ async function createKitchenWindow() {
     backgroundColor: "#101820",
     title: "Egsoft - شاشة المطبخ",
     webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      additionalArguments: [`--egsoft-api-token=${apiToken}`],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
@@ -54,6 +58,7 @@ async function createWindow() {
     backgroundColor: "#101820",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
+      additionalArguments: [`--egsoft-api-token=${apiToken}`],
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
@@ -67,7 +72,7 @@ async function createWindow() {
 app.whenReady().then(async () => {
   try {
     loadDesktopEnv();
-    localServer = await startLocalServer({ userDataPath: app.getPath("userData") });
+    localServer = await startLocalServer({ userDataPath: app.getPath("userData"), apiToken });
     await createWindow();
     globalShortcut.register("CommandOrControl+K", createKitchenWindow);
   } catch (error) {
