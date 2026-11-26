@@ -269,10 +269,6 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     }
     res.json({categories,products,orders,sales_minor:sales,cloud:supabase.configured});
   });
-  app.use("/api/admin", (req,res,next) => {
-    if(!supabase.getSession().authenticated) return res.status(401).json({error:"سجل الدخول أولاً."});
-    next();
-  });
 
   app.get("/api/admin/menu", async (_req,res) => {
     if(supabase.getSession().authenticated) {
