@@ -150,7 +150,19 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const module=req.params.module;
     if(!adminModules.has(module)) return res.status(404).json({error:"القسم غير موجود."});
     const rows=db.prepare("SELECT id,data_json,created_at,updated_at FROM admin_records WHERE module=? ORDER BY updated_at DESC").all(module);
-    res.json(rows.map(r=>({id:r.id,...JSON.parse(r.data_json),created_at:r.created_at,updated_at:r.updated_at})));
+    let result=rows.map(r=>({id:r.id,...JSON.parse(r.data_json),created_at:r.created_at,updated_at:r.updated_at}));
+    if(supabase.getSession().authenticated) {
+      try {
+        const remote=await supabase.listRecords(module);
+        const replace=db.transaction(()=>{
+          db.prepare("DELETE FROM admin_records WHERE module=?").run(module);
+          const add=db.prepare("INSERT INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)");
+          for(const row of remote||[]) { const {id,created_at,updated_at,...data}=row; add.run(module,String(id),JSON.stringify(data),created_at||new Date().toISOString(),updated_at||new Date().toISOString()); }
+        });
+        replace(); result=remote||[];
+      } catch(error) { if(error.status===401||error.status===403) return res.status(error.status).json({error:error.message}); }
+    }
+    res.json(result);
   });
   app.post("/api/admin/records/:module", (req,res) => {
     const module=req.params.module, data=req.body||{};
@@ -158,8 +170,13 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const id=randomUUID(), now=new Date().toISOString(), clean={};
     for(const [k,v] of Object.entries(data)) if(/^[a-zA-Z_][a-zA-Z0-9_]{0,60}$/.test(k) && !["id","created_at","updated_at"].includes(k)) clean[k]=v;
     if(!Object.keys(clean).length) return res.status(400).json({error:"أدخل بيانات السجل."});
-    db.prepare("INSERT INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)").run(module,id,JSON.stringify(clean),now,now);
-    res.status(201).json({id,...clean,created_at:now,updated_at:now});
+    let saved={id,...clean,created_at:now,updated_at:now};
+    if(supabase.getSession().authenticated) {
+      try { saved=await supabase.insertRecord(module,clean); }
+      catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
+    }
+    db.prepare("INSERT OR REPLACE INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)").run(module,String(saved.id||id),JSON.stringify(Object.fromEntries(Object.entries(saved).filter(([k])=>!["id","created_at","updated_at"].includes(k)))),saved.created_at||now,saved.updated_at||now);
+    res.status(201).json(saved);
   });
   app.patch("/api/admin/records/:module/:id", (req,res) => {
     const module=req.params.module, data=req.body||{};
@@ -169,13 +186,22 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const clean={...JSON.parse(old.data_json)};
     for(const [k,v] of Object.entries(data)) if(/^[a-zA-Z_][a-zA-Z0-9_]{0,60}$/.test(k) && !["id","created_at","updated_at"].includes(k)) clean[k]=v;
     const now=new Date().toISOString();
+    let saved={id:req.params.id,...clean,updated_at:now};
+    if(supabase.getSession().authenticated) {
+      try { saved=await supabase.updateRecord(module,req.params.id,data); if(!saved) return res.status(404).json({error:"السجل غير موجود في السحابة."}); }
+      catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
+    }
     db.prepare("UPDATE admin_records SET data_json=?,updated_at=? WHERE module=? AND id=?").run(JSON.stringify(clean),now,module,req.params.id);
-    res.json({ok:true,id:req.params.id,...clean,updated_at:now});
+    res.json(saved);
   });
   app.delete("/api/admin/records/:module/:id", (req,res) => {
     if(!adminModules.has(req.params.module)) return res.status(404).json({error:"القسم غير موجود."});
+    if(supabase.getSession().authenticated) {
+      try { await supabase.deleteRecord(req.params.module,req.params.id); }
+      catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
+    }
     const result=db.prepare("DELETE FROM admin_records WHERE module=? AND id=?").run(req.params.module,req.params.id);
-    if(!result.changes) return res.status(404).json({error:"السجل غير موجود."});
+    if(!result.changes && !supabase.getSession().authenticated) return res.status(404).json({error:"السجل غير موجود."});
     res.json({ok:true});
   });
 
