@@ -30,8 +30,8 @@ const selectedOrder=()=>{const t=selectedTable();return t?orderFor(t):null};
 const isReserved=t=>reservations.some(r=>r.area===t.area&&r.number===t.number);
 const total=()=>activeOrders().reduce((s,o)=>s+o.total,0);
 function updateActionState(){
- const has=!!selectedOrder();
- document.querySelectorAll("[data-action]").forEach(b=>b.disabled=!has);
+ const has=!!selectedOrder(),canAdd=!!selectedTable();
+ document.querySelectorAll("[data-action]").forEach(b=>b.disabled=b.dataset.action==="add"?!canAdd:!has);
 }
 function render(){
  const opened=activeOrders();
@@ -71,8 +71,20 @@ function targetTable(exclude){
  if(!tables.some(x=>key(x)===key(t))||orderFor(t)||isReserved(t)||key(t)===exclude){alert("الطاولة غير متاحة.");return null;}
  return t;
 }
-function runAction(action){
- const o=selectedOrder(),t=selectedTable();if(!o||!t)return;
+async function runAction(action){
+ const o=selectedOrder(),t=selectedTable();if(!t)return;
+ if(action==="add"&&!o){
+  const choices=products.map((p,i)=>(i+1)+") "+p.name+" — "+p.price+" ج.م").join("\n");
+  const raw=prompt("اختار أول صنف للطلب الجديد:\n"+choices),p=products[Number(raw)-1];
+  if(!p||!p.id||!raw||!Number.isInteger(Number(raw))){alert("اختيار المنتج غير صحيح أو المنيو لم يتم تحميله.");return;}
+  try{
+   const response=await fetch("http://127.0.0.1:4317/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order_type:"dine_in",table_number:t.number,table_area:t.area,items:[{menu_item_id:p.id,quantity:1}]})});
+   const result=await response.json();if(!response.ok)throw new Error(result.error||"تعذر إنشاء الطلب.");
+   await loadConnectedFloorData();select(key(t));
+  }catch(error){alert(error.message);}
+  return;
+ }
+ if(!o)return;
  if(action==="add"){
   const choices=products.map((p,i)=>`${i+1}) ${p.name} — ${p.price} ج.م`).join("\n");
   const raw=prompt("اختار رقم المنتج لإضافته:\n"+choices);const p=products[Number(raw)-1];
