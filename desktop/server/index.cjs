@@ -376,7 +376,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     for (const requested of body.items) {
       const menuItem = menuItems.get(String(requested.menu_item_id || ""));
       const quantity = Number(requested.quantity);
-      if (!menuItem || !menuItem.is_available || !Number.isFinite(quantity) ||
+      if (!menuItem || !menuItem.is_available || !Number.isFinite(quantity) || !Number.isInteger(quantity) ||
           quantity <= 0 || quantity > 99) {
         return res.status(400).json({ error: "يوجد صنف غير متاح أو كمية غير صحيحة." });
       }
@@ -515,7 +515,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     for (const requested of requestedItems) {
       const menuItem = findMenuItem.get(String(requested?.menu_item_id || ""));
       const quantity = Number(requested?.quantity);
-      if (!menuItem || !menuItem.is_available || !Number.isFinite(quantity) || quantity <= 0 || quantity > 99) {
+      if (!menuItem || !menuItem.is_available || !Number.isFinite(quantity) || !Number.isInteger(quantity) || quantity <= 0 || quantity > 99) {
         return res.status(400).json({ error: "يوجد صنف غير متاح أو كمية غير صحيحة." });
       }
       preparedItems.push({
