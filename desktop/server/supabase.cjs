@@ -4,12 +4,18 @@ function createSupabaseRestClient() {
   const url = (process.env.EGSOFT_SUPABASE_URL || process.env.ARKAN_SUPABASE_URL || DEFAULT_URL).replace(/\/$/, "");
   const key = process.env.EGSOFT_SUPABASE_PUBLISHABLE_KEY || process.env.ARKAN_SUPABASE_PUBLISHABLE_KEY || "";
 
-  async function request(path) {
+  let accessToken = null;
+  let currentUser = null;
+
+  async function request(path, options = {}) {
     if (!key) throw new Error("EGSOFT_SUPABASE_PUBLISHABLE_KEY is not configured.");
     const response = await fetch(url + path, {
+      ...options,
       headers: {
         apikey: key,
-        Accept: "application/json"
+        Accept: "application/json",
+        ...(accessToken ? { Authorization: "Bearer " + accessToken } : {}),
+        ...(options.headers || {})
       },
       signal: AbortSignal.timeout(10000)
     });
@@ -24,6 +30,23 @@ function createSupabaseRestClient() {
 
   return {
     configured: Boolean(key),
+    getSession() { return { authenticated: Boolean(accessToken), user: currentUser }; },
+    async signIn(email, password) {
+      if (!key) throw new Error("مفتاح Supabase غير مضبوط داخل desktop/.env");
+      const result = await request("/auth/v1/token?grant_type=password", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      if (!result?.access_token) throw new Error("لم يتم استلام جلسة تسجيل الدخول.");
+      accessToken = result.access_token;
+      currentUser = result.user || null;
+      return { authenticated: true, user: currentUser };
+    },
+    async signOut() {
+      if (accessToken) { try { await request("/auth/v1/logout", { method: "POST" }); } catch (_) {} }
+      accessToken = null; currentUser = null;
+      return { ok: true };
+    },
     async getStatus() {
       if (!key) return { configured: false, connected: false, message: "Publishable key is missing." };
       try {
