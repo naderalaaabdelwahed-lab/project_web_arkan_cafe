@@ -78,7 +78,16 @@ Prices in the import payload are Egyptian pounds; they are stored locally as int
 
 1. Copy `.env.example` to `.env`.
 2. Set `ARKAN_SUPABASE_PUBLISHABLE_KEY` to the project's Supabase publishable key. Never put a service-role/secret key in this desktop app.
-3. Sign in to administration with an existing Supabase Auth account.
+3. Create a user in Supabase Authentication → Users.
+4. In the Supabase SQL Editor, grant that user the desktop administrator claim (replace the email):
+
+```sql
+UPDATE auth.users
+SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || '{"egsoft_role":"admin"}'::jsonb
+WHERE email = 'admin@example.com';
+```
+
+5. Sign in to administration with that account.
 4. Keep the app on the `offline-desktop` branch while testing.
 
 The desktop app binds its API to `127.0.0.1` only. A separate internal/LAN server still requires device pairing, request authentication, and firewall configuration before enabling network access. USB/network printer drivers and full per-role permissions still require deployment-specific setup. HR face-profile data is not exposed to the desktop client.
