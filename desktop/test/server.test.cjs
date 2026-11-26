@@ -190,6 +190,11 @@ test("full payments are validated, recorded once and close the order", async () 
   });
   assert.equal(created.response.status, 201);
   paidOrderId = created.body.id;
+  const delivered = await request(`/api/orders/${paidOrderId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "delivered" })
+  });
+  assert.equal(delivered.response.status, 200);
 
   let result = await request(`/api/orders/${paidOrderId}/pay`, {
     method: "POST",
@@ -212,6 +217,7 @@ test("full payments are validated, recorded once and close the order", async () 
   assert.equal(result.body.payment.payment_method, "card");
   assert.equal(result.body.payment.payment_status, "paid");
   assert.equal(result.body.order.status, "delivered");
+  assert.equal(result.body.order.payment_status, "paid");
   assert.ok(result.body.order.closed_at);
 
   const duplicate = await request(`/api/orders/${paidOrderId}/pay`, {
@@ -235,6 +241,7 @@ test("SQLite orders survive a complete local service restart", async () => {
   const paid = listed.body.find((order) => order.id === paidOrderId);
   assert.ok(paid, "paid order must survive a database restart");
   assert.equal(paid.status, "delivered");
+  assert.equal(paid.payment_status, "paid");
   assert.equal(server.db.prepare("SELECT COUNT(*) AS count FROM payments WHERE order_id=?").get(paidOrderId).count, 1);
 });
 
