@@ -149,6 +149,9 @@ test("order creation validates items and persists money in integer piastres", as
 
 test("order edits persist items, discounts and table transfers atomically", async () => {
   assert.ok(createdOrderId);
+  // A product may be repriced or disabled after the order was created.
+  server.db.prepare("UPDATE menu_items SET price_minor=10000,is_available=0 WHERE id=?")
+    .run("test-fatir-cheese");
   const edited = await request(`/api/orders/${createdOrderId}`, {
     method: "PATCH",
     body: JSON.stringify({
@@ -169,6 +172,7 @@ test("order edits persist items, discounts and table transfers atomically", asyn
   assert.equal(edited.body.table_number, 9);
   assert.equal(edited.body.table_area, "outdoor");
   assert.equal(edited.body.items.length, 2);
+  assert.equal(edited.body.items[0].unit_price_minor, 8500, "open order must retain its original product price");
   assert.equal(edited.body.items[1].line_total_minor, 3000);
 
   const invalid = await request(`/api/orders/${createdOrderId}`, {
