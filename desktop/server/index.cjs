@@ -292,12 +292,13 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   });
   app.post("/api/admin/products", async (req,res) => {
     const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price);
+    const isAvailable=req.body?.is_available!==false;
     if(!name||!category||!Number.isFinite(price)||price<0)return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
     let id=randomUUID();
     try {
-      if(supabase.getSession().authenticated) { const saved=await supabase.insertRecord("products",{category_id:category,name,description:String(req.body?.description||""),price,is_available:true}); id=saved.id; }
-      if(!supabase.getSession().authenticated) db.prepare("INSERT OR REPLACE INTO menu_items(id,category_id,name,description,price_minor,is_available) VALUES(?,?,?,?,?,1)").run(id,category,name,String(req.body?.description||""),Math.round(price*100));
-      res.status(201).json({id,name});
+      if(supabase.getSession().authenticated) { const saved=await supabase.insertRecord("products",{category_id:category,name,description:String(req.body?.description||""),price,is_available:isAvailable}); id=saved.id; }
+      if(!supabase.getSession().authenticated) db.prepare("INSERT OR REPLACE INTO menu_items(id,category_id,name,description,price_minor,is_available) VALUES(?,?,?,?,?,?)").run(id,category,name,String(req.body?.description||""),Math.round(price*100),isAvailable?1:0);
+      res.status(201).json({id,name,is_available:isAvailable});
     } catch(e){res.status(e.status||400).json({error:e.message});}
   });
   app.patch("/api/admin/products/:id", async (req,res) => {
