@@ -10,6 +10,7 @@ const { startLocalServer } = require("../server/index.cjs");
 let server;
 let tempDir;
 let baseUrl;
+let createdOrderId;
 
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "egsoft-pos-test-"));
@@ -87,6 +88,7 @@ test("order creation validates items and persists money in integer piastres", as
   });
 
   assert.equal(result.response.status, 201);
+  createdOrderId = result.body.id;
   assert.equal(result.body.subtotal_minor, 17000);
   assert.equal(result.body.discount_minor, 1000);
   assert.equal(result.body.total_minor, 16000);
@@ -125,6 +127,18 @@ test("order status rejects invalid values and persists valid transitions", async
 
   const listed = await request("/api/orders");
   assert.equal(listed.body.find((order) => order.id === created.body.id).status, "preparing");
+});
+
+test("SQLite orders survive a complete local service restart", async () => {
+  assert.ok(createdOrderId, "an order must have been created by the earlier integration test");
+  await server.close();
+  server = await startLocalServer({ userDataPath: tempDir, port: 0 });
+  baseUrl = `http://127.0.0.1:${server.port}`;
+  const listed = await request("/api/orders");
+  const saved = listed.body.find((order) => order.id === createdOrderId);
+  assert.ok(saved, "the order must still exist after reopening SQLite");
+  assert.equal(saved.total_minor, 16000);
+  assert.equal(saved.status, "pending");
 });
 
 test("invalid menu imports are rejected without damaging the existing menu", async () => {
