@@ -229,13 +229,59 @@ shifts:{title:"الورديات",db:"hr_shifts",fields:[["name","اسم الور
  };
  const heading=(t,sub,action="")=>'<div class="admin-page-heading"><div><h1>'+t+'</h1><p>'+sub+'</p></div>'+action+'</div>';
  const table=(heads,rows)=>'<div class="admin-table-wrap"><table><thead><tr>'+heads.map(x=>'<th>'+x+'</th>').join("")+'</tr></thead><tbody>'+rows+'</tbody></table></div>';
- async function menuPage(kind){const d=await api("/api/admin/menu"),cat=kind==="categories",list=cat?d.categories:d.products;
- const rows=list.map(x=>cat?'<tr><td>'+esc(x.name)+'</td><td>'+x.sort_order+'</td><td><button class="admin-small-btn" data-edit="'+x.id+'">تعديل</button></td></tr>':'<tr><td>'+esc(x.name)+'</td><td>'+esc(d.categories.find(c=>c.id===x.category_id)?.name||"—")+'</td><td>'+money(x.price_minor/100)+'</td><td><button class="admin-small-btn" data-edit="'+x.id+'">تعديل</button></td></tr>').join("");
- workspace.innerHTML=heading(cat?"الفئات":"المنتجات","إدارة المنيو والأسعار",'<button class="admin-primary" id="new">+ إضافة</button>')+table(cat?["اسم الفئة","الترتيب","إجراء"]:["المنتج","الفئة","السعر","إجراء"],rows||'<tr><td colspan="4">لا توجد بيانات</td></tr>');
- workspace.querySelector("#new").onclick=()=>editMenu(kind,null,d);
- workspace.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editMenu(kind,list.find(x=>x.id===b.dataset.edit),d));
+ async function menuPage(kind){
+  const d=await api("/api/admin/menu"),cat=kind==="categories",list=cat?d.categories:d.products;
+  const rows=list.map(x=>cat
+   ? '<tr><td>'+esc(x.name)+'</td><td>'+Number(x.sort_order||0)+'</td><td><button class="admin-small-btn" data-edit="'+x.id+'">تعديل</button></td></tr>'
+   : '<tr><td>'+esc(x.name)+'</td><td>'+esc(d.categories.find(c=>c.id===x.category_id)?.name||"—")+'</td><td>'+money(x.price_minor/100)+'</td><td><span class="admin-status '+(x.is_available===false?"is-off":"is-on")+'">'+(x.is_available===false?"غير متاح":"متاح")+'</span></td><td><button class="admin-small-btn" data-edit="'+x.id+'">تعديل</button></td></tr>'
+  ).join("");
+  workspace.innerHTML=heading(cat?"الفئات":"المنتجات",cat?"إدارة فئات المنيو وترتيب ظهورها":"إدارة أصناف المنيو والأسعار والتوافر",'<button class="admin-primary" id="new">+ إضافة '+(cat?"فئة":"منتج")+'</button>')+
+   table(cat?["اسم الفئة","الترتيب","إجراء"]:["المنتج","الفئة","السعر","التوافر","إجراء"],rows||'<tr><td colspan="5">لا توجد بيانات</td></tr>');
+  workspace.querySelector("#new").onclick=()=>editMenu(kind,null,d);
+  workspace.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editMenu(kind,list.find(x=>x.id===b.dataset.edit),d));
  }
- async function editMenu(kind,item,d){const cat=kind==="categories",name=prompt("الاسم",item?.name||"");if(name===null)return;const body={name};let path=cat?"/api/admin/categories":"/api/admin/products";if(cat)body.sort_order=Number(prompt("ترتيب العرض",String(item?.sort_order||0)));else{const opts=d.categories.map((c,i)=>(i+1)+") "+c.name).join("\n");const n=Number(prompt("رقم الفئة:\n"+opts,"1")),c=d.categories[n-1];if(!c)return alert("الفئة غير صحيحة");body.category_id=c.id;body.price=Number(prompt("السعر بالجنيه",String((item?.price_minor||0)/100)));body.description=prompt("الوصف",item?.description||"")||"";}try{await api(path+(item?"/"+item.id:""),{method:item?"PATCH":"POST",body:JSON.stringify(body)});menuPage(kind);}catch(e){alert(e.message);}}
+ async function editMenu(kind,item,d){
+  const cat=kind==="categories";
+  const formTitle=(item?"تعديل ":"إضافة ")+(cat?"فئة":"منتج");
+  const categoryOptions=(d.categories||[]).map(c=>'<option value="'+esc(c.id)+'" '+(String(item?.category_id||"")===String(c.id)?"selected":"")+'>'+esc(c.name)+'</option>').join("");
+  workspace.innerHTML=heading(formTitle,cat?"بيانات الفئة الجديدة أو المعدلة":"أدخل بيانات الصنف كما تظهر في المنيو")+
+   '<form id="menu-edit-form" class="admin-panel admin-form-card">'+
+   '<div class="admin-form-grid">'+
+   '<label class="admin-form-field"><span>الاسم</span><input name="name" maxlength="150" required value="'+esc(item?.name||"")+'" placeholder="'+(cat?"اسم الفئة":"اسم المنتج")+'"></label>'+
+   (cat
+    ? '<label class="admin-form-field"><span>ترتيب العرض</span><input name="sort_order" type="number" min="0" step="1" value="'+Number(item?.sort_order||0)+'"></label>'
+    : '<label class="admin-form-field"><span>الفئة</span><select name="category_id" required><option value="">اختر الفئة</option>'+categoryOptions+'</select></label>'+
+      '<label class="admin-form-field"><span>السعر بالجنيه</span><input name="price" type="number" min="0" step="0.01" required value="'+(item?Number(item.price_minor||0)/100:"")+'" placeholder="0.00"></label>'+
+      '<label class="admin-form-field"><span>الوصف</span><textarea name="description" rows="3" maxlength="500" placeholder="وصف اختياري">'+esc(item?.description||"")+'</textarea></label>'+
+      '<label class="admin-form-field admin-form-check"><input name="is_available" type="checkbox" '+(item?.is_available===false?"":"checked")+'><span>المنتج متاح للبيع</span></label>'
+   )+
+   '</div><div class="admin-form-actions"><button class="admin-primary" type="submit">حفظ</button><button class="admin-small-btn" type="button" id="cancel-menu-edit">إلغاء</button></div><p class="admin-error" id="menu-form-error" role="alert"></p></form>';
+  const form=workspace.querySelector("#menu-edit-form");
+  workspace.querySelector("#cancel-menu-edit").onclick=()=>menuPage(kind);
+  form.onsubmit=async event=>{
+   event.preventDefault();
+   const fd=new FormData(form),name=String(fd.get("name")||"").trim();
+   const body={name};
+   if(cat) body.sort_order=Number(fd.get("sort_order")||0);
+   else {
+    body.category_id=String(fd.get("category_id")||"");
+    body.price=Number(fd.get("price"));
+    body.description=String(fd.get("description")||"");
+    body.is_available=fd.get("is_available")==="on";
+   }
+   const path=(cat?"/api/admin/categories":"/api/admin/products")+(item?"/"+encodeURIComponent(item.id):"");
+   const submit=form.querySelector('button[type="submit"]');
+   submit.disabled=true;submit.textContent="جاري الحفظ...";
+   try{
+    await api(path,{method:item?"PATCH":"POST",body:JSON.stringify(body)});
+    await menuPage(kind);
+   }catch(error){
+    const message=workspace.querySelector("#menu-form-error");
+    if(message)message.textContent=error.message;
+    submit.disabled=false;submit.textContent="حفظ";
+   }
+  };
+ }
  async function recordsPage(key){const m=modules[key],rows=await api("/api/admin/records/"+m.db),fields=m.fields;
  const body=rows.map(r=>'<tr>'+fields.map(f=>'<td>'+esc(r[f[0]]??"—")+'</td>').join("")+'<td><button class="admin-small-btn" data-edit="'+r.id+'">تعديل</button> <button class="admin-small-btn" data-del="'+r.id+'">حذف</button></td></tr>').join("");
  workspace.innerHTML=heading(m.title,"إدارة وحفظ البيانات",'<button class="admin-primary" id="new">+ إضافة سجل</button>')+table(fields.map(f=>f[1]).concat(["إجراءات"]),body||'<tr><td colspan="'+(fields.length+1)+'">لا توجد سجلات حتى الآن</td></tr>');
