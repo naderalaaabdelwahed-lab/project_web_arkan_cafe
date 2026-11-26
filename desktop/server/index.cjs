@@ -11,6 +11,13 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   const supabase = createSupabaseRestClient();
 
   app.disable("x-powered-by");
+  app.use((req,res,next) => {
+    res.setHeader("Access-Control-Allow-Origin","*");
+    res.setHeader("Access-Control-Allow-Methods","GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers","Content-Type");
+    if(req.method==="OPTIONS") return res.sendStatus(204);
+    next();
+  });
   app.use(express.json({ limit: "1mb" }));
 
   app.get("/api/health", (_req, res) => {
@@ -205,6 +212,11 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const result=db.prepare("DELETE FROM admin_records WHERE module=? AND id=?").run(req.params.module,req.params.id);
     if(!result.changes && !supabase.getSession().authenticated) return res.status(404).json({error:"السجل غير موجود."});
     res.json({ok:true});
+  });
+
+  app.use("/api/admin", (req,res,next) => {
+    if(!supabase.getSession().authenticated) return res.status(401).json({error:"سجل الدخول أولاً."});
+    next();
   });
 
   app.get("/api/admin/summary", (_req,res) => {
