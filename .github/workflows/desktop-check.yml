@@ -20,10 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: desktop/package-lock.json
       - name: Install desktop dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
         working-directory: desktop
       - name: Check JavaScript syntax
         run: |
