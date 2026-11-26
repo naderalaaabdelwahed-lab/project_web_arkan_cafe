@@ -30,6 +30,19 @@ function createSupabaseRestClient() {
 
   return {
     configured: Boolean(key),
+    async listRecords(table) { return await request("/rest/v1/" + encodeURIComponent(table) + "?select=*&order=created_at.desc"); },
+    async insertRecord(table, data) {
+      const rows=await request("/rest/v1/"+encodeURIComponent(table),{method:"POST",headers:{"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify(data)});
+      return Array.isArray(rows)?rows[0]:rows;
+    },
+    async updateRecord(table,id,data) {
+      const rows=await request("/rest/v1/"+encodeURIComponent(table)+"?id=eq."+encodeURIComponent(id),{method:"PATCH",headers:{"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify(data)});
+      return Array.isArray(rows)?rows[0]:rows;
+    },
+    async deleteRecord(table,id) {
+      await request("/rest/v1/"+encodeURIComponent(table)+"?id=eq."+encodeURIComponent(id),{method:"DELETE"});
+      return {ok:true};
+    },
     getSession() { return { authenticated: Boolean(accessToken), user: currentUser }; },
     async signIn(email, password) {
       if (!key) throw new Error("مفتاح Supabase غير مضبوط داخل desktop/.env");
