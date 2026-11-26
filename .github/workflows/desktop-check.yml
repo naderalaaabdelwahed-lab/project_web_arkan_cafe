@@ -1,8 +1,8 @@
-name: Desktop syntax checks
+name: Desktop checks
 
 on:
   push:
-    branches: [offline-desktop]
+    branches: [offline-desktop, fix/desktop-deep-audit]
     paths:
       - "desktop/**"
       - ".github/workflows/desktop-check.yml"
@@ -12,17 +12,30 @@ on:
       - "desktop/**"
 
 jobs:
-  syntax:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install desktop dependencies
+        run: npm ci
+        working-directory: desktop
       - name: Check JavaScript syntax
         run: |
-          node --check desktop/electron/main.cjs
-          node --check desktop/server/index.cjs
-          node --check desktop/server/database.cjs
-          node --check desktop/server/supabase.cjs
-          node --check desktop/ui/renderer.js
+          node --check electron/main.cjs
+          node --check electron/preload.cjs
+          node --check server/index.cjs
+          node --check server/database.cjs
+          node --check server/supabase.cjs
+          node --check ui/renderer.js
+          node --check ui/kitchen.js
+          node --check test/server.test.cjs
+        working-directory: desktop
+      - name: Run POS API integration tests
+        run: npm test
+        working-directory: desktop
