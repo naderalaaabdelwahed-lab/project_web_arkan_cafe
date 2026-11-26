@@ -166,9 +166,12 @@ function startLocalServer({ userDataPath, port = 4317 }) {
           for(const row of remote||[]) { const {id,created_at,updated_at,...data}=row; add.run(module,String(id),JSON.stringify(data),created_at||new Date().toISOString(),updated_at||new Date().toISOString()); }
         });
         replace();
+        const localRows=db.prepare("SELECT id,data_json,created_at,updated_at FROM admin_records WHERE module=?").all(module);
+        const tombstones=new Set(localRows.filter(row=>JSON.parse(row.data_json)._deleted===true).map(row=>String(row.id)));
         const remoteIds=new Set((remote||[]).map(row=>String(row.id)));
-        const offline= db.prepare("SELECT id,data_json,created_at,updated_at FROM admin_records WHERE module=?").all(module).filter(row=>!remoteIds.has(String(row.id))).map(row=>({id:row.id,...JSON.parse(row.data_json),created_at:row.created_at,updated_at:row.updated_at}));
-        result=[...(remote||[]),...offline];
+        const visibleRemote=(remote||[]).filter(row=>!tombstones.has(String(row.id)));
+        const offline=localRows.filter(row=>!remoteIds.has(String(row.id)) && !tombstones.has(String(row.id))).map(row=>({id:row.id,...JSON.parse(row.data_json),created_at:row.created_at,updated_at:row.updated_at}));
+        result=[...visibleRemote,...offline];
       } catch(error) { if(error.status===401||error.status===403) return res.status(error.status).json({error:error.message}); }
     }
     res.json(result);
@@ -180,11 +183,13 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     for(const [k,v] of Object.entries(data)) if(/^[a-zA-Z_][a-zA-Z0-9_]{0,60}$/.test(k) && !["id","created_at","updated_at"].includes(k) && v!=="") clean[k]=v;
     if(!Object.keys(clean).length) return res.status(400).json({error:"أدخل بيانات السجل."});
     let saved={id,...clean,created_at:now,updated_at:now};
+    let cloudPending=false;
     if(supabase.getSession().authenticated) {
-      try { saved=await supabase.insertRecord(module,clean); }
-      catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
+      try { saved=await supabase.insertRecord(module,{id,...clean}); }
+      catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); cloudPending=true; }
     }
     db.prepare("INSERT OR REPLACE INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)").run(module,String(saved.id||id),JSON.stringify(Object.fromEntries(Object.entries(saved).filter(([k])=>!["id","created_at","updated_at"].includes(k)))),saved.created_at||now,saved.updated_at||now);
+    if(cloudPending) db.prepare("INSERT INTO sync_outbox(id,aggregate_type,aggregate_id,operation,payload_json,created_at) VALUES(?,?,?,?,?,?)").run(randomUUID(),"admin:"+module,id,"create",JSON.stringify(clean),now);
     res.status(201).json(saved);
   });
   app.patch("/api/admin/records/:module/:id", async (req,res) => {
@@ -193,24 +198,31 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const old=db.prepare("SELECT data_json FROM admin_records WHERE module=? AND id=?").get(module,req.params.id);
     if(!old) return res.status(404).json({error:"السجل غير موجود."});
     const clean={...JSON.parse(old.data_json)};
-    for(const [k,v] of Object.entries(data)) if(/^[a-zA-Z_][a-zA-Z0-9_]{0,60}$/.test(k) && !["id","created_at","updated_at"].includes(k)) clean[k]=v;
+    for(const [k,v] of Object.entries(data)) if(/^[a-zA-Z_][a-zA-Z0-9_]{0,60}$/.test(k) && !["id","created_at","updated_at"].includes(k) && v!=="") clean[k]=v;
     const now=new Date().toISOString();
-    let saved={id:req.params.id,...clean,updated_at:now};
+    let saved={id:req.params.id,...clean,updated_at:now}, cloudPending=false;
     if(supabase.getSession().authenticated) {
-      try { saved=await supabase.updateRecord(module,req.params.id,data); if(!saved) return res.status(404).json({error:"السجل غير موجود في السحابة."}); }
-      catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
+      try { saved=await supabase.updateRecord(module,req.params.id,clean); if(!saved) return res.status(404).json({error:"السجل غير موجود في السحابة."}); }
+      catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); cloudPending=true; }
     }
     db.prepare("UPDATE admin_records SET data_json=?,updated_at=? WHERE module=? AND id=?").run(JSON.stringify(clean),now,module,req.params.id);
+    if(cloudPending) db.prepare("INSERT INTO sync_outbox(id,aggregate_type,aggregate_id,operation,payload_json,created_at) VALUES(?,?,?,?,?,?)").run(randomUUID(),"admin:"+module,req.params.id,"update",JSON.stringify(clean),now);
     res.json(saved);
   });
   app.delete("/api/admin/records/:module/:id", async (req,res) => {
     if(!adminModules.has(req.params.module)) return res.status(404).json({error:"القسم غير موجود."});
+    let cloudPending=false;
     if(supabase.getSession().authenticated) {
       try { await supabase.deleteRecord(req.params.module,req.params.id); }
-      catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
+      catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); cloudPending=true; }
     }
     const result=db.prepare("DELETE FROM admin_records WHERE module=? AND id=?").run(req.params.module,req.params.id);
     if(!result.changes && !supabase.getSession().authenticated) return res.status(404).json({error:"السجل غير موجود."});
+    if(cloudPending) {
+      const now=new Date().toISOString();
+      db.prepare("INSERT OR REPLACE INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)").run(req.params.module,req.params.id,JSON.stringify({_deleted:true}),now,now);
+      db.prepare("INSERT INTO sync_outbox(id,aggregate_type,aggregate_id,operation,payload_json,created_at) VALUES(?,?,?,?,?,?)").run(randomUUID(),"admin:"+req.params.module,req.params.id,"delete","{}",now);
+    }
     res.json({ok:true});
   });
 
@@ -444,6 +456,17 @@ function startLocalServer({ userDataPath, port = 4317 }) {
         } else if(task.operation==="update_status") {
           await supabase.updateRecord("orders",task.aggregate_id,{status:payload.status,updated_at:new Date().toISOString()});
           db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(task.aggregate_id);
+        } else if(task.aggregate_type.startsWith("admin:")) {
+          const module=task.aggregate_type.slice(6);
+          if(task.operation==="create") {
+            const existing=await supabase.getRecord(module,task.aggregate_id);
+            if(!existing) await supabase.insertRecord(module,{id:task.aggregate_id,...payload});
+          } else if(task.operation==="update") {
+            await supabase.updateRecord(module,task.aggregate_id,payload);
+          } else if(task.operation==="delete") {
+            await supabase.deleteRecord(module,task.aggregate_id);
+            db.prepare("DELETE FROM admin_records WHERE module=? AND id=?").run(module,task.aggregate_id);
+          }
         }
         db.prepare("UPDATE sync_outbox SET synced_at=?,last_error=NULL,next_attempt_at=NULL WHERE id=?").run(new Date().toISOString(),task.id);
       } catch(error) {
