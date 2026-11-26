@@ -141,8 +141,8 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     res.json({categories:count("menu_categories"),products:count("menu_items"),orders:count("orders"),sales_minor:sales,cloud:supabase.configured});
   });
   app.get("/api/admin/menu", (_req,res) => res.json({
-    categories:db.prepare("SELECT id,name,sort_order,is_active FROM menu_categories ORDER BY sort_order,name").all(),
-    products:db.prepare("SELECT id,category_id,name,description,price_minor,is_available FROM menu_items ORDER BY name").all()
+    categories:db.prepare("SELECT id,name,sort_order,is_active FROM menu_categories WHERE is_active=1 ORDER BY sort_order,name").all(),
+    products:db.prepare("SELECT id,category_id,name,description,price_minor,is_available FROM menu_items WHERE is_available=1 ORDER BY name").all()
   }));
   app.post("/api/admin/categories", (req,res) => {
     const name=String(req.body?.name||"").trim().slice(0,100);
