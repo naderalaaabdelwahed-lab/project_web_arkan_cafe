@@ -35,7 +35,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   app.post("/api/auth/login", async (req,res) => {
     const email=String(req.body?.email||"").trim(), password=String(req.body?.password||"");
     if(!email||!password) return res.status(400).json({error:"أدخل البريد الإلكتروني وكلمة المرور."});
-    try { res.json(await supabase.signIn(email,password)); }
+    try { const session=await supabase.signIn(email,password); await syncPendingOrders(); res.json(session); }
     catch(error) { res.status(401).json({error:error.message}); }
   });
   app.post("/api/auth/logout", async (_req,res) => res.json(await supabase.signOut()));
@@ -417,8 +417,45 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     res.json({ ok: true, id: req.params.id, status });
   });
 
+  async function syncPendingOrders() {
+    if(!supabase.getSession().authenticated) return;
+    const pending=db.prepare("SELECT * FROM sync_outbox WHERE synced_at IS NULL AND (next_attempt_at IS NULL OR next_attempt_at <= datetime('now')) ORDER BY created_at LIMIT 25").all();
+    for(const task of pending) {
+      try {
+        const payload=JSON.parse(task.payload_json);
+        if(task.operation==="create") {
+          const order=payload.order;
+          let remote=await supabase.getRecord("orders",task.aggregate_id);
+          if(!remote) remote=await supabase.insertRecord("orders",{
+            id:order.id,order_type:order.order_type,status:order.status,
+            subtotal:Number(order.subtotal_minor||0)/100,discount:Number(order.discount_minor||0)/100,
+            delivery_fee:0,total:Number(order.total_minor||0)/100,notes:order.notes||null,
+            customer_name:order.customer_name||null,customer_phone:order.phone||null,
+            delivery_address:order.address||null,payment_method:order.payment_method||"cash",
+            created_at:order.created_at,updated_at:order.updated_at
+          });
+          const remoteItems=await supabase.getOrderItems(task.aggregate_id);
+          if(!remoteItems.length && payload.items?.length) await supabase.insertMany("order_items",payload.items.map(item=>({
+            order_id:task.aggregate_id,product_id:item.menu_item_id,
+            product_name:item.product_name,unit_price:Number(item.unit_price_minor||0)/100,
+            quantity:Math.round(Number(item.quantity)),item_note:item.notes||null
+          })));
+          db.prepare("UPDATE orders SET order_number=?,sync_status='synced',updated_at=? WHERE id=?").run(String(remote.order_number),new Date().toISOString(),task.aggregate_id);
+        } else if(task.operation==="update_status") {
+          await supabase.updateRecord("orders",task.aggregate_id,{status:payload.status,updated_at:new Date().toISOString()});
+          db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(task.aggregate_id);
+        }
+        db.prepare("UPDATE sync_outbox SET synced_at=?,last_error=NULL,next_attempt_at=NULL WHERE id=?").run(new Date().toISOString(),task.id);
+      } catch(error) {
+        db.prepare("UPDATE sync_outbox SET attempts=attempts+1,last_error=?,next_attempt_at=datetime('now','+30 seconds') WHERE id=?").run(String(error.message||error).slice(0,1000),task.id);
+      }
+    }
+  }
+
   const httpServer = http.createServer(app);
   const io = new Server(httpServer, { cors: { origin: false }, maxHttpBufferSize: 1e6 });
+  const syncTimer=setInterval(()=>syncPendingOrders().catch(()=>{}),15000);
+  syncTimer.unref?.();
   io.on("connection", (socket) => {
     socket.emit("server:ready", { service: "egsoft-local", timestamp: new Date().toISOString() });
   });
@@ -428,6 +465,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     httpServer.listen(port, "127.0.0.1", () => resolve({
       db, io, databasePath, port,
       close: () => new Promise((done) => {
+        clearInterval(syncTimer);
         io.close();
         if (db.open) db.close();
         done();
