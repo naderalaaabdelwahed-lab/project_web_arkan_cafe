@@ -231,7 +231,42 @@ shifts:{title:"الورديات",db:"hr_shifts",fields:[["name","اسم الور
  workspace.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editRecord(key,rows.find(r=>r.id===b.dataset.edit)));
  workspace.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{if(!confirm("تأكيد حذف السجل؟"))return;try{await api("/api/admin/records/"+m.db+"/"+b.dataset.del,{method:"DELETE"});recordsPage(key);}catch(e){alert(e.message);}});
  }
- async function editRecord(key,row){const m=modules[key],body={};for(const f of m.fields){const v=prompt(f[1],row?.[f[0]]??"");if(v===null)return;body[f[0]]=v;}try{await api("/api/admin/records/"+m.db+(row?"/"+row.id:""),{method:row?"PATCH":"POST",body:JSON.stringify(body)});recordsPage(key);}catch(e){alert(e.message);}}
+ async function editRecord(key,row){
+  const m=modules[key];
+  const relations={employee_id:["hr_employees","full_name"],shift_id:["hr_shifts","name"],unit_id:["inventory_units","name"],base_unit_id:["inventory_units","name"],inventory_item_id:["inventory_items","name"],recipe_id:["inventory_recipes","name"],purchase_id:["inventory_purchases","invoice_number"],supplier_id:["inventory_suppliers","name"],screen_id:["preparation_screens","name"],payroll_run_id:["hr_payroll_runs","period_start"],table_id:["restaurant_tables","table_number"]};
+  let menu=null;
+  const controls=[];
+  for(const field of m.fields){
+   const keyName=field[0],label=field[1],value=row?.[keyName]??"";
+   const boolean=["is_active","is_flexible","crosses_midnight"].includes(keyName);
+   const numeric=["table_number","capacity","display_order","guest_count","party_size","opening_cash","expected_cash","counted_cash","quantity","current_quantity","minimum_quantity","average_cost","subtotal","discount","tax","total","output_quantity","unit_cost","line_total","yield_quantity","monthly_salary","overtime_hour_rate","daily_work_hours","break_minutes","grace_minutes","worked_minutes","late_minutes","overtime_minutes","leave_year","entitled_days","used_days","amount","total_amount","conversion_factor","port","paper_width_mm","basic_salary","overtime_amount","bonuses","deductions","net_salary"].includes(keyName);
+   const date=["business_date","hire_date","purchase_date","adjustment_date","shift_date","effective_from","effective_to","reservation_date","period_start","period_end"].includes(keyName);
+   const time=["reservation_time","start_time","end_time","latest_check_in"].includes(keyName);
+   const timestamp=["check_in","check_out"].includes(keyName);
+   const longText=["notes","description","address","reason"].includes(keyName);
+   let relation=relations[keyName],options=null;
+   if(keyName==="category_id"||keyName==="product_id"){
+    if(!menu)menu=await api("/api/admin/menu");
+    options=keyName==="category_id"?(menu.categories||[]).map(x=>({id:x.id,label:x.name})):(menu.products||[]).map(x=>({id:x.id,label:x.name}));
+   }else if(relation){
+    try{const list=await api("/api/admin/records/"+relation[0]);options=(list||[]).map(x=>({id:x.id,label:x[relation[1]]||x.name||x.id}));}catch(_){options=[];}
+   }
+   let control="";
+   if(boolean) control='<label class="admin-form-check"><input type="checkbox" name="'+keyName+'" '+((value===""?["is_active"].includes(keyName):value===true||value==="true"||value===1)?"checked":"")+'> نعم</label>';
+   else if(options) control='<select name="'+keyName+'"><option value="">— اختر —</option>'+options.map(o=>'<option value="'+esc(o.id)+'" '+(String(value)===String(o.id)?"selected":"")+'>'+esc(o.label)+'</option>').join("")+'</select>';
+   else if(longText) control='<textarea name="'+keyName+'">'+esc(value)+'</textarea>';
+   else control='<input name="'+keyName+'" type="'+(date?"date":time?"time":timestamp?"datetime-local":numeric?"number":"text")+'" '+(numeric?'step="any"':'')+' value="'+esc(value)+'">';
+   controls.push('<label class="admin-form-field">'+esc(label)+control+'</label>');
+  }
+  workspace.innerHTML=heading(row?"تعديل سجل":"إضافة سجل",m.title)+'<form id="record-form" class="admin-form-card"><div class="admin-form-grid">'+controls.join("")+'</div><p id="record-error" class="admin-form-error"></p><div class="admin-form-actions"><button class="admin-primary" type="submit">حفظ البيانات</button><button class="admin-small-btn" type="button" id="cancel-record">إلغاء</button></div></form>';
+  workspace.querySelector("#cancel-record").onclick=()=>recordsPage(key);
+  workspace.querySelector("#record-form").onsubmit=async e=>{
+   e.preventDefault();const form=e.currentTarget,body={};
+   for(const field of m.fields){const name=field[0],el=form.elements[name];if(!el)continue;if(el.type==="checkbox")body[name]=el.checked;else if(el.value!=="")body[name]=el.type==="number"?Number(el.value):el.value;}
+   try{await api("/api/admin/records/"+m.db+(row?"/"+row.id:""),{method:row?"PATCH":"POST",body:JSON.stringify(body)});await recordsPage(key);}
+   catch(error){workspace.querySelector("#record-error").textContent=error.message;}
+  };
+ }
  async function simplePage(key){if(key==="orders"||key==="sales"){const rows=await api("/api/admin/orders");workspace.innerHTML=heading("الطلبات","الطلبات المسجلة على الجهاز")+table(["رقم الطلب","النوع","الحالة","الإجمالي","التاريخ","المزامنة"],rows.map(o=>'<tr><td>'+esc(o.order_number)+'</td><td>'+esc(o.order_type)+'</td><td>'+esc(o.status)+'</td><td>'+money(o.total_minor/100)+'</td><td>'+new Date(o.created_at).toLocaleString("ar-EG")+'</td><td>'+esc(o.sync_status)+'</td></tr>').join("")||'<tr><td colspan="6">لا توجد طلبات</td></tr>');return;}
  if(key==="kitchen"){const rows=await api("/api/orders");workspace.innerHTML=heading("شاشة المطبخ والبار","تحديث حالات الطلبات")+table(["رقم الطلب","الأصناف","الحالة"],rows.map(o=>'<tr><td>'+esc(o.order_number)+'</td><td>'+o.items.map(i=>esc(i.item_name_snapshot)+" × "+i.quantity).join("، ")+'</td><td><select data-status="'+o.id+'">'+["pending","preparing","ready","delivered","cancelled"].map(s=>'<option value="'+s+'" '+(s===o.status?"selected":"")+'>'+s+'</option>').join("")+'</select></td></tr>').join("")||'<tr><td colspan="3">لا توجد طلبات</td></tr>');workspace.querySelectorAll("[data-status]").forEach(s=>s.onchange=async()=>{try{await api("/api/orders/"+s.dataset.status+"/status",{method:"PATCH",body:JSON.stringify({status:s.value})});}catch(e){alert(e.message);}});return;}
  if(key==="settings"){const cloud=await api("/api/cloud/status").catch(e=>({connected:false,message:e.message}));workspace.innerHTML=heading("إعدادات النظام","الاتصال وقاعدة البيانات") + '<div class="admin-panel"><h2>حالة الاتصال</h2><p>Supabase: '+(cloud.connected?"متصل":"غير متصل")+"</p><p>"+esc(cloud.message||"")+"</p><p>لتغيير بيانات الاتصال حدّث ملف desktop/.env ثم أعد تشغيل التطبيق.</p></div>";return;}
