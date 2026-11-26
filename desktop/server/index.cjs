@@ -23,6 +23,15 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     });
   });
 
+
+  app.get("/api/auth/session", (_req,res) => res.json(supabase.getSession()));
+  app.post("/api/auth/login", async (req,res) => {
+    const email=String(req.body?.email||"").trim(), password=String(req.body?.password||"");
+    if(!email||!password) return res.status(400).json({error:"أدخل البريد الإلكتروني وكلمة المرور."});
+    try { res.json(await supabase.signIn(email,password)); }
+    catch(error) { res.status(401).json({error:error.message}); }
+  });
+  app.post("/api/auth/logout", async (_req,res) => res.json(await supabase.signOut()));
   app.get("/api/cloud/status", async (_req, res) => {
     const status = await supabase.getStatus();
     res.status(status.connected || !status.configured ? 200 : 503).json(status);
