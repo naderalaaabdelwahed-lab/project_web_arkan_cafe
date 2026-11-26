@@ -11,6 +11,8 @@ function openDatabase(userDataPath) {
   db.pragma("busy_timeout = 5000");
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_records (module TEXT NOT NULL, id TEXT NOT NULL, data_json TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY(module,id));
+    CREATE INDEX IF NOT EXISTS idx_admin_records_module ON admin_records(module,updated_at);
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version INTEGER PRIMARY KEY,
       applied_at TEXT NOT NULL DEFAULT (datetime('now'))
