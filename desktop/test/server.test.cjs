@@ -178,6 +178,17 @@ test("order edits persist items, discounts and table transfers atomically", asyn
   assert.equal(saved.total_minor, 11000);
   assert.equal(saved.table_number, 9);
   assert.equal(saved.items.length, 2);
+
+  const duplicateTableOrder = await request("/api/orders", {
+    method: "POST",
+    body: JSON.stringify({
+      order_type: "dine_in",
+      table_number: 9,
+      table_area: "outdoor",
+      items: [{ menu_item_id: "test-tea", quantity: 1 }]
+    })
+  });
+  assert.equal(duplicateTableOrder.response.status, 409);
 });
 
 test("order status rejects invalid values and persists valid transitions", async () => {
@@ -249,6 +260,12 @@ test("full payments are validated, recorded once and close the order", async () 
   });
   assert.equal(duplicate.response.status, 409);
   assert.equal(server.db.prepare("SELECT COUNT(*) AS count FROM payments WHERE order_id=?").get(paidOrderId).count, 1);
+
+  const editPaidOrder = await request(`/api/orders/${paidOrderId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ discount_minor: 100 })
+  });
+  assert.equal(editPaidOrder.response.status, 409);
 });
 
 test("SQLite orders survive a complete local service restart", async () => {
