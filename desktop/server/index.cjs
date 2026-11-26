@@ -389,18 +389,23 @@ function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
     if(supabase.getSession().authenticated) {
       try {
         const remote=await supabase.getOrders();
-        const remoteRows=(remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),payment_method:o.payment_method||"cash",payment_status:(o.payments||[]).some(p=>p.payment_status==="paid")?"paid":"unpaid",paid_at:(o.payments||[]).find(p=>p.payment_status==="paid")?.paid_at||null,closed_at:o.closed_at,created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,menu_item_id:i.product_id||i.menu_item_id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total ?? (Number(i.unit_price||0)*Number(i.quantity||0)))*100),notes:i.item_note||i.notes||""}))}));
+        const remoteRows=(remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,customer_name:o.customer_name||"",phone:o.phone||o.customer_phone||"",address:o.address||o.delivery_address||"",notes:o.notes||"",table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),payment_method:o.payment_method||"cash",payment_status:(o.payments||[]).some(p=>p.payment_status==="paid")?"paid":"unpaid",paid_at:(o.payments||[]).find(p=>p.payment_status==="paid")?.paid_at||null,closed_at:o.closed_at,created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,menu_item_id:i.product_id||i.menu_item_id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total ?? (Number(i.unit_price||0)*Number(i.quantity||0)))*100),notes:i.item_note||i.notes||""}))}));
         const remoteIds=new Set(remoteRows.map(o=>String(o.id)));
         const pending=db.prepare("SELECT * FROM orders WHERE sync_status <> 'synced' ORDER BY created_at DESC").all();
         const getLocalItems=db.prepare("SELECT * FROM order_items WHERE order_id=?");
         const localRows=pending.map(o=>({...o,items:getLocalItems.all(o.id)}));
         const merged=new Map(remoteRows.map(order=>[String(order.id),order]));
         for(const order of localRows) merged.set(String(order.id),order);
-        return res.json([...merged.values()]);
+        const allOrders=[...merged.values()].sort((a,b)=>
+          String(b.created_at||"").localeCompare(String(a.created_at||"")) || String(b.id||"").localeCompare(String(a.id||""))
+        );
+        return res.json(allOrders);
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
+    // The All tab is a history view, not an active-orders view. Return
+    // every locally stored order regardless of channel, payment, or status.
     const orders = db.prepare(
-      "SELECT * FROM orders ORDER BY created_at DESC LIMIT 200"
+      "SELECT * FROM orders ORDER BY created_at DESC, id DESC"
     ).all();
     const getItems = db.prepare("SELECT * FROM order_items WHERE order_id = ?");
     res.json(orders.map((order) => ({ ...order, items: getItems.all(order.id) })));
@@ -441,6 +446,9 @@ function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
     const createdAt = new Date().toISOString();
     const orderType = ["dine_in", "takeaway", "delivery"].includes(body.order_type)
       ? body.order_type : "takeaway";
+    if(orderType==="delivery" && (!String(body.phone||"").trim() || !String(body.address||"").trim())) {
+      return res.status(400).json({error:"رقم الهاتف وعنوان التوصيل مطلوبان لطلب الدليفري."});
+    }
     const tableNumber = body.table_number != null && body.table_number !== "" && Number.isInteger(Number(body.table_number)) && Number(body.table_number) > 0
       ? Number(body.table_number) : null;
     const tableArea = ["indoor","outdoor"].includes(body.table_area) ? body.table_area : null;

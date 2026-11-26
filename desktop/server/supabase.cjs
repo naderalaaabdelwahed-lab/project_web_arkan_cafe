@@ -30,7 +30,21 @@ function createSupabaseRestClient() {
 
   return {
     configured: Boolean(key),
-    async getOrders() { return await request("/rest/v1/orders?select=*,order_items(*),payments(*)&order=created_at.desc&limit=300"); },
+    async getOrders() {
+      // Fetch every order in stable pages. A fixed limit silently hid older
+      // takeaway, delivery, and completed orders from the POS "All" view.
+      const pageSize = 1000;
+      const allOrders = [];
+      for (let offset = 0; ; offset += pageSize) {
+        const page = await request(
+          "/rest/v1/orders?select=*,order_items(*),payments(*)&order=created_at.desc,id.desc&limit=" + pageSize + "&offset=" + offset
+        );
+        if (!Array.isArray(page)) throw new Error("Supabase returned an invalid orders response.");
+        allOrders.push(...page);
+        if (page.length < pageSize) break;
+      }
+      return allOrders;
+    },
     async getRecord(table,id) {
       const rows=await request("/rest/v1/"+encodeURIComponent(table)+"?select=*&id=eq."+encodeURIComponent(id)+"&limit=1");
       return Array.isArray(rows)?rows[0]||null:null;

@@ -168,6 +168,99 @@ test("order creation validates items and persists money in integer piastres", as
   assert.equal(saved.items[0].line_total_minor, 17000);
 });
 
+test("offline all-orders endpoint returns all historical order types and statuses beyond 200 rows", async () => {
+  const insert = server.db.prepare(`
+    INSERT INTO orders (
+      id, order_number, order_type, status, subtotal_minor, discount_minor,
+      total_minor, notes, created_at, updated_at, sync_status, customer_name,
+      phone, address, payment_method, payment_status
+    ) VALUES (?, ?, ?, ?, 0, 0, 0, '', ?, ?, 'synced', ?, '', '', 'cash', ?)
+  `);
+  const now = new Date().toISOString();
+  for (let index = 0; index < 205; index += 1) {
+    const type = ["dine_in", "takeaway", "delivery"][index % 3];
+    const status = ["pending", "delivered", "cancelled"][index % 3];
+    insert.run(
+      "history-order-" + index,
+      "HISTORY-" + index,
+      type,
+      status,
+      now,
+      now,
+      "History customer " + index,
+      index % 2 === 0 ? "paid" : "unpaid"
+    );
+  }
+
+  const listed = await request("/api/orders");
+  assert.equal(listed.response.status, 200);
+  assert.ok(listed.body.length >= 205, "the endpoint must not stop at the previous 200-order limit");
+  for (const id of ["history-order-0", "history-order-1", "history-order-2", "history-order-204"]) {
+    assert.ok(listed.body.some(order => order.id === id), id + " must be included in the all-orders feed");
+  }
+  assert.ok(listed.body.some(order => order.order_type === "delivery" && order.status === "cancelled"));
+  assert.ok(listed.body.some(order => order.order_type === "takeaway" && order.payment_status === "paid"));
+});
+
+test("takeaway and delivery orders preserve customer details and remain in the all-orders feed", async () => {
+  const takeaway = await request("/api/orders", {
+    method: "POST",
+    body: JSON.stringify({
+      order_type: "takeaway",
+      customer_name: "Takeaway Customer",
+      phone: "01000000000",
+      items: [{ menu_item_id: "test-tea", quantity: 2 }]
+    })
+  });
+  assert.equal(takeaway.response.status, 201);
+  assert.equal(takeaway.body.order_type, "takeaway");
+  assert.equal(takeaway.body.customer_name, "Takeaway Customer");
+  assert.equal(takeaway.body.phone, "01000000000");
+
+  const invalidDelivery = await request("/api/orders", {
+    method: "POST",
+    body: JSON.stringify({
+      order_type: "delivery",
+      items: [{ menu_item_id: "test-tea", quantity: 1 }]
+    })
+  });
+  assert.equal(invalidDelivery.response.status, 400);
+  assert.match(invalidDelivery.body.error, /رقم الهاتف وعنوان التوصيل/);
+
+  const delivery = await request("/api/orders", {
+    method: "POST",
+    body: JSON.stringify({
+      order_type: "delivery",
+      customer_name: "Delivery Customer",
+      phone: "01111111111",
+      address: "شارع الجمهورية",
+      items: [{ menu_item_id: "test-fatir-cheese", quantity: 1 }]
+    })
+  });
+  assert.equal(delivery.response.status, 201);
+  assert.equal(delivery.body.order_type, "delivery");
+  assert.equal(delivery.body.customer_name, "Delivery Customer");
+  assert.equal(delivery.body.phone, "01111111111");
+  assert.equal(delivery.body.address, "شارع الجمهورية");
+
+  const cancelled = await request(`/api/orders/${takeaway.body.id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "cancelled" })
+  });
+  assert.equal(cancelled.response.status, 200);
+
+  const allOrders = await request("/api/orders");
+  const savedTakeaway = allOrders.body.find(order => order.id === takeaway.body.id);
+  const savedDelivery = allOrders.body.find(order => order.id === delivery.body.id);
+  assert.ok(savedTakeaway, "all-orders feed must retain cancelled orders");
+  assert.ok(savedDelivery, "all-orders feed must include delivery orders");
+  assert.equal(savedTakeaway.order_type, "takeaway");
+  assert.equal(savedTakeaway.customer_name, "Takeaway Customer");
+  assert.equal(savedDelivery.order_type, "delivery");
+  assert.equal(savedDelivery.customer_name, "Delivery Customer");
+  assert.equal(savedDelivery.address, "شارع الجمهورية");
+});
+
 test("order edits persist items, discounts and table transfers atomically", async () => {
   assert.ok(createdOrderId);
   // A product may be repriced or disabled after the order was created.
