@@ -177,7 +177,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const module=req.params.module, data=req.body||{};
     if(!adminModules.has(module)) return res.status(404).json({error:"القسم غير موجود."});
     const id=randomUUID(), now=new Date().toISOString(), clean={};
-    for(const [k,v] of Object.entries(data)) if(/^[a-zA-Z_][a-zA-Z0-9_]{0,60}$/.test(k) && !["id","created_at","updated_at"].includes(k)) clean[k]=v;
+    for(const [k,v] of Object.entries(data)) if(/^[a-zA-Z_][a-zA-Z0-9_]{0,60}$/.test(k) && !["id","created_at","updated_at"].includes(k) && v!=="") clean[k]=v;
     if(!Object.keys(clean).length) return res.status(400).json({error:"أدخل بيانات السجل."});
     let saved={id,...clean,created_at:now,updated_at:now};
     if(supabase.getSession().authenticated) {
@@ -214,10 +214,19 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     res.json({ok:true});
   });
 
-  app.get("/api/admin/summary", (_req,res) => {
+  app.get("/api/admin/summary", async (_req,res) => {
     const count = table => db.prepare("SELECT COUNT(*) AS n FROM "+table).get().n;
-    const sales = db.prepare("SELECT COALESCE(SUM(total_minor),0) AS total FROM orders WHERE status <> 'cancelled'").get().total;
-    res.json({categories:count("menu_categories"),products:count("menu_items"),orders:count("orders"),sales_minor:sales,cloud:supabase.configured});
+    let categories=count("menu_categories"), products=count("menu_items"), orders=count("orders");
+    let sales=db.prepare("SELECT COALESCE(SUM(total_minor),0) AS total FROM orders WHERE status <> 'cancelled'").get().total;
+    if(supabase.getSession().authenticated) {
+      try {
+        const [menu,remoteOrders]=await Promise.all([supabase.getAdminMenu(),supabase.getOrders()]);
+        categories=(menu.categories||[]).length; products=(menu.products||[]).length;
+        orders=(remoteOrders||[]).length;
+        sales=Math.round((remoteOrders||[]).filter(o=>o.status!=="cancelled").reduce((sum,o)=>sum+Number(o.total||0),0)*100);
+      } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
+    }
+    res.json({categories,products,orders,sales_minor:sales,cloud:supabase.configured});
   });
   app.use("/api/admin", (req,res,next) => {
     if(!supabase.getSession().authenticated) return res.status(401).json({error:"سجل الدخول أولاً."});
