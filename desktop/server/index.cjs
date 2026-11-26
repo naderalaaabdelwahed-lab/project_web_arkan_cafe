@@ -311,13 +311,13 @@ function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
   app.delete("/api/admin/categories/:id", async (req,res) => {
     const id=String(req.params.id);
     try {
+      const linked=db.prepare("SELECT COUNT(*) AS count FROM menu_items WHERE category_id=?").get(id).count;
+      if(linked) return res.status(409).json({error:"انقل الأصناف إلى قسم آخر قبل حذف هذا القسم."});
       if(supabase.getSession().authenticated) {
         const menu=await supabase.getAdminMenu();
         if((menu.products||[]).some(p=>String(p.category_id)===id)) return res.status(409).json({error:"انقل الأصناف إلى قسم آخر قبل حذف هذا القسم."});
         await supabase.deleteRecord("categories",id);
       }
-      const linked=db.prepare("SELECT COUNT(*) AS count FROM menu_items WHERE category_id=?").get(id).count;
-      if(linked) return res.status(409).json({error:"انقل الأصناف إلى قسم آخر قبل حذف هذا القسم."});
       db.prepare("DELETE FROM menu_categories WHERE id=?").run(id);
       res.json({ok:true});
     } catch(e){res.status(e.status||400).json({error:e.message});}
@@ -347,7 +347,7 @@ function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
   });
   app.delete("/api/admin/products/:id", async (req,res) => {
     try {
-      if(supabase.getSession().authenticated) await supabase.deleteRecord("products",req.params.id);
+      if(supabase.getSession().authenticated) await supabase.updateRecord("products",req.params.id,{is_available:false});
       db.prepare("UPDATE menu_items SET is_available=0 WHERE id=?").run(req.params.id);
       res.json({ok:true});
     } catch(e){res.status(e.status||400).json({error:e.message});}
