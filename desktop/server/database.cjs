@@ -28,6 +28,7 @@ function openDatabase(userDataPath) {
     CREATE TABLE IF NOT EXISTS menu_items (
       id TEXT PRIMARY KEY, category_id TEXT, name TEXT NOT NULL, description TEXT,
       price_minor INTEGER NOT NULL CHECK (price_minor >= 0),
+      preparation_station TEXT NOT NULL DEFAULT 'kitchen',
       is_available INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (category_id) REFERENCES menu_categories(id)
     );
@@ -75,6 +76,12 @@ function openDatabase(userDataPath) {
     ["paid_at", "TEXT"]
   ]) {
     if (!columns.has(name)) db.exec(`ALTER TABLE orders ADD COLUMN ${name} ${type}`);
+  }
+
+  // Additive menu routing column for existing local databases.
+  const menuItemColumns = new Set(db.prepare("PRAGMA table_info(menu_items)").all().map((column) => column.name));
+  if (!menuItemColumns.has("preparation_station")) {
+    db.exec("ALTER TABLE menu_items ADD COLUMN preparation_station TEXT NOT NULL DEFAULT 'kitchen'");
   }
 
   // Seed clearly labelled demo data only when no menu has been imported yet.

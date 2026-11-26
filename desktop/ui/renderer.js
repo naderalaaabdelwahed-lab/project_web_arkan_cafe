@@ -362,29 +362,37 @@ shifts:{title:"الورديات",db:"hr_shifts",fields:[["name","اسم الور
  const table=(heads,rows)=>'<div class="admin-table-wrap"><table><thead><tr>'+heads.map(x=>'<th>'+x+'</th>').join("")+'</tr></thead><tbody>'+rows+'</tbody></table></div>';
  async function menuPage(kind){
   const d=await api("/api/admin/menu"),cat=kind==="categories",list=cat?d.categories:d.products;
+  const stationLabel=value=>({kitchen:"المطبخ",hall:"الصالة",bar:"المشروبات"}[value]||"المطبخ");
   const rows=list.map(x=>cat
-   ? '<tr><td>'+esc(x.name)+'</td><td>'+Number(x.sort_order||0)+'</td><td><button class="admin-small-btn" data-edit="'+x.id+'">تعديل</button></td></tr>'
-   : '<tr><td>'+esc(x.name)+'</td><td>'+esc(d.categories.find(c=>c.id===x.category_id)?.name||"—")+'</td><td>'+money(x.price_minor/100)+'</td><td><span class="admin-status '+(x.is_available===false?"is-off":"is-on")+'">'+(x.is_available===false?"غير متاح":"متاح")+'</span></td><td><button class="admin-small-btn" data-edit="'+x.id+'">تعديل</button></td></tr>'
+   ? '<tr><td>'+esc(x.name)+'</td><td>'+Number(x.sort_order||0)+'</td><td><button class="admin-small-btn" data-edit="'+esc(x.id)+'">تعديل</button> <button class="admin-small-btn" data-delete="'+esc(x.id)+'">'+(cat?"حذف":"إخفاء")+'</button></td></tr>'
+   : '<tr><td>'+esc(x.name)+'</td><td>'+esc(d.categories.find(c=>String(c.id)===String(x.category_id))?.name||"—")+'</td><td>'+esc(stationLabel(x.preparation_station))+'</td><td>'+money(x.price_minor/100)+'</td><td><span class="admin-status '+(x.is_available===false?"is-off":"is-on")+'">'+(x.is_available===false?"غير متاح":"متاح")+'</span></td><td><button class="admin-small-btn" data-edit="'+esc(x.id)+'">تعديل</button> <button class="admin-small-btn" data-delete="'+esc(x.id)+'">حذف</button></td></tr>'
   ).join("");
-  workspace.innerHTML=heading(cat?"الفئات":"المنتجات",cat?"إدارة فئات المنيو وترتيب ظهورها":"إدارة أصناف المنيو والأسعار والتوافر",'<button class="admin-primary" id="new">+ إضافة '+(cat?"فئة":"منتج")+'</button>')+
-   table(cat?["اسم الفئة","الترتيب","إجراء"]:["المنتج","الفئة","السعر","التوافر","إجراء"],rows||'<tr><td colspan="5">لا توجد بيانات</td></tr>');
+  workspace.innerHTML=heading(cat?"أقسام المنيو":"أصناف المنيو",cat?"أضف أقسام المطعم ورتبها":"تحكم في الأصناف والأسعار والقسم ومكان التحضير لكل صنف بشكل مستقل",'<button class="admin-primary" id="new">+ إضافة '+(cat?"قسم":"صنف")+'</button>')+
+   table(cat?["اسم القسم","الترتيب","إجراءات"]:["الصنف","القسم","مكان التحضير","السعر","التوفر","إجراءات"],rows||'<tr><td colspan="6">لا توجد بيانات</td></tr>');
   workspace.querySelector("#new").onclick=()=>editMenu(kind,null,d);
-  workspace.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editMenu(kind,list.find(x=>x.id===b.dataset.edit),d));
+  workspace.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editMenu(kind,list.find(x=>String(x.id)===b.dataset.edit),d));
+  workspace.querySelectorAll("[data-delete]").forEach(b=>b.onclick=async()=>{
+   const item=list.find(x=>String(x.id)===b.dataset.delete);
+   if(!item||!confirm(cat?"حذف القسم؟ لا يمكن حذف قسم يحتوي على أصناف.":"إخفاء الصنف من البيع؟ يمكنك إتاحته مرة أخرى بالتعديل."))return;
+   try{await api("/api/admin/"+(cat?"categories/":"products/")+encodeURIComponent(item.id),{method:"DELETE"});await menuPage(kind);}
+   catch(error){alert(error.message);}
+  });
  }
  async function editMenu(kind,item,d){
   const cat=kind==="categories";
-  const formTitle=(item?"تعديل ":"إضافة ")+(cat?"فئة":"منتج");
+  const formTitle=(item?"تعديل ":"إضافة ")+(cat?"قسم":"صنف");
   const categoryOptions=(d.categories||[]).map(c=>'<option value="'+esc(c.id)+'" '+(String(item?.category_id||"")===String(c.id)?"selected":"")+'>'+esc(c.name)+'</option>').join("");
-  workspace.innerHTML=heading(formTitle,cat?"بيانات الفئة الجديدة أو المعدلة":"أدخل بيانات الصنف كما تظهر في المنيو")+
+  workspace.innerHTML=heading(formTitle,cat?"أنشئ قسمًا جديدًا أو عدّل اسم وترتيب القسم":"حدد القسم ومكان التحضير لهذا الصنف بشكل مستقل")+
    '<form id="menu-edit-form" class="admin-panel admin-form-card">'+
    '<div class="admin-form-grid">'+
-   '<label class="admin-form-field"><span>الاسم</span><input name="name" maxlength="150" required value="'+esc(item?.name||"")+'" placeholder="'+(cat?"اسم الفئة":"اسم المنتج")+'"></label>'+
+   '<label class="admin-form-field"><span>'+(cat?"اسم القسم":"اسم الصنف")+'</span><input name="name" maxlength="150" required value="'+esc(item?.name||"")+'" placeholder="'+(cat?"مثال: فطائر":"مثال: فطير مشلتت")+'"></label>'+
    (cat
     ? '<label class="admin-form-field"><span>ترتيب العرض</span><input name="sort_order" type="number" min="0" step="1" value="'+Number(item?.sort_order||0)+'"></label>'
-    : '<label class="admin-form-field"><span>الفئة</span><select name="category_id" required><option value="">اختر الفئة</option>'+categoryOptions+'</select></label>'+
+    : '<label class="admin-form-field"><span>القسم التابع له</span><select name="category_id" required><option value="">اختر القسم</option>'+categoryOptions+'</select></label>'+
+      '<label class="admin-form-field"><span>مكان التحضير</span><select name="preparation_station" required><option value="kitchen" '+((item?.preparation_station||"kitchen")==="kitchen"?"selected":"")+'>المطبخ</option><option value="hall" '+(item?.preparation_station==="hall"?"selected":"")+'>الصالة</option><option value="bar" '+(item?.preparation_station==="bar"?"selected":"")+'>المشروبات</option></select></label>'+
       '<label class="admin-form-field"><span>السعر بالجنيه</span><input name="price" type="number" min="0" step="0.01" required value="'+(item?Number(item.price_minor||0)/100:"")+'" placeholder="0.00"></label>'+
       '<label class="admin-form-field"><span>الوصف</span><textarea name="description" rows="3" maxlength="500" placeholder="وصف اختياري">'+esc(item?.description||"")+'</textarea></label>'+
-      '<label class="admin-form-field admin-form-check"><input name="is_available" type="checkbox" '+(item?.is_available===false?"":"checked")+'><span>المنتج متاح للبيع</span></label>'
+      '<label class="admin-form-field admin-form-check"><input name="is_available" type="checkbox" '+(item?.is_available===false?"":"checked")+'><span>الصنف متاح للبيع</span></label>'
    )+
    '</div><div class="admin-form-actions"><button class="admin-primary" type="submit">حفظ</button><button class="admin-small-btn" type="button" id="cancel-menu-edit">إلغاء</button></div><p class="admin-error" id="menu-form-error" role="alert"></p></form>';
   const form=workspace.querySelector("#menu-edit-form");
@@ -396,6 +404,7 @@ shifts:{title:"الورديات",db:"hr_shifts",fields:[["name","اسم الور
    if(cat) body.sort_order=Number(fd.get("sort_order")||0);
    else {
     body.category_id=String(fd.get("category_id")||"");
+    body.preparation_station=String(fd.get("preparation_station")||"kitchen");
     body.price=Number(fd.get("price"));
     body.description=String(fd.get("description")||"");
     body.is_available=fd.get("is_available")==="on";
