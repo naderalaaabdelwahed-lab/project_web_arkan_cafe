@@ -12,7 +12,15 @@ function startLocalServer({ userDataPath, port = 4317 }) {
 
   app.disable("x-powered-by");
   app.use((req,res,next) => {
-    res.setHeader("Access-Control-Allow-Origin","*");
+    const origin = req.headers.origin;
+    // The renderer is loaded from file:// (serialized by Chromium as "null").
+    // Do not expose the loopback POS API to arbitrary websites.
+    const allowedOrigins = new Set(["null","file://","http://127.0.0.1","http://localhost"]);
+    if (origin && !allowedOrigins.has(origin)) {
+      return res.status(403).json({ error: "Origin is not allowed." });
+    }
+    if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods","GET,POST,PUT,PATCH,DELETE,OPTIONS");
     res.setHeader("Access-Control-Allow-Headers","Content-Type");
     if(req.method==="OPTIONS") return res.sendStatus(204);
