@@ -68,6 +68,15 @@ function createSupabaseRestClient() {
       if (!result?.access_token) throw new Error("لم يتم استلام جلسة تسجيل الدخول.");
       accessToken = result.access_token;
       currentUser = result.user || null;
+      try {
+        const allowed = await request("/rest/v1/rpc/is_egsoft_admin", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+        });
+        if (allowed !== true) throw new Error("الحساب لا يحمل صلاحية Egsoft Admin. أضف app_metadata.egsoft_role = admin للمستخدم من لوحة Supabase.");
+      } catch(error) {
+        accessToken = null; currentUser = null;
+        throw error;
+      }
       return { authenticated: true, user: currentUser };
     },
     async signOut() {
