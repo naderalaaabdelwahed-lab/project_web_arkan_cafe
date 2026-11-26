@@ -62,6 +62,29 @@ test("all administration routes require an authenticated admin session", async (
   }
 });
 
+test("floor tables and reservations remain available from the offline cache", async () => {
+  const now = new Date().toISOString();
+  server.db.prepare("INSERT OR REPLACE INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)")
+    .run("restaurant_tables", "cached-table", JSON.stringify({
+      table_number: 9, area: "outdoor", capacity: 4, is_active: true
+    }), now, now);
+  server.db.prepare("INSERT OR REPLACE INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)")
+    .run("reservations", "cached-reservation", JSON.stringify({
+      table_id: "cached-table", table_number: 9, status: "confirmed", customer_name: "Offline guest"
+    }), now, now);
+
+  const tables = await request("/api/tables");
+  assert.equal(tables.response.status, 200);
+  assert.equal(tables.body.length, 1);
+  assert.equal(tables.body[0].area, "outdoor");
+
+  const reservations = await request("/api/reservations");
+  assert.equal(reservations.response.status, 200);
+  assert.equal(reservations.body.length, 1);
+  assert.equal(reservations.body[0].area, "outdoor");
+  assert.equal(reservations.body[0].table_number, 9);
+});
+
 test("order creation validates items and persists money in integer piastres", async () => {
   let result = await request("/api/orders", {
     method: "POST",
