@@ -9,6 +9,12 @@ let products=[];
 let menuLoaded=false;
 let selectedKey="";
 const $=id=>document.getElementById(id);
+const apiFetch=(url,options={})=>{
+ const headers={...(options.headers||{})};
+ const token=window.arkanDesktop?.apiToken;
+ if(token)headers["X-Egsoft-Api-Token"]=token;
+ return globalThis["fetch"](url,{...options,headers});
+};
 const key=t=>t.area+":"+t.number;
 const fmt=n=>Number(n||0).toLocaleString("ar-EG",{maximumFractionDigits:2});
 const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -61,7 +67,7 @@ function targetTable(exclude,allowOccupied=false){
  return t;
 }
 async function saveOrder(orderId,changes,refreshAfter=true){
- const response=await fetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(orderId),{
+ const response=await apiFetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(orderId),{
   method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(changes)
  });
  const result=await response.json().catch(()=>({}));
@@ -79,7 +85,7 @@ async function runAction(action){
    const choices=products.map((p,i)=>(i+1)+") "+p.name+" — "+p.price+" ج.م").join("\n");
    const raw=prompt("اختار أول صنف للطلب الجديد:\n"+choices),p=products[Number(raw)-1];
    if(!p||!p.id||!raw||!Number.isInteger(Number(raw))){alert("اختيار المنتج غير صحيح أو المنيو لم يتم تحميله.");return;}
-   const response=await fetch("http://127.0.0.1:4317/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order_type:"dine_in",table_id:t.id||null,table_number:t.number,table_area:t.area,items:[{menu_item_id:p.id,quantity:1}]})});
+   const response=await apiFetch("http://127.0.0.1:4317/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order_type:"dine_in",table_id:t.id||null,table_number:t.number,table_area:t.area,items:[{menu_item_id:p.id,quantity:1}]})});
    const result=await response.json();if(!response.ok)throw new Error(result.error||"تعذر إنشاء الطلب.");
    await loadConnectedFloorData();select(key(t));return;
   }
@@ -123,7 +129,7 @@ async function runAction(action){
    const target=targetTable(key(t));if(!target)return;
    const sourceItems=orderItemPayload(o),moved=sourceItems[n-1];
    if(!moved.menu_item_id){alert("لا يمكن نقل هذا الصنف لأن معرف المنتج غير متوفر.");return;}
-   const created=await fetch("http://127.0.0.1:4317/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order_type:"dine_in",table_id:target.id||null,table_number:target.number,table_area:target.area,items:[{menu_item_id:moved.menu_item_id,quantity:1,notes:moved.notes}]})});
+   const created=await apiFetch("http://127.0.0.1:4317/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order_type:"dine_in",table_id:target.id||null,table_number:target.number,table_area:target.area,items:[{menu_item_id:moved.menu_item_id,quantity:1,notes:moved.notes}]})});
    const createdData=await created.json();if(!created.ok)throw new Error(createdData.error||"تعذر إنشاء الطلب في الطاولة المستهدفة.");
    if(moved.quantity>1)moved.quantity--;else sourceItems.splice(n-1,1);
    if(sourceItems.length)await saveOrder(o.id,{items:sourceItems},false);
@@ -133,7 +139,7 @@ async function runAction(action){
    if(!confirm("تأكيد تحصيل كامل قيمة الطلب؟"))return;
    const paymentMethod=action==="cash"?"cash":(prompt("طريقة الدفع: cash أو card أو wallet",o.payment_method||"cash")||"");
    if(!["cash","card","wallet"].includes(paymentMethod)){alert("طريقة الدفع غير صحيحة.");return;}
-   const response=await fetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(o.id)+"/pay",{
+   const response=await apiFetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(o.id)+"/pay",{
     method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method:paymentMethod})
    });
    const result=await response.json().catch(()=>({}));
@@ -168,7 +174,7 @@ function renderChannel(tab){
  panel.querySelectorAll("[data-channel-done]").forEach(b=>b.addEventListener("click",async()=>{
   b.disabled=true;b.textContent="جاري التحديث...";
   try{
-   const response=await fetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(b.dataset.channelDone)+"/pay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method:"cash"})});
+   const response=await apiFetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(b.dataset.channelDone)+"/pay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method:"cash"})});
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(result.error||"تعذر تحديث حالة الطلب.");
    await loadConnectedFloorData();renderChannel(tab);
@@ -184,7 +190,7 @@ document.querySelectorAll(".tabs .tab").forEach(tab=>tab.addEventListener("click
 // cache from Supabase when cloud access and read policies are available.
 async function loadConnectedMenu(){
  try{
-  const response=await fetch("http://127.0.0.1:4317/api/menu");
+  const response=await apiFetch("http://127.0.0.1:4317/api/menu");
   if(!response.ok)throw new Error("Menu API returned "+response.status);
   const data=await response.json();
   products=Array.isArray(data.items)?data.items.map(item=>({id:item.id,name:item.name,price:Number(item.price_minor)/100})): [];
@@ -199,9 +205,9 @@ loadConnectedMenu().then(()=>loadConnectedFloorData());
 async function loadConnectedFloorData(){
  try{
   const [tableResponse,orderResponse,reservationResponse]=await Promise.all([
-   fetch("http://127.0.0.1:4317/api/tables"),
-   fetch("http://127.0.0.1:4317/api/orders"),
-   fetch("http://127.0.0.1:4317/api/reservations")
+   apiFetch("http://127.0.0.1:4317/api/tables"),
+   apiFetch("http://127.0.0.1:4317/api/orders"),
+   apiFetch("http://127.0.0.1:4317/api/reservations")
   ]);
   if(!tableResponse.ok||!orderResponse.ok||!reservationResponse.ok)return;
   const remoteTables=await tableResponse.json(),remoteOrders=await orderResponse.json(),remoteReservations=await reservationResponse.json();
@@ -242,7 +248,7 @@ document.getElementById("back-to-pos").addEventListener("click",()=>{
  const workspace=document.getElementById("admin-workspace"); if(!workspace)return;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const money=n=>Number(n||0).toLocaleString("ar-EG",{maximumFractionDigits:2})+" ج.م";
- async function api(path,opt={}){const r=await fetch("http://127.0.0.1:4317"+path,{headers:{"Content-Type":"application/json"},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"تعذر الاتصال بالخادم");return d;}
+ async function api(path,opt={}){const r=await apiFetch("http://127.0.0.1:4317"+path,{headers:{"Content-Type":"application/json"},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"تعذر الاتصال بالخادم");return d;}
  const modules={
  tables:{title:"إعدادات الطاولات",db:"restaurant_tables",fields:[["table_number","رقم الطاولة"],["capacity","السعة"],["area","الصالة (indoor/outdoor)"],["status","الحالة"],["display_order","ترتيب العرض"],["is_active","مفعلة"]]},
  "recipe-items":{title:"مكونات الوصفات",db:"inventory_recipe_items",fields:[["recipe_id","معرف الوصفة"],["inventory_item_id","معرف الخامة"],["quantity","الكمية"],["unit_id","معرف الوحدة"],["notes","ملاحظات"]]},
