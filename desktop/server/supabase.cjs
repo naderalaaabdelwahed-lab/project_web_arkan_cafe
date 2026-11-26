@@ -38,6 +38,10 @@ function createSupabaseRestClient() {
     async getOrderItems(orderId) {
       return await request("/rest/v1/order_items?select=id&order_id=eq."+encodeURIComponent(orderId));
     },
+    async deleteOrderItems(orderId) {
+      await request("/rest/v1/order_items?order_id=eq."+encodeURIComponent(orderId), { method: "DELETE" });
+      return { ok: true };
+    },
     async insertMany(table, rows) {
       return await request("/rest/v1/"+encodeURIComponent(table),{method:"POST",headers:{"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify(rows)});
     },
