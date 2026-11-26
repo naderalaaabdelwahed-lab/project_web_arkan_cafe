@@ -548,12 +548,11 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     httpServer.once("error", reject);
     httpServer.listen(port, "127.0.0.1", () => resolve({
       db, io, databasePath, port: httpServer.address().port,
-      close: () => new Promise((done) => {
+      close: async () => {
         clearInterval(syncTimer);
-        io.close();
+        await new Promise((done) => io.close(done));
         if (db.open) db.close();
-        done();
-      })
+      }
     }));
   });
 }
