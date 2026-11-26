@@ -30,7 +30,7 @@ function createSupabaseRestClient() {
 
   return {
     configured: Boolean(key),
-    async getOrders() { return await request("/rest/v1/orders?select=*,order_items(*)&order=created_at.desc&limit=300"); },
+    async getOrders() { return await request("/rest/v1/orders?select=*,order_items(*),payments(*)&order=created_at.desc&limit=300"); },
     async getRecord(table,id) {
       const rows=await request("/rest/v1/"+encodeURIComponent(table)+"?select=*&id=eq."+encodeURIComponent(id)+"&limit=1");
       return Array.isArray(rows)?rows[0]||null:null;
