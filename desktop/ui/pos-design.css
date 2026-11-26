@@ -1834,3 +1834,30 @@
   color:#8b612e !important;
 }
 
+
+/* Channel workspaces: independent from the dining-room screen. */
+.pos-channel-workspace{display:grid;gap:16px;margin-top:18px;padding:18px;background:#fff;border:1px solid #e8e2d8;border-radius:14px;direction:rtl}
+.pos-channel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pos-channel-heading h2{margin:0}
+.pos-channel-heading button{border:1px solid #ddd;border-radius:9px;background:#f8f6f2;padding:10px 16px}
+.pos-channel-workspace-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;direction:ltr;align-items:start}
+.pos-channel-menu,.pos-channel-cart{direction:rtl;min-width:0;padding:16px;border:1px solid #e8e2d8;border-radius:12px;background:#fff}
+.pos-channel-menu h3,.pos-channel-cart h3{margin:0 0 14px}
+.pos-channel-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.pos-channel-product{display:grid;gap:7px;text-align:right;padding:12px;border:1px solid #e8e2d8;border-radius:10px;background:#faf9f6;min-height:88px}
+.pos-channel-product strong{color:#6b512f}
+.pos-channel-product small{color:#777}
+.pos-channel-customer-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.pos-channel-customer-fields label{display:grid;gap:5px;font-size:13px;font-weight:700}
+.pos-channel-customer-fields label:last-child{grid-column:1/-1}
+.pos-channel-customer-fields input{width:100%;min-width:0;padding:10px;border:1px solid #ddd;border-radius:8px}
+.pos-channel-cart-table-wrap,.pos-channel-table-wrap{width:100%;overflow:auto}
+.pos-channel-cart-table,.pos-channel-orders-table{width:100%;border-collapse:collapse;white-space:nowrap}
+.pos-channel-cart-table th,.pos-channel-cart-table td,.pos-channel-orders-table th,.pos-channel-orders-table td{padding:11px 9px;border-bottom:1px solid #eee;text-align:right}
+.pos-channel-cart-table th,.pos-channel-orders-table th{background:#f7f4ee;font-weight:750}
+.pos-channel-cart-table td button{border:0;border-radius:7px;background:#fff0ed;color:#a33;padding:4px 10px}
+.pos-channel-cart-total{display:flex;justify-content:space-between;align-items:center;margin:15px 0;padding:13px;background:#f7f4ee;border-radius:9px}
+.pos-channel-submit{width:100%;padding:13px;border:0;border-radius:9px;background:#292622;color:#fff;font-weight:750}
+.pos-channel-empty{text-align:center;color:#888;padding:18px!important}
+@media(max-width:900px){.pos-channel-workspace-grid{grid-template-columns:minmax(0,1fr)}.pos-channel-products{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.pos-channel-workspace{padding:10px}.pos-channel-products,.pos-channel-customer-fields{grid-template-columns:minmax(0,1fr)}.pos-channel-customer-fields label:last-child{grid-column:auto}.pos-channel-heading{align-items:flex-start;flex-direction:column}}
