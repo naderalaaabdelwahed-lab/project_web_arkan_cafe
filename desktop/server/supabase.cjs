@@ -30,6 +30,7 @@ function createSupabaseRestClient() {
 
   return {
     configured: Boolean(key),
+    async getOrders() { return await request("/rest/v1/orders?select=*,order_items(*)&order=created_at.desc&limit=300"); },
     async getAdminMenu() {
       const [categories,products]=await Promise.all([request('/rest/v1/categories?select=id,name,is_active,department,display_order&order=display_order.asc'),request('/rest/v1/products?select=id,category_id,name,description,price,is_available,preparation_station,sku,cost_price&order=name.asc')]);
       return {categories,products};
