@@ -17,6 +17,12 @@ npm install
 npm start
 ```
 
+Run the local API integration tests:
+
+```powershell
+npm test
+```
+
 Create a Windows installer:
 
 ```powershell
@@ -28,12 +34,15 @@ The app starts an embedded local Express service on `127.0.0.1:4317` and stores 
 ## Current desktop modules
 
 - Electron desktop shell with context isolation and Node integration disabled
+- Local API protected by a random per-launch token shared only with isolated Electron windows
 - Local Express API and Socket.IO event server
 - SQLite database and initial local schema
 - Redesigned Arabic cashier screen inspired by the existing ARKAN POS layout: category chips, searchable product cards, order cart, dine-in/takeaway/delivery, customer fields and payment method
 - First-run demo menu with TEST-labelled pastries, pasta, main dishes and drinks; these are sample-only prices and are replaced by a later menu import
-- Local order creation in a single SQLite transaction
-- Retryable order outbox: orders and line items synchronize to Supabase after sign-in / connectivity recovery
+- Local order creation, editing, item replacement, discounts, table transfers and full-payment recording in SQLite transactions
+- Separate kitchen order status and payment status; paid orders cannot be edited or charged twice
+- Retryable outbox for order creation/changes, payments and admin records after sign-in / connectivity recovery
+- Cached restaurant tables and reservations for floor display while offline
 - Supabase Auth sign-in for the administration workspace
 - Cloud-backed administration for menu categories/products, reservations, business days, cash transactions, suppliers, inventory items/units/movements/purchases/recipes, printers, preparation screens, employees, shifts, attendance, leave balances and payroll runs
 - Cloud-backed sales list and kitchen status updates, with SQLite cache for offline access
@@ -72,6 +81,8 @@ Prices in the import payload are Egyptian pounds; they are stored locally as int
 - `PUT /api/menu/import`
 - `GET /api/orders`
 - `POST /api/orders`
+- `PATCH /api/orders/:id` (edit items, discount and table)
+- `POST /api/orders/:id/pay` (record full payment)
 - `PATCH /api/orders/:id/status`
 - `GET /api/admin/summary`
 - `GET /api/admin/menu`
@@ -100,3 +111,6 @@ The desktop app binds its API to `127.0.0.1` only. A separate internal/LAN serve
 The local service currently binds to loopback only. The kitchen window works on the POS computer. LAN access will be enabled after device pairing and request authentication are implemented, so unauthenticated order APIs are not exposed on the restaurant network.
 
 The existing public website and production Supabase project are not changed by this desktop app. All work remains on the `offline-desktop` branch.
+
+
+Installed Windows configuration: place the runtime environment file at `%APPDATA%\\egsoft-desktop\\.env`. The installer excludes `.env` files to avoid bundling credentials; use only the Supabase URL and publishable key, never a service-role key.

@@ -30,13 +30,17 @@ function createSupabaseRestClient() {
 
   return {
     configured: Boolean(key),
-    async getOrders() { return await request("/rest/v1/orders?select=*,order_items(*)&order=created_at.desc&limit=300"); },
+    async getOrders() { return await request("/rest/v1/orders?select=*,order_items(*),payments(*)&order=created_at.desc&limit=300"); },
     async getRecord(table,id) {
       const rows=await request("/rest/v1/"+encodeURIComponent(table)+"?select=*&id=eq."+encodeURIComponent(id)+"&limit=1");
       return Array.isArray(rows)?rows[0]||null:null;
     },
     async getOrderItems(orderId) {
       return await request("/rest/v1/order_items?select=id&order_id=eq."+encodeURIComponent(orderId));
+    },
+    async deleteOrderItems(orderId) {
+      await request("/rest/v1/order_items?order_id=eq."+encodeURIComponent(orderId), { method: "DELETE" });
+      return { ok: true };
     },
     async insertMany(table, rows) {
       return await request("/rest/v1/"+encodeURIComponent(table),{method:"POST",headers:{"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify(rows)});

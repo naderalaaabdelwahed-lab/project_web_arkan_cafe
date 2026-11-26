@@ -1,36 +1,31 @@
-// Screen-only demonstration. All state stays in memory; no API/database calls.
+// Floor data and products are loaded from the local SQLite-backed API.
 const tables=[
  ...Array.from({length:12},(_,i)=>({area:"indoor",number:i+1})),
  ...Array.from({length:6},(_,i)=>({area:"outdoor",number:i+1}))
 ];
-const orders=[
- {id:1042,area:"indoor",number:2,total:285,printed:false,items:[
-  {id:1,name:"فطير مشلتت بالجبنة",qty:1,price:85},
-  {id:2,name:"مكرونة بشاميل",qty:2,price:95},
-  {id:3,name:"شاي",qty:1,price:10}
- ]},
- {id:1043,area:"indoor",number:5,total:340,printed:true,items:[
-  {id:4,name:"كفتة مشوية",qty:2,price:160},
-  {id:5,name:"كانز",qty:1,price:20}
- ]},
- {id:1044,area:"outdoor",number:1,total:145,printed:false,items:[
-  {id:6,name:"وجبة فراخ",qty:1,price:145}
- ]}
-];
-const reservations=[{area:"indoor",number:3},{area:"outdoor",number:4}];
-let products=[{name:"فطير سادة",price:55},{name:"فطير جبنة",price:85},{name:"مكرونة بشاميل",price:95},{name:"كفتة مشوية",price:160},{name:"شاي",price:10},{name:"عصير مانجو",price:35}];
+const orders=[];
+const reservations=[];
+let products=[];
+let menuLoaded=false;
 let selectedKey="";
 const $=id=>document.getElementById(id);
+const apiFetch=(url,options={})=>{
+ const headers={...(options.headers||{})};
+ const token=window.arkanDesktop?.apiToken;
+ if(token)headers["X-Egsoft-Api-Token"]=token;
+ return globalThis["fetch"](url,{...options,headers});
+};
 const key=t=>t.area+":"+t.number;
 const fmt=n=>Number(n||0).toLocaleString("ar-EG",{maximumFractionDigits:2});
-const activeOrders=()=>orders.filter(o=>!o.closed);
+const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const activeOrders=()=>orders.filter(o=>!o.closed&&o.status!=="cancelled"&&o.payment_status!=="paid");
 const orderFor=t=>orders.find(o=>!o.closed&&o.area===t.area&&o.number===t.number);
 const selectedTable=()=>tables.find(t=>key(t)===selectedKey);
 const selectedOrder=()=>{const t=selectedTable();return t?orderFor(t):null};
 const isReserved=t=>reservations.some(r=>r.area===t.area&&r.number===t.number);
 const total=()=>activeOrders().reduce((s,o)=>s+o.total,0);
 function updateActionState(){
- const has=!!selectedOrder(),canAdd=!!selectedTable();
+ const has=!!selectedOrder(),canAdd=!!selectedTable()&&menuLoaded&&products.length>0;
  document.querySelectorAll("[data-action]").forEach(b=>b.disabled=b.dataset.action==="add"?!canAdd:!has);
 }
 function render(){
@@ -57,62 +52,109 @@ function renderPreview(){
  if(!o){box.innerHTML=`<h3>الطاولة ${t.number} — ${area}</h3><p>الطاولة ${isReserved(t)?"محجوزة":"متاحة"} — لا يوجد طلب حالي.</p>`;return;}
  box.innerHTML=`<h3>أوردر الطاولة ${o.number} <span class="status-pill">EGS-${o.id}</span></h3>
  <div class="floor-preview-wrap"><table><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
- <tbody>${o.items.map(i=>`<tr><td>${i.name}</td><td>${fmt(i.qty)}</td><td>${fmt(i.price)} ج.م</td><td>${fmt(i.qty*i.price)} ج.م</td></tr>`).join("")}</tbody>
+ <tbody>${o.items.map(i=>`<tr><td>${esc(i.name)}</td><td>${fmt(i.qty)}</td><td>${fmt(i.price)} ج.م</td><td>${fmt(i.qty*i.price)} ج.م</td></tr>`).join("")}</tbody>
  <tfoot><tr><th colspan="3">الإجمالي</th><th>${fmt(o.total)} ج.م</th></tr></tfoot></table></div>`;
 }
 function refresh(){render();}
 function recalc(o){o.total=o.items.reduce((s,i)=>s+i.qty*i.price,0);o.printed=false;}
-function targetTable(exclude){
+function targetTable(exclude,allowOccupied=false){
  const value=prompt("اكتب الطاولة المستهدفة بالشكل: داخلية 4 أو خارجية 2");
  if(!value)return null;
  const m=value.trim().match(/^(داخلية|خارجية)\s*(\d+)$/);
  if(!m){alert("اكتبها مثل: داخلية 4 أو خارجية 2");return null;}
  const t={area:m[1]==="داخلية"?"indoor":"outdoor",number:Number(m[2])};
- if(!tables.some(x=>key(x)===key(t))||orderFor(t)||isReserved(t)||key(t)===exclude){alert("الطاولة غير متاحة.");return null;}
+ if(!tables.some(x=>key(x)===key(t))||(!allowOccupied&&orderFor(t))||isReserved(t)||key(t)===exclude){alert("الطاولة غير متاحة.");return null;}
  return t;
 }
+async function saveOrder(orderId,changes,refreshAfter=true){
+ const response=await apiFetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(orderId),{
+  method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(changes)
+ });
+ const result=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(result.error||"تعذر حفظ تعديل الطلب.");
+ if(refreshAfter)await loadConnectedFloorData();
+ return result;
+}
+const orderItemPayload=order=>(order.items||[]).map(item=>({
+ menu_item_id:item.menu_item_id,quantity:Number(item.qty),notes:item.notes||""
+}));
 async function runAction(action){
  const o=selectedOrder(),t=selectedTable();if(!t)return;
- if(action==="add"&&!o){
-  const choices=products.map((p,i)=>(i+1)+") "+p.name+" — "+p.price+" ج.م").join("\n");
-  const raw=prompt("اختار أول صنف للطلب الجديد:\n"+choices),p=products[Number(raw)-1];
-  if(!p||!p.id||!raw||!Number.isInteger(Number(raw))){alert("اختيار المنتج غير صحيح أو المنيو لم يتم تحميله.");return;}
-  try{
-   const response=await fetch("http://127.0.0.1:4317/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order_type:"dine_in",table_number:t.number,table_area:t.area,items:[{menu_item_id:p.id,quantity:1}]})});
+ try{
+  if(action==="add"&&!o){
+   const choices=products.map((p,i)=>(i+1)+") "+p.name+" — "+p.price+" ج.م").join("\n");
+   const raw=prompt("اختار أول صنف للطلب الجديد:\n"+choices),p=products[Number(raw)-1];
+   if(!p||!p.id||!raw||!Number.isInteger(Number(raw))){alert("اختيار المنتج غير صحيح أو المنيو لم يتم تحميله.");return;}
+   const response=await apiFetch("http://127.0.0.1:4317/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order_type:"dine_in",table_id:t.id||null,table_number:t.number,table_area:t.area,items:[{menu_item_id:p.id,quantity:1}]})});
    const result=await response.json();if(!response.ok)throw new Error(result.error||"تعذر إنشاء الطلب.");
-   await loadConnectedFloorData();select(key(t));
-  }catch(error){alert(error.message);}
-  return;
- }
- if(!o)return;
- if(action==="add"){
-  const choices=products.map((p,i)=>`${i+1}) ${p.name} — ${p.price} ج.م`).join("\n");
-  const raw=prompt("اختار رقم المنتج لإضافته:\n"+choices);const p=products[Number(raw)-1];
-  if(!p)return;if(!raw||!Number.isInteger(Number(raw))){alert("اختيار غير صحيح");return;}
-  const existing=o.items.find(i=>i.name===p.name);if(existing)existing.qty++;else o.items.push({id:Date.now(),name:p.name,qty:1,price:p.price});recalc(o);
- }else if(action==="remove-item"){
-  const choices=o.items.map((i,n)=>`${n+1}) ${i.name} (×${i.qty})`).join("\n");
-  const n=Number(prompt("اكتب رقم الصنف المطلوب حذفه:\n"+choices));if(!Number.isInteger(n)||n<1||n>o.items.length)return;
-  const item=o.items[n-1];if(item.qty>1)item.qty--;else o.items.splice(n-1,1);recalc(o);
- }else if(action==="transfer"||action==="merge"){
-  const target=targetTable(key(t));if(!target)return;
-  if(action==="transfer"){o.area=target.area;o.number=target.number;}
-  else{const destination=orderFor(target);if(!destination)return;o.items.forEach(i=>{const found=destination.items.find(x=>x.name===i.name&&x.price===i.price);if(found)found.qty+=i.qty;else destination.items.push({...i,id:Date.now()+Math.random()});});recalc(destination);o.closed=true;}
- }else if(action==="transfer-item"){
-  if(o.items.length===0)return;const choices=o.items.map((i,n)=>`${n+1}) ${i.name} (×${i.qty})`).join("\n");
-  const n=Number(prompt("اكتب رقم الصنف المطلوب نقله:\n"+choices));if(!Number.isInteger(n)||n<1||n>o.items.length)return;
-  const target=targetTable(key(t));if(!target)return;const item=o.items[n-1];const moved={...item,qty:1,id:Date.now()};item.qty--;if(item.qty<=0)o.items.splice(n-1,1);
-  const newOrder={id:Math.max(1044,...orders.map(x=>x.id))+1,area:target.area,number:target.number,total:0,printed:false,items:[moved]};recalc(o);recalc(newOrder);orders.push(newOrder);
- }else if(action==="cash"||action==="finish"){
-  if(confirm("تأكيد إنهاء الأوردر التجريبي؟"))o.closed=true;
- }else if(action==="discount"){
-  const n=Number(prompt("قيمة الخصم بالجنيه:", "10"));if(!Number.isFinite(n)||n<=0)return;o.total=Math.max(0,o.total-n);
- }else if(action==="empty"){
-  if(confirm("تأكيد إفراغ الطاولة التجريبية؟")){o.closed=true;}
- }else if(action==="print"){
-  o.printed=true;alert("تم تغيير حالة الطاولة إلى تم طباعة الفاتورة (تجريبي).");
- }
- render();
+   await loadConnectedFloorData();select(key(t));return;
+  }
+  if(!o)return;
+  if(action==="add"){
+   const choices=products.map((p,i)=>(i+1)+") "+p.name+" — "+p.price+" ج.م").join("\n");
+   const raw=prompt("اختار رقم المنتج لإضافته:\n"+choices),p=products[Number(raw)-1];
+   if(!p||!raw||!Number.isInteger(Number(raw)))return;
+   const items=orderItemPayload(o),existing=items.find(i=>String(i.menu_item_id)===String(p.id));
+   if(existing)existing.quantity++;else items.push({menu_item_id:p.id,quantity:1,notes:""});
+   await saveOrder(o.id,{items});
+  }else if(action==="remove-item"){
+   const choices=o.items.map((i,n)=>(n+1)+") "+i.name+" (×"+i.qty+")").join("\n");
+   const n=Number(prompt("اكتب رقم الصنف المطلوب تقليل كميته أو حذفه:\n"+choices));
+   if(!Number.isInteger(n)||n<1||n>o.items.length)return;
+   const items=orderItemPayload(o),item=items[n-1];
+   if(item.quantity>1)item.quantity--;else items.splice(n-1,1);
+   if(!items.length){alert("لا يمكن ترك الطلب بدون أصناف. استخدم إفراغ الطاولة لإلغاء الطلب.");return;}
+   await saveOrder(o.id,{items});
+  }else if(action==="transfer"||action==="merge"){
+   const target=targetTable(key(t),action==="merge");if(!target)return;
+   if(action==="transfer"){
+    await saveOrder(o.id,{table_id:target.id||null,table_number:target.number,table_area:target.area},false);
+    selectedKey=key(target);await loadConnectedFloorData();select(key(target));
+   }else{
+    const destination=orderFor(target);if(!destination){alert("الطاولة المستهدفة ليس عليها طلب.");return;}
+    const items=orderItemPayload(destination);
+    for(const item of orderItemPayload(o)){
+     const found=items.find(x=>String(x.menu_item_id)===String(item.menu_item_id));
+     if(found)found.quantity+=item.quantity;else items.push(item);
+    }
+    await saveOrder(destination.id,{items},false);
+    await saveOrder(o.id,{status:"cancelled"},false);
+    await loadConnectedFloorData();select(key(target));
+   }
+  }else if(action==="transfer-item"){
+   if(!o.items.length)return;
+   const choices=o.items.map((i,n)=>(n+1)+") "+i.name+" (×"+i.qty+")").join("\n");
+   const n=Number(prompt("اكتب رقم الصنف المطلوب نقل وحدة منه:\n"+choices));
+   if(!Number.isInteger(n)||n<1||n>o.items.length)return;
+   const target=targetTable(key(t));if(!target)return;
+   const sourceItems=orderItemPayload(o),moved=sourceItems[n-1];
+   if(!moved.menu_item_id){alert("لا يمكن نقل هذا الصنف لأن معرف المنتج غير متوفر.");return;}
+   const created=await apiFetch("http://127.0.0.1:4317/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({order_type:"dine_in",table_id:target.id||null,table_number:target.number,table_area:target.area,items:[{menu_item_id:moved.menu_item_id,quantity:1,notes:moved.notes}]})});
+   const createdData=await created.json();if(!created.ok)throw new Error(createdData.error||"تعذر إنشاء الطلب في الطاولة المستهدفة.");
+   if(moved.quantity>1)moved.quantity--;else sourceItems.splice(n-1,1);
+   if(sourceItems.length)await saveOrder(o.id,{items:sourceItems},false);
+   else await saveOrder(o.id,{status:"cancelled"},false);
+   await loadConnectedFloorData();select(key(target));
+  }else if(action==="cash"||action==="finish"){
+   if(!confirm("تأكيد تحصيل كامل قيمة الطلب؟"))return;
+   const paymentMethod=action==="cash"?"cash":(prompt("طريقة الدفع: cash أو card أو wallet",o.payment_method||"cash")||"");
+   if(!["cash","card","wallet"].includes(paymentMethod)){alert("طريقة الدفع غير صحيحة.");return;}
+   const response=await apiFetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(o.id)+"/pay",{
+    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method:paymentMethod})
+   });
+   const result=await response.json().catch(()=>({}));
+   if(!response.ok)throw new Error(result.error||"تعذر تسجيل الدفع.");
+   await loadConnectedFloorData();
+  }else if(action==="discount"){
+   const n=Number(prompt("قيمة الخصم بالجنيه:",String(Number(o.discount_minor||0)/100)));
+   if(!Number.isFinite(n)||n<0)return;
+   await saveOrder(o.id,{discount_minor:Math.round(n*100)});
+  }else if(action==="empty"){
+   if(confirm("تأكيد إلغاء الطلب وإخلاء الطاولة؟"))await saveOrder(o.id,{status:"cancelled"});
+  }else if(action==="print"){
+   window.print();
+  }
+ }catch(error){alert(error.message);}
 }
 document.querySelectorAll("[data-action]").forEach(b=>b.addEventListener("click",()=>runAction(b.dataset.action)));
 $("side-refresh").addEventListener("click",refresh);
@@ -128,11 +170,11 @@ function renderChannel(tab){
  if(!panel){panel=document.createElement("section");panel.id="channel-demo-panel";panel.className="pos-channel-panel";dashboard.after(panel);}
  let list=tab==="تيك أواي"?channelOrders.filter(o=>o.channel==="takeaway"):tab==="دليفري"?channelOrders.filter(o=>o.channel==="delivery"):channelOrders;
  panel.innerHTML=`<h2>${tab==="تيك أواي"?"طلبات التيك أواي":tab==="دليفري"?"طلبات الدليفري":"كل الطلبات"}</h2>
- <div class="pos-channel-grid">${list.map(o=>`<article class="pos-channel-card"><h3>${o.customer}</h3><small>رقم الطلب: ${o.id} · الحالة: ${o.status||"pending"}</small><ul>${o.items.map(i=>`<li>${i}</li>`).join("")}</ul><strong>${fmt(o.total)} ج.م</strong><button data-channel-done="${o.id}" ${["delivered","cancelled"].includes(o.status)?"disabled":""}>إنهاء الطلب</button></article>`).join("")||"<p>لا توجد طلبات حاليًا.</p>"}</div>`;
+ <div class="pos-channel-grid">${list.map(o=>`<article class="pos-channel-card"><h3>${esc(o.customer)}</h3><small>رقم الطلب: ${esc(o.id)} · الحالة: ${esc(o.status||"pending")}</small><ul>${o.items.map(i=>`<li>${esc(i)}</li>`).join("")}</ul><strong>${fmt(o.total)} ج.م</strong><button data-channel-done="${o.id}" ${o.payment_status==="paid"||o.status==="cancelled"?"disabled":""}>إنهاء الطلب</button></article>`).join("")||"<p>لا توجد طلبات حاليًا.</p>"}</div>`;
  panel.querySelectorAll("[data-channel-done]").forEach(b=>b.addEventListener("click",async()=>{
   b.disabled=true;b.textContent="جاري التحديث...";
   try{
-   const response=await fetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(b.dataset.channelDone)+"/status",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:"delivered"})});
+   const response=await apiFetch("http://127.0.0.1:4317/api/orders/"+encodeURIComponent(b.dataset.channelDone)+"/pay",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({payment_method:"cash"})});
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(result.error||"تعذر تحديث حالة الطلب.");
    await loadConnectedFloorData();renderChannel(tab);
@@ -148,35 +190,35 @@ document.querySelectorAll(".tabs .tab").forEach(tab=>tab.addEventListener("click
 // cache from Supabase when cloud access and read policies are available.
 async function loadConnectedMenu(){
  try{
-  const response=await fetch("http://127.0.0.1:4317/api/menu");
+  const response=await apiFetch("http://127.0.0.1:4317/api/menu");
   if(!response.ok)throw new Error("Menu API returned "+response.status);
   const data=await response.json();
-  if(Array.isArray(data.items)&&data.items.length){
-   products=data.items.map(item=>({id:item.id,name:item.name,price:Number(item.price_minor)/100}));
-  }
+  products=Array.isArray(data.items)?data.items.map(item=>({id:item.id,name:item.name,price:Number(item.price_minor)/100})): [];
+  menuLoaded=products.length>0;
+  render();
  }catch(error){
   console.error("Could not load menu:",error);
  }
 }
-loadConnectedMenu();
+loadConnectedMenu().then(()=>loadConnectedFloorData());
 
 async function loadConnectedFloorData(){
  try{
   const [tableResponse,orderResponse,reservationResponse]=await Promise.all([
-   fetch("http://127.0.0.1:4317/api/tables"),
-   fetch("http://127.0.0.1:4317/api/orders"),
-   fetch("http://127.0.0.1:4317/api/reservations")
+   apiFetch("http://127.0.0.1:4317/api/tables"),
+   apiFetch("http://127.0.0.1:4317/api/orders"),
+   apiFetch("http://127.0.0.1:4317/api/reservations")
   ]);
   if(!tableResponse.ok||!orderResponse.ok||!reservationResponse.ok)return;
   const remoteTables=await tableResponse.json(),remoteOrders=await orderResponse.json(),remoteReservations=await reservationResponse.json();
   if(Array.isArray(remoteTables)&&remoteTables.length){
-   tables.splice(0,tables.length,...remoteTables.filter(t=>t.is_active!==false).map(t=>({area:t.area||"indoor",number:Number(t.table_number),capacity:t.capacity,status:t.status})));
+   tables.splice(0,tables.length,...remoteTables.filter(t=>t.is_active!==false).map(t=>({id:t.id,area:t.area||"indoor",number:Number(t.table_number),capacity:t.capacity,status:t.status})));
   }
   if(Array.isArray(remoteOrders)){
    const active=remoteOrders.filter(o=>!["cancelled","canceled"].includes(String(o.status||"").toLowerCase()));
    const dineIn=active.filter(o=>o.order_type==="dine_in"&&o.table_number!=null);
-   orders.splice(0,orders.length,...dineIn.map(o=>({id:o.id,area:o.table_area||"indoor",number:Number(o.table_number),total:Number(o.total_minor||0)/100,printed:["ready","delivered"].includes(o.status),closed:false,status:o.status,items:(o.items||[]).map(i=>({id:i.id,name:i.item_name_snapshot,qty:Number(i.quantity),price:Number(i.unit_price_minor||0)/100}))})));
-   channelOrders.splice(0,channelOrders.length,...active.map(o=>({id:o.id,channel:o.order_type,customer:o.customer_name||({takeaway:"طلب تيك أواي",delivery:"طلب دليفري",dine_in:"طلب صالة"}[o.order_type]||"طلب"),total:Number(o.total_minor||0)/100,status:o.status,items:(o.items||[]).map(i=>i.item_name_snapshot||"صنف")})));
+   orders.splice(0,orders.length,...dineIn.map(o=>({id:o.id,area:o.table_area||"indoor",number:Number(o.table_number),total:Number(o.total_minor||0)/100,discount_minor:Number(o.discount_minor||0),payment_method:o.payment_method||"cash",payment_status:o.payment_status||"unpaid",paid_at:o.paid_at||null,printed:["ready","delivered"].includes(o.status),closed:false,status:o.status,items:(o.items||[]).map(i=>({id:i.id,menu_item_id:i.menu_item_id,name:i.item_name_snapshot,qty:Number(i.quantity),price:Number(i.unit_price_minor||0)/100,notes:i.notes||""}))})));
+   channelOrders.splice(0,channelOrders.length,...active.map(o=>({id:o.id,channel:o.order_type,customer:o.customer_name||({takeaway:"طلب تيك أواي",delivery:"طلب دليفري",dine_in:"طلب صالة"}[o.order_type]||"طلب"),total:Number(o.total_minor||0)/100,status:o.status,payment_status:o.payment_status||"unpaid",items:(o.items||[]).map(i=>i.item_name_snapshot||"صنف")})));
   }
   if(Array.isArray(remoteReservations)){
    reservations.splice(0,reservations.length,...remoteReservations.filter(r=>["pending","confirmed"].includes(r.status)).map(r=>({area:r.area||"indoor",number:Number(r.table_number)})));
@@ -206,7 +248,7 @@ document.getElementById("back-to-pos").addEventListener("click",()=>{
  const workspace=document.getElementById("admin-workspace"); if(!workspace)return;
  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
  const money=n=>Number(n||0).toLocaleString("ar-EG",{maximumFractionDigits:2})+" ج.م";
- async function api(path,opt={}){const r=await fetch("http://127.0.0.1:4317"+path,{headers:{"Content-Type":"application/json"},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"تعذر الاتصال بالخادم");return d;}
+ async function api(path,opt={}){const r=await apiFetch("http://127.0.0.1:4317"+path,{headers:{"Content-Type":"application/json"},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"تعذر الاتصال بالخادم");return d;}
  const modules={
  tables:{title:"إعدادات الطاولات",db:"restaurant_tables",fields:[["table_number","رقم الطاولة"],["capacity","السعة"],["area","الصالة (indoor/outdoor)"],["status","الحالة"],["display_order","ترتيب العرض"],["is_active","مفعلة"]]},
  "recipe-items":{title:"مكونات الوصفات",db:"inventory_recipe_items",fields:[["recipe_id","معرف الوصفة"],["inventory_item_id","معرف الخامة"],["quantity","الكمية"],["unit_id","معرف الوحدة"],["notes","ملاحظات"]]},

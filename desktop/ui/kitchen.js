@@ -1,4 +1,10 @@
 const API = "http://127.0.0.1:4317/api";
+const apiFetch=(url,options={})=>{
+ const headers={...(options.headers||{})};
+ const token=window.arkanDesktop?.apiToken;
+ if(token)headers["X-Egsoft-Api-Token"]=token;
+ return globalThis["fetch"](url,{...options,headers});
+};
 const activeStatuses = new Set(["pending", "preparing", "ready"]);
 const labels = {
   pending: "طلب جديد",
@@ -14,7 +20,7 @@ const money = (minor) => (Number(minor || 0) / 100).toFixed(2) + " ج.م";
 
 async function updateStatus(id, status) {
   try {
-    const response = await fetch(API + "/orders/" + encodeURIComponent(id) + "/status", {
+    const response = await apiFetch(API + "/orders/" + encodeURIComponent(id) + "/status", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status })
@@ -52,7 +58,7 @@ function render(orders) {
 
 async function loadOrders() {
   try {
-    const response = await fetch(API + "/orders");
+    const response = await apiFetch(API + "/orders");
     if (!response.ok) throw new Error("تعذر تحميل الطلبات");
     render(await response.json());
     document.getElementById("status").textContent =

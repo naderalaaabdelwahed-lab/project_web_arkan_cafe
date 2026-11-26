@@ -5,17 +5,31 @@ const { randomUUID } = require("node:crypto");
 const { openDatabase } = require("./database.cjs");
 const { createSupabaseRestClient } = require("./supabase.cjs");
 
-function startLocalServer({ userDataPath, port = 4317 }) {
+function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
   const { db, databasePath } = openDatabase(userDataPath);
   const app = express();
   const supabase = createSupabaseRestClient();
 
   app.disable("x-powered-by");
   app.use((req,res,next) => {
-    res.setHeader("Access-Control-Allow-Origin","*");
+    const origin = req.headers.origin;
+    // The renderer is loaded from file:// (serialized by Chromium as "null").
+    // Do not expose the loopback POS API to arbitrary websites.
+    const allowedOrigins = new Set(["null","file://","http://127.0.0.1","http://localhost"]);
+    if (origin && !allowedOrigins.has(origin)) {
+      return res.status(403).json({ error: "Origin is not allowed." });
+    }
+    if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods","GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers","Content-Type");
+    res.setHeader("Access-Control-Allow-Headers","Content-Type, X-Egsoft-Api-Token");
     if(req.method==="OPTIONS") return res.sendStatus(204);
+    next();
+  });
+  app.use("/api", (req,res,next) => {
+    if(apiToken && req.headers["x-egsoft-api-token"] !== apiToken) {
+      return res.status(401).json({error:"Local application token is missing or invalid."});
+    }
     next();
   });
   app.use(express.json({ limit: "1mb" }));
@@ -114,7 +128,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     for (const item of items) {
       const price = Number(item?.price);
       if (!item || item.id == null || !String(item.name || "").trim() ||
-          !Number.isFinite(price) || price < 0 ||
+          !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(Math.round(price * 100)) ||
           !categoryIds.has(String(item.category_id))) {
         return res.status(400).json({ error: "Invalid menu item or category reference." });
       }
@@ -151,6 +165,14 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   });
 
 
+
+  // Protect every administration endpoint before registering any /api/admin route.
+  // Previously this guard was registered after summary and CRUD routes, leaving
+  // sensitive business data and records publicly readable on the local API.
+  app.use("/api/admin", (req,res,next) => {
+    if(!supabase.getSession().authenticated) return res.status(401).json({error:"سجل الدخول أولاً."});
+    next();
+  });
 
   const adminModules = new Set(["reservations","business_days","cash_transactions","printers","preparation_screens","inventory_units","inventory_suppliers","inventory_items","inventory_movements","inventory_recipes","inventory_purchases","hr_employees","hr_shifts","hr_attendance","hr_leave_balances","hr_payroll_runs","hr_payroll_adjustments","hr_payroll_items","hr_employee_shift_assignments","inventory_purchase_items","inventory_recipe_items","restaurant_tables","preparation_screen_categories","audit_logs"]);
   app.get("/api/admin/records/:module", async (req,res) => {
@@ -253,10 +275,6 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     }
     res.json({categories,products,orders,sales_minor:sales,cloud:supabase.configured});
   });
-  app.use("/api/admin", (req,res,next) => {
-    if(!supabase.getSession().authenticated) return res.status(401).json({error:"سجل الدخول أولاً."});
-    next();
-  });
 
   app.get("/api/admin/menu", async (_req,res) => {
     if(supabase.getSession().authenticated) {
@@ -293,7 +311,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   app.post("/api/admin/products", async (req,res) => {
     const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price);
     const isAvailable=req.body?.is_available!==false;
-    if(!name||!category||!Number.isFinite(price)||price<0)return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
+    if(!name||!category||!Number.isFinite(price)||price<0||!Number.isSafeInteger(Math.round(price*100)))return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
     let id=randomUUID();
     try {
       if(supabase.getSession().authenticated) { const saved=await supabase.insertRecord("products",{category_id:category,name,description:String(req.body?.description||""),price,is_available:isAvailable}); id=saved.id; }
@@ -303,7 +321,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   });
   app.patch("/api/admin/products/:id", async (req,res) => {
     const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price);
-    if(!name||!category||!Number.isFinite(price)||price<0)return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
+    if(!name||!category||!Number.isFinite(price)||price<0||!Number.isSafeInteger(Math.round(price*100)))return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
     try {
       if(supabase.getSession().authenticated) await supabase.updateRecord("products",req.params.id,{name,category_id:category,description:String(req.body?.description||"").slice(0,500),price,is_available:req.body?.is_available!==false});
       const r=db.prepare("UPDATE menu_items SET name=?,category_id=?,description=?,price_minor=?,is_available=? WHERE id=?").run(name,category,String(req.body?.description||"").slice(0,500),Math.round(price*100),req.body?.is_available===false?0:1,req.params.id);
@@ -316,30 +334,69 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     res.json(db.prepare("SELECT id,order_number,order_type,status,total_minor,created_at,sync_status FROM orders ORDER BY created_at DESC LIMIT 300").all());
   });
 
+  function cacheAdminRecords(module, rows) {
+    const now=new Date().toISOString();
+    const replace=db.transaction(()=>{
+      db.prepare("DELETE FROM admin_records WHERE module=?").run(module);
+      const add=db.prepare("INSERT INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)");
+      for(const row of rows||[]) {
+        const {id,created_at,updated_at,...data}=row;
+        if(id==null) continue;
+        add.run(module,String(id),JSON.stringify(data),created_at||now,updated_at||now);
+      }
+    });
+    replace();
+  }
+  function getCachedAdminRecords(module) {
+    return db.prepare("SELECT id,data_json,created_at,updated_at FROM admin_records WHERE module=? ORDER BY updated_at DESC")
+      .all(module).map(row=>({id:row.id,...JSON.parse(row.data_json),created_at:row.created_at,updated_at:row.updated_at}));
+  }
+
   app.get("/api/tables", async (_req,res) => {
-    if(!supabase.getSession().authenticated) return res.json([]);
-    try { return res.json(await supabase.listRecords("restaurant_tables")); }
-    catch(error) { return res.status(error.status||503).json({error:error.message}); }
+    if(supabase.getSession().authenticated) {
+      try {
+        const rows=await supabase.listRecords("restaurant_tables");
+        cacheAdminRecords("restaurant_tables",rows||[]);
+        return res.json(rows||[]);
+      } catch(error) {
+        if(error.status===401||error.status===403) return res.status(error.status).json({error:error.message});
+      }
+    }
+    return res.json(getCachedAdminRecords("restaurant_tables"));
   });
   app.get("/api/reservations", async (_req,res) => {
-    if(!supabase.getSession().authenticated) return res.json([]);
-    try {
-      const [reservations,tables]=await Promise.all([supabase.listRecords("reservations"),supabase.listRecords("restaurant_tables")]);
-      const tableMap=new Map((tables||[]).map(t=>[String(t.id),t]));
-      return res.json((reservations||[]).map(r=>{const table=tableMap.get(String(r.table_id));return {...r,area:table?.area||"indoor",table_number:r.table_number||table?.table_number||null};}));
-    } catch(error) { return res.status(error.status||503).json({error:error.message}); }
+    let reservations=getCachedAdminRecords("reservations");
+    let tables=getCachedAdminRecords("restaurant_tables");
+    if(supabase.getSession().authenticated) {
+      try {
+        const remote=await Promise.all([supabase.listRecords("reservations"),supabase.listRecords("restaurant_tables")]);
+        reservations=remote[0]||[];
+        tables=remote[1]||[];
+        cacheAdminRecords("reservations",reservations);
+        cacheAdminRecords("restaurant_tables",tables);
+      } catch(error) {
+        if(error.status===401||error.status===403) return res.status(error.status).json({error:error.message});
+      }
+    }
+    const tableMap=new Map(tables.map(t=>[String(t.id),t]));
+    return res.json(reservations.map(r=>{
+      const table=tableMap.get(String(r.table_id));
+      return {...r,area:table?.area||"indoor",table_number:r.table_number||table?.table_number||null};
+    }));
   });
 
   app.get("/api/orders", async (_req, res) => {
     if(supabase.getSession().authenticated) {
       try {
         const remote=await supabase.getOrders();
-        const remoteRows=(remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total||0)*100),notes:i.item_note||i.notes||""}))}));
+        const remoteRows=(remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),payment_method:o.payment_method||"cash",payment_status:(o.payments||[]).some(p=>p.payment_status==="paid")?"paid":"unpaid",paid_at:(o.payments||[]).find(p=>p.payment_status==="paid")?.paid_at||null,closed_at:o.closed_at,created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,menu_item_id:i.product_id||i.menu_item_id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total ?? (Number(i.unit_price||0)*Number(i.quantity||0)))*100),notes:i.item_note||i.notes||""}))}));
         const remoteIds=new Set(remoteRows.map(o=>String(o.id)));
         const pending=db.prepare("SELECT * FROM orders WHERE sync_status <> 'synced' ORDER BY created_at DESC").all();
         const getLocalItems=db.prepare("SELECT * FROM order_items WHERE order_id=?");
-        const localRows=pending.filter(o=>!remoteIds.has(String(o.id))).map(o=>({...o,items:getLocalItems.all(o.id)}));
-        return res.json([...remoteRows,...localRows]);
+        const localRows=pending.map(o=>({...o,items:getLocalItems.all(o.id)}));
+        const merged=new Map(remoteRows.map(order=>[String(order.id),order]));
+        for(const order of localRows) merged.set(String(order.id),order);
+        return res.json([...merged.values()]);
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
     const orders = db.prepare(
@@ -362,7 +419,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     for (const requested of body.items) {
       const menuItem = menuItems.get(String(requested.menu_item_id || ""));
       const quantity = Number(requested.quantity);
-      if (!menuItem || !menuItem.is_available || !Number.isFinite(quantity) ||
+      if (!menuItem || !menuItem.is_available || !Number.isFinite(quantity) || !Number.isInteger(quantity) ||
           quantity <= 0 || quantity > 99) {
         return res.status(400).json({ error: "يوجد صنف غير متاح أو كمية غير صحيحة." });
       }
@@ -372,6 +429,9 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const subtotal = preparedItems.reduce(
       (sum, item) => sum + Math.round(item.menuItem.price_minor * item.quantity), 0
     );
+    if (!Number.isSafeInteger(subtotal)) {
+      return res.status(400).json({ error: "إجمالي الطلب أكبر من الحد المسموح." });
+    }
     const discount = Math.round(Number(body.discount_minor || 0));
     if (!Number.isSafeInteger(discount) || discount < 0 || discount > subtotal) {
       return res.status(400).json({ error: "قيمة الخصم غير صحيحة." });
@@ -381,6 +441,16 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const createdAt = new Date().toISOString();
     const orderType = ["dine_in", "takeaway", "delivery"].includes(body.order_type)
       ? body.order_type : "takeaway";
+    const tableNumber = body.table_number != null && body.table_number !== "" && Number.isInteger(Number(body.table_number)) && Number(body.table_number) > 0
+      ? Number(body.table_number) : null;
+    const tableArea = ["indoor","outdoor"].includes(body.table_area) ? body.table_area : null;
+    if(orderType==="dine_in" && (!tableNumber || !tableArea)) {
+      return res.status(400).json({error:"حدد رقم الطاولة والصالة للطلب الداخلي."});
+    }
+    if(orderType==="dine_in") {
+      const occupied=db.prepare("SELECT id FROM orders WHERE order_type='dine_in' AND table_number=? AND table_area=? AND status<>'cancelled' AND payment_status<>'paid' LIMIT 1").get(tableNumber,tableArea);
+      if(occupied) return res.status(409).json({error:"الطاولة عليها طلب مفتوح بالفعل."});
+    }
     const orderNumber = "LOCAL-" + createdAt.replace(/\D/g, "").slice(0, 14) +
       "-" + id.slice(0, 6).toUpperCase();
     const order = {
@@ -392,8 +462,8 @@ function startLocalServer({ userDataPath, port = 4317 }) {
       phone: String(body.phone || "").slice(0, 30),
       address: String(body.address || "").slice(0, 500),
       table_id: body.table_id ? String(body.table_id) : null,
-      table_number: body.table_number != null && body.table_number !== "" && Number.isInteger(Number(body.table_number)) ? Number(body.table_number) : null,
-      table_area: ["indoor","outdoor"].includes(body.table_area) ? body.table_area : null,
+      table_number: tableNumber,
+      table_area: tableArea,
       payment_method: ["cash", "card", "wallet"].includes(body.payment_method) ? body.payment_method : "cash",
       created_at: createdAt, updated_at: createdAt, sync_status: "pending"
     };
@@ -440,6 +510,178 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     }
   });
 
+  app.post("/api/orders/:id/pay", async (req, res) => {
+    const order=db.prepare("SELECT * FROM orders WHERE id=?").get(req.params.id);
+    if(!order) return res.status(404).json({error:"الطلب غير موجود."});
+    if(order.status==="cancelled") {
+      return res.status(409).json({error:"لا يمكن تحصيل طلب ملغي."});
+    }
+    const existing=db.prepare("SELECT id FROM payments WHERE order_id=?").get(order.id);
+    if(existing || order.payment_status==="paid") return res.status(409).json({error:"تم تسجيل دفعة لهذا الطلب بالفعل."});
+    const method=req.body?.payment_method || order.payment_method || "cash";
+    if(!["cash","card","wallet"].includes(method)) return res.status(400).json({error:"طريقة الدفع غير صحيحة."});
+    const amount=req.body?.amount_minor===undefined ? order.total_minor : Number(req.body.amount_minor);
+    if(!Number.isSafeInteger(amount)||amount!==order.total_minor) {
+      return res.status(400).json({error:"المبلغ المدفوع يجب أن يساوي إجمالي الطلب بالكامل."});
+    }
+
+    const id=randomUUID(),paidAt=new Date().toISOString();
+    const payment={id,order_id:order.id,amount_minor:amount,payment_method:method,payment_status:"paid",paid_at:paidAt,order_status:order.status,sync_status:"pending"};
+    try {
+      const savePayment=db.transaction(()=>{
+        db.prepare(`INSERT INTO payments(id,order_id,amount_minor,payment_method,payment_status,paid_at,sync_status)
+          VALUES(@id,@order_id,@amount_minor,@payment_method,@payment_status,@paid_at,@sync_status)`).run(payment);
+        db.prepare("UPDATE orders SET payment_status='paid',payment_method=?,paid_at=?,closed_at=?,updated_at=?,sync_status='pending' WHERE id=?")
+          .run(method,paidAt,paidAt,paidAt,order.id);
+        db.prepare(`INSERT INTO sync_outbox(id,aggregate_type,aggregate_id,operation,payload_json,created_at)
+          VALUES(?,'payment',?,'create',?,?)`).run(randomUUID(),id,JSON.stringify(payment),paidAt);
+      });
+      savePayment();
+      if(supabase.getSession().authenticated) await syncPendingOrders();
+      const saved=db.prepare("SELECT * FROM payments WHERE id=?").get(id);
+      io.emit("kitchen:order-updated",{id:order.id,status:"delivered"});
+      res.status(201).json({payment:saved,order:db.prepare("SELECT * FROM orders WHERE id=?").get(order.id)});
+    } catch(error) {
+      res.status(500).json({error:"تعذر تسجيل الدفع: "+error.message});
+    }
+  });
+
+  app.patch("/api/orders/:id", async (req, res) => {
+    const current = db.prepare("SELECT * FROM orders WHERE id=?").get(req.params.id);
+    if (!current) return res.status(404).json({ error: "الطلب غير موجود." });
+
+    const body = req.body || {};
+    if(current.payment_status==="paid") return res.status(409).json({error:"لا يمكن تعديل طلب تم تحصيله."});
+    const existingItems = db.prepare("SELECT * FROM order_items WHERE order_id=?").all(req.params.id);
+    const requestedItems = Array.isArray(body.items)
+      ? body.items
+      : existingItems.map(item => ({
+          menu_item_id: item.menu_item_id,
+          quantity: item.quantity,
+          notes: item.notes
+        }));
+    if (requestedItems.length > 100) {
+      return res.status(413).json({ error: "عدد أصناف الطلب أكبر من الحد المسموح." });
+    }
+
+    const preparedItems = [];
+    const existingByProduct = new Map(existingItems.map(item=>[String(item.menu_item_id),item]));
+    const findMenuItem = db.prepare("SELECT id,name,price_minor,is_available FROM menu_items WHERE id=?");
+    for (const requested of requestedItems) {
+      const productId=String(requested?.menu_item_id || "");
+      const menuItem = findMenuItem.get(productId);
+      const existingLine=existingByProduct.get(productId);
+      const quantity = Number(requested?.quantity);
+      if (!menuItem || (!menuItem.is_available && !existingLine) || !Number.isFinite(quantity) || !Number.isInteger(quantity) || quantity <= 0 || quantity > 99) {
+        return res.status(400).json({ error: "يوجد صنف غير متاح أو كمية غير صحيحة." });
+      }
+      // Keep the price/name snapshot already attached to this order. A menu
+      // price change must never rewrite an order that is already in progress.
+      preparedItems.push({
+        menuItem: {
+          ...menuItem,
+          name: existingLine?.item_name_snapshot || menuItem.name,
+          price_minor: existingLine?.unit_price_minor ?? menuItem.price_minor
+        },
+        quantity,
+        notes: String(requested.notes ?? existingLine?.notes ?? "").slice(0, 300)
+      });
+    }
+
+    const subtotal = preparedItems.reduce((sum, item) =>
+      sum + Math.round(item.menuItem.price_minor * item.quantity), 0);
+    if (!Number.isSafeInteger(subtotal)) {
+      return res.status(400).json({ error: "إجمالي الطلب أكبر من الحد المسموح." });
+    }
+    const discount = body.discount_minor === undefined
+      ? Number(current.discount_minor || 0)
+      : Number(body.discount_minor);
+    if (!Number.isSafeInteger(discount) || discount < 0 || discount > subtotal) {
+      return res.status(400).json({ error: "قيمة الخصم غير صحيحة." });
+    }
+
+    const allowedStatuses = ["pending", "preparing", "ready", "delivered", "cancelled"];
+    const status = body.status === undefined ? current.status : body.status;
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: "حالة الطلب غير صحيحة." });
+    }
+    const tableNumber = body.table_number === undefined
+      ? current.table_number
+      : (Number.isInteger(Number(body.table_number)) && Number(body.table_number) > 0 ? Number(body.table_number) : null);
+    const tableArea = body.table_area === undefined
+      ? current.table_area
+      : (["indoor", "outdoor"].includes(body.table_area) ? body.table_area : null);
+    const tableId = body.table_id === undefined ? current.table_id : (body.table_id ? String(body.table_id) : null);
+    if(body.table_number!==undefined && (!Number.isInteger(Number(body.table_number)) || Number(body.table_number)<=0)) {
+      return res.status(400).json({error:"رقم الطاولة غير صحيح."});
+    }
+    if(body.table_area!==undefined && !["indoor","outdoor"].includes(body.table_area)) {
+      return res.status(400).json({error:"الصالة غير صحيحة."});
+    }
+    if(tableNumber!==null && tableArea!==null && (tableNumber!==current.table_number || tableArea!==current.table_area)) {
+      const occupied=db.prepare("SELECT id FROM orders WHERE order_type='dine_in' AND table_number=? AND table_area=? AND status<>'cancelled' AND payment_status<>'paid' AND id<>? LIMIT 1").get(tableNumber,tableArea,req.params.id);
+      if(occupied) return res.status(409).json({error:"الطاولة المستهدفة عليها طلب مفتوح بالفعل."});
+    }
+    const paymentMethod = body.payment_method === undefined
+      ? current.payment_method
+      : (["cash", "card", "wallet"].includes(body.payment_method) ? body.payment_method : null);
+    if (body.payment_method !== undefined && !paymentMethod) {
+      return res.status(400).json({ error: "طريقة الدفع غير صحيحة." });
+    }
+
+    const now = new Date().toISOString();
+    const order = {
+      ...current,
+      status,
+      subtotal_minor: subtotal,
+      discount_minor: discount,
+      total_minor: subtotal - discount,
+      table_id: tableId,
+      table_number: tableNumber,
+      table_area: tableArea,
+      payment_method: paymentMethod,
+      updated_at: now,
+      sync_status: "pending"
+    };
+    const itemPayload = preparedItems.map(({ menuItem, quantity, notes }) => ({
+      menu_item_id: menuItem.id,
+      product_name: menuItem.name,
+      unit_price_minor: menuItem.price_minor,
+      quantity,
+      notes
+    }));
+
+    try {
+      const saveChanges = db.transaction(() => {
+        db.prepare(`UPDATE orders SET status=@status,subtotal_minor=@subtotal_minor,
+          discount_minor=@discount_minor,total_minor=@total_minor,table_id=@table_id,
+          table_number=@table_number,table_area=@table_area,payment_method=@payment_method,
+          updated_at=@updated_at,sync_status='pending' WHERE id=@id`).run(order);
+        db.prepare("DELETE FROM order_items WHERE order_id=?").run(req.params.id);
+        const addLine = db.prepare(`INSERT INTO order_items
+          (id,order_id,menu_item_id,item_name_snapshot,unit_price_minor,quantity,line_total_minor,notes)
+          VALUES (?,?,?,?,?,?,?,?)`);
+        preparedItems.forEach(({ menuItem, quantity, notes }) => addLine.run(
+          randomUUID(), req.params.id, menuItem.id, menuItem.name, menuItem.price_minor,
+          quantity, Math.round(menuItem.price_minor * quantity), notes
+        ));
+        db.prepare(`INSERT INTO sync_outbox
+          (id,aggregate_type,aggregate_id,operation,payload_json,created_at)
+          VALUES (?,'order',?,'replace',?,?)`).run(
+          randomUUID(), req.params.id, JSON.stringify({ order, items: itemPayload }), now
+        );
+      });
+      saveChanges();
+      if (supabase.getSession().authenticated) await syncPendingOrders();
+      const savedItems = db.prepare("SELECT * FROM order_items WHERE order_id=?").all(req.params.id);
+      const savedOrder = db.prepare("SELECT * FROM orders WHERE id=?").get(req.params.id);
+      io.emit("kitchen:order-updated", { id: req.params.id, status: savedOrder.status });
+      res.json({ ...savedOrder, items: savedItems });
+    } catch (error) {
+      res.status(500).json({ error: "تعذر تحديث الطلب: " + error.message });
+    }
+  });
+
   app.patch("/api/orders/:id/status", async (req, res) => {
     const allowed = ["pending", "preparing", "ready", "delivered", "cancelled"];
     const status = req.body?.status;
@@ -448,9 +690,15 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     if(supabase.getSession().authenticated) {
       try {
         const remote=await supabase.updateRecord("orders",req.params.id,{status,updated_at:now});
-        if(!remote) return res.status(404).json({error:"الطلب غير موجود."});
-        io.emit("kitchen:order-updated",{id:req.params.id,status});
-        return res.json({ok:true,id:req.params.id,status,sync_status:"cloud"});
+        if(remote) {
+          db.prepare("UPDATE orders SET status=?,updated_at=?,sync_status='synced' WHERE id=?").run(status,now,req.params.id);
+          io.emit("kitchen:order-updated",{id:req.params.id,status});
+          return res.json({ok:true,id:req.params.id,status,sync_status:"cloud"});
+        }
+        // A local order may still be waiting for its first cloud insert.
+        // Keep the status change in SQLite/outbox instead of losing the action.
+        const local=db.prepare("SELECT id FROM orders WHERE id=?").get(req.params.id);
+        if(!local) return res.status(404).json({error:"الطلب غير موجود."});
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
     const result = db.prepare(
@@ -480,7 +728,8 @@ function startLocalServer({ userDataPath, port = 4317 }) {
             delivery_fee:0,total:Number(order.total_minor||0)/100,notes:order.notes||null,
             customer_name:order.customer_name||null,customer_phone:order.phone||null,
             delivery_address:order.address||null,payment_method:order.payment_method||"cash",
-            created_at:order.created_at,updated_at:order.updated_at
+            table_id:order.table_id||null,table_number:order.table_number||null,table_area:order.table_area||null,
+            closed_at:order.closed_at||null,created_at:order.created_at,updated_at:order.updated_at
           });
           const remoteItems=await supabase.getOrderItems(task.aggregate_id);
           if(!remoteItems.length && payload.items?.length) await supabase.insertMany("order_items",payload.items.map(item=>({
@@ -489,8 +738,54 @@ function startLocalServer({ userDataPath, port = 4317 }) {
             quantity:Math.round(Number(item.quantity)),item_note:item.notes||null
           })));
           db.prepare("UPDATE orders SET order_number=?,sync_status='synced',updated_at=? WHERE id=?").run(String(remote.order_number),new Date().toISOString(),task.aggregate_id);
+        } else if(task.operation==="replace") {
+          const pendingCreate=db.prepare("SELECT id FROM sync_outbox WHERE aggregate_type='order' AND aggregate_id=? AND operation='create' AND synced_at IS NULL").get(task.aggregate_id);
+          if(pendingCreate) throw new Error("Order creation is still waiting to sync.");
+          const order=payload.order;
+          const remote=await supabase.updateRecord("orders",task.aggregate_id,{
+            status:order.status,order_type:order.order_type,
+            subtotal:Number(order.subtotal_minor||0)/100,discount:Number(order.discount_minor||0)/100,
+            total:Number(order.total_minor||0)/100,notes:order.notes||null,
+            customer_name:order.customer_name||null,customer_phone:order.phone||null,
+            delivery_address:order.address||null,payment_method:order.payment_method||"cash",
+            table_id:order.table_id||null,table_number:order.table_number||null,table_area:order.table_area||null,
+            updated_at:order.updated_at
+          });
+          if(!remote) throw new Error("Cloud order does not exist yet.");
+          await supabase.deleteOrderItems(task.aggregate_id);
+          if(payload.items?.length) await supabase.insertMany("order_items",payload.items.map(item=>({
+            order_id:task.aggregate_id,product_id:item.menu_item_id,
+            product_name:item.product_name,unit_price:Number(item.unit_price_minor||0)/100,
+            quantity:item.quantity,item_note:item.notes||null
+          })));
+          db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(task.aggregate_id);
+        } else if(task.aggregate_type==="payment" && task.operation==="create") {
+          const payment=payload;
+          const pendingCreate=db.prepare("SELECT id FROM sync_outbox WHERE aggregate_type='order' AND aggregate_id=? AND operation='create' AND synced_at IS NULL").get(payment.order_id);
+          if(pendingCreate) throw new Error("Order creation is still waiting to sync.");
+          const remoteOrder=await supabase.getRecord("orders",payment.order_id);
+          if(!remoteOrder) throw new Error("Cloud order does not exist yet.");
+          const existingPayment=await supabase.getRecord("payments",payment.id);
+          if(!existingPayment) await supabase.insertRecord("payments",{
+            id:payment.id,order_id:payment.order_id,amount:Number(payment.amount_minor||0)/100,
+            payment_method:payment.payment_method,payment_status:payment.payment_status,paid_at:payment.paid_at
+          });
+          await supabase.updateRecord("orders",payment.order_id,{
+            status:payment.order_status||remoteOrder.status,
+            payment_method:payment.payment_method,closed_at:payment.paid_at,
+            updated_at:payment.paid_at
+          });
+          db.prepare("UPDATE payments SET sync_status='synced' WHERE id=?").run(payment.id);
+          db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(payment.order_id);
         } else if(task.operation==="update_status") {
-          await supabase.updateRecord("orders",task.aggregate_id,{status:payload.status,updated_at:new Date().toISOString()});
+          const localOrder=db.prepare("SELECT sync_status FROM orders WHERE id=?").get(task.aggregate_id);
+          // Do not mark a status update as synced while the order itself has
+          // not yet been created in the cloud.
+          if(localOrder && localOrder.sync_status!=="synced") {
+            throw new Error("Order creation is still waiting to sync.");
+          }
+          const updated=await supabase.updateRecord("orders",task.aggregate_id,{status:payload.status,updated_at:new Date().toISOString()});
+          if(!updated) throw new Error("Cloud order does not exist yet.");
           db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(task.aggregate_id);
         } else if(task.aggregate_type.startsWith("admin:")) {
           const module=task.aggregate_type.slice(6);
@@ -522,13 +817,12 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   return new Promise((resolve, reject) => {
     httpServer.once("error", reject);
     httpServer.listen(port, "127.0.0.1", () => resolve({
-      db, io, databasePath, port,
-      close: () => new Promise((done) => {
+      db, io, databasePath, port: httpServer.address().port,
+      close: async () => {
         clearInterval(syncTimer);
-        io.close();
+        await new Promise((done) => io.close(done));
         if (db.open) db.close();
-        done();
-      })
+      }
     }));
   });
 }

@@ -44,6 +44,16 @@ function openDatabase(userDataPath) {
       quantity REAL NOT NULL CHECK (quantity > 0), line_total_minor INTEGER NOT NULL, notes TEXT,
       FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS payments (
+      id TEXT PRIMARY KEY, order_id TEXT NOT NULL UNIQUE,
+      amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+      payment_method TEXT NOT NULL CHECK (payment_method IN ('cash','card','wallet')),
+      payment_status TEXT NOT NULL DEFAULT 'paid' CHECK (payment_status IN ('pending','paid','refunded')),
+      paid_at TEXT NOT NULL,
+      sync_status TEXT NOT NULL DEFAULT 'pending',
+      FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id);
     CREATE TABLE IF NOT EXISTS sync_outbox (
       id TEXT PRIMARY KEY, aggregate_type TEXT NOT NULL, aggregate_id TEXT NOT NULL,
       operation TEXT NOT NULL, payload_json TEXT NOT NULL, created_at TEXT NOT NULL,
@@ -60,7 +70,9 @@ function openDatabase(userDataPath) {
   for (const [name, type] of [
     ["customer_name", "TEXT"], ["phone", "TEXT"], ["address", "TEXT"],
     ["payment_method", "TEXT NOT NULL DEFAULT 'cash'"],
-    ["table_id", "TEXT"], ["table_number", "INTEGER"], ["table_area", "TEXT"]
+    ["table_id", "TEXT"], ["table_number", "INTEGER"], ["table_area", "TEXT"],
+    ["closed_at", "TEXT"], ["payment_status", "TEXT NOT NULL DEFAULT 'unpaid'"],
+    ["paid_at", "TEXT"]
   ]) {
     if (!columns.has(name)) db.exec(`ALTER TABLE orders ADD COLUMN ${name} ${type}`);
   }
