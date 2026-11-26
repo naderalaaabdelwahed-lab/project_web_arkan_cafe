@@ -559,17 +559,26 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     }
 
     const preparedItems = [];
+    const existingByProduct = new Map(existingItems.map(item=>[String(item.menu_item_id),item]));
     const findMenuItem = db.prepare("SELECT id,name,price_minor,is_available FROM menu_items WHERE id=?");
     for (const requested of requestedItems) {
-      const menuItem = findMenuItem.get(String(requested?.menu_item_id || ""));
+      const productId=String(requested?.menu_item_id || "");
+      const menuItem = findMenuItem.get(productId);
+      const existingLine=existingByProduct.get(productId);
       const quantity = Number(requested?.quantity);
-      if (!menuItem || !menuItem.is_available || !Number.isFinite(quantity) || !Number.isInteger(quantity) || quantity <= 0 || quantity > 99) {
+      if (!menuItem || (!menuItem.is_available && !existingLine) || !Number.isFinite(quantity) || !Number.isInteger(quantity) || quantity <= 0 || quantity > 99) {
         return res.status(400).json({ error: "يوجد صنف غير متاح أو كمية غير صحيحة." });
       }
+      // Keep the price/name snapshot already attached to this order. A menu
+      // price change must never rewrite an order that is already in progress.
       preparedItems.push({
-        menuItem,
+        menuItem: {
+          ...menuItem,
+          name: existingLine?.item_name_snapshot || menuItem.name,
+          price_minor: existingLine?.unit_price_minor ?? menuItem.price_minor
+        },
         quantity,
-        notes: String(requested.notes || "").slice(0, 300)
+        notes: String(requested.notes ?? existingLine?.notes ?? "").slice(0, 300)
       });
     }
 
