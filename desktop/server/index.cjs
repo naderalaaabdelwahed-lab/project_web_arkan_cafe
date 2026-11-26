@@ -350,8 +350,10 @@ function startLocalServer({ userDataPath, port = 4317 }) {
         const remoteIds=new Set(remoteRows.map(o=>String(o.id)));
         const pending=db.prepare("SELECT * FROM orders WHERE sync_status <> 'synced' ORDER BY created_at DESC").all();
         const getLocalItems=db.prepare("SELECT * FROM order_items WHERE order_id=?");
-        const localRows=pending.filter(o=>!remoteIds.has(String(o.id))).map(o=>({...o,items:getLocalItems.all(o.id)}));
-        return res.json([...remoteRows,...localRows]);
+        const localRows=pending.map(o=>({...o,items:getLocalItems.all(o.id)}));
+        const merged=new Map(remoteRows.map(order=>[String(order.id),order]));
+        for(const order of localRows) merged.set(String(order.id),order);
+        return res.json([...merged.values()]);
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
     const orders = db.prepare(
@@ -455,6 +457,122 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     }
   });
 
+  app.patch("/api/orders/:id", async (req, res) => {
+    const current = db.prepare("SELECT * FROM orders WHERE id=?").get(req.params.id);
+    if (!current) return res.status(404).json({ error: "الطلب غير موجود." });
+
+    const body = req.body || {};
+    const existingItems = db.prepare("SELECT * FROM order_items WHERE order_id=?").all(req.params.id);
+    const requestedItems = Array.isArray(body.items)
+      ? body.items
+      : existingItems.map(item => ({
+          menu_item_id: item.menu_item_id,
+          quantity: item.quantity,
+          notes: item.notes
+        }));
+    if (requestedItems.length > 100) {
+      return res.status(413).json({ error: "عدد أصناف الطلب أكبر من الحد المسموح." });
+    }
+
+    const preparedItems = [];
+    const findMenuItem = db.prepare("SELECT id,name,price_minor,is_available FROM menu_items WHERE id=?");
+    for (const requested of requestedItems) {
+      const menuItem = findMenuItem.get(String(requested?.menu_item_id || ""));
+      const quantity = Number(requested?.quantity);
+      if (!menuItem || !menuItem.is_available || !Number.isFinite(quantity) || quantity <= 0 || quantity > 99) {
+        return res.status(400).json({ error: "يوجد صنف غير متاح أو كمية غير صحيحة." });
+      }
+      preparedItems.push({
+        menuItem,
+        quantity,
+        notes: String(requested.notes || "").slice(0, 300)
+      });
+    }
+
+    const subtotal = preparedItems.reduce((sum, item) =>
+      sum + Math.round(item.menuItem.price_minor * item.quantity), 0);
+    if (!Number.isSafeInteger(subtotal)) {
+      return res.status(400).json({ error: "إجمالي الطلب أكبر من الحد المسموح." });
+    }
+    const discount = body.discount_minor === undefined
+      ? Number(current.discount_minor || 0)
+      : Number(body.discount_minor);
+    if (!Number.isSafeInteger(discount) || discount < 0 || discount > subtotal) {
+      return res.status(400).json({ error: "قيمة الخصم غير صحيحة." });
+    }
+
+    const allowedStatuses = ["pending", "preparing", "ready", "delivered", "cancelled"];
+    const status = body.status === undefined ? current.status : body.status;
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: "حالة الطلب غير صحيحة." });
+    }
+    const tableNumber = body.table_number === undefined
+      ? current.table_number
+      : (Number.isInteger(Number(body.table_number)) && Number(body.table_number) > 0 ? Number(body.table_number) : null);
+    const tableArea = body.table_area === undefined
+      ? current.table_area
+      : (["indoor", "outdoor"].includes(body.table_area) ? body.table_area : null);
+    const tableId = body.table_id === undefined ? current.table_id : (body.table_id ? String(body.table_id) : null);
+    const paymentMethod = body.payment_method === undefined
+      ? current.payment_method
+      : (["cash", "card", "wallet"].includes(body.payment_method) ? body.payment_method : null);
+    if (body.payment_method !== undefined && !paymentMethod) {
+      return res.status(400).json({ error: "طريقة الدفع غير صحيحة." });
+    }
+
+    const now = new Date().toISOString();
+    const order = {
+      ...current,
+      status,
+      subtotal_minor: subtotal,
+      discount_minor: discount,
+      total_minor: subtotal - discount,
+      table_id: tableId,
+      table_number: tableNumber,
+      table_area: tableArea,
+      payment_method: paymentMethod,
+      updated_at: now,
+      sync_status: "pending"
+    };
+    const itemPayload = preparedItems.map(({ menuItem, quantity, notes }) => ({
+      menu_item_id: menuItem.id,
+      product_name: menuItem.name,
+      unit_price_minor: menuItem.price_minor,
+      quantity,
+      notes
+    }));
+
+    try {
+      const saveChanges = db.transaction(() => {
+        db.prepare(`UPDATE orders SET status=@status,subtotal_minor=@subtotal_minor,
+          discount_minor=@discount_minor,total_minor=@total_minor,table_id=@table_id,
+          table_number=@table_number,table_area=@table_area,payment_method=@payment_method,
+          updated_at=@updated_at,sync_status='pending' WHERE id=@id`).run(order);
+        db.prepare("DELETE FROM order_items WHERE order_id=?").run(req.params.id);
+        const addLine = db.prepare(`INSERT INTO order_items
+          (id,order_id,menu_item_id,item_name_snapshot,unit_price_minor,quantity,line_total_minor,notes)
+          VALUES (?,?,?,?,?,?,?,?)`);
+        preparedItems.forEach(({ menuItem, quantity, notes }) => addLine.run(
+          randomUUID(), req.params.id, menuItem.id, menuItem.name, menuItem.price_minor,
+          quantity, Math.round(menuItem.price_minor * quantity), notes
+        ));
+        db.prepare(`INSERT INTO sync_outbox
+          (id,aggregate_type,aggregate_id,operation,payload_json,created_at)
+          VALUES (?,'order',?,'replace',?,?)`).run(
+          randomUUID(), req.params.id, JSON.stringify({ order, items: itemPayload }), now
+        );
+      });
+      saveChanges();
+      if (supabase.getSession().authenticated) await syncPendingOrders();
+      const savedItems = db.prepare("SELECT * FROM order_items WHERE order_id=?").all(req.params.id);
+      const savedOrder = db.prepare("SELECT * FROM orders WHERE id=?").get(req.params.id);
+      io.emit("kitchen:order-updated", { id: req.params.id, status: savedOrder.status });
+      res.json({ ...savedOrder, items: savedItems });
+    } catch (error) {
+      res.status(500).json({ error: "تعذر تحديث الطلب: " + error.message });
+    }
+  });
+
   app.patch("/api/orders/:id/status", async (req, res) => {
     const allowed = ["pending", "preparing", "ready", "delivered", "cancelled"];
     const status = req.body?.status;
@@ -511,6 +629,27 @@ function startLocalServer({ userDataPath, port = 4317 }) {
             quantity:Math.round(Number(item.quantity)),item_note:item.notes||null
           })));
           db.prepare("UPDATE orders SET order_number=?,sync_status='synced',updated_at=? WHERE id=?").run(String(remote.order_number),new Date().toISOString(),task.aggregate_id);
+        } else if(task.operation==="replace") {
+          const pendingCreate=db.prepare("SELECT id FROM sync_outbox WHERE aggregate_type='order' AND aggregate_id=? AND operation='create' AND synced_at IS NULL").get(task.aggregate_id);
+          if(pendingCreate) throw new Error("Order creation is still waiting to sync.");
+          const order=payload.order;
+          const remote=await supabase.updateRecord("orders",task.aggregate_id,{
+            status:order.status,order_type:order.order_type,
+            subtotal:Number(order.subtotal_minor||0)/100,discount:Number(order.discount_minor||0)/100,
+            total:Number(order.total_minor||0)/100,notes:order.notes||null,
+            customer_name:order.customer_name||null,customer_phone:order.phone||null,
+            delivery_address:order.address||null,payment_method:order.payment_method||"cash",
+            table_id:order.table_id||null,table_number:order.table_number||null,table_area:order.table_area||null,
+            updated_at:order.updated_at
+          });
+          if(!remote) throw new Error("Cloud order does not exist yet.");
+          await supabase.deleteOrderItems(task.aggregate_id);
+          if(payload.items?.length) await supabase.insertMany("order_items",payload.items.map(item=>({
+            order_id:task.aggregate_id,product_id:item.menu_item_id,
+            product_name:item.product_name,unit_price:Number(item.unit_price_minor||0)/100,
+            quantity:item.quantity,item_note:item.notes||null
+          })));
+          db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(task.aggregate_id);
         } else if(task.operation==="update_status") {
           const localOrder=db.prepare("SELECT sync_status FROM orders WHERE id=?").get(task.aggregate_id);
           // Do not mark a status update as synced while the order itself has
