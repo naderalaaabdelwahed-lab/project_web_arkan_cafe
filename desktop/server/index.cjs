@@ -282,11 +282,11 @@ function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
         const remote=await supabase.getAdminMenu();
         return res.json({
           categories:(remote.categories||[]).map(c=>({id:c.id,name:c.name,sort_order:c.display_order||0,is_active:c.is_active})),
-          products:(remote.products||[]).map(p=>({id:p.id,category_id:p.category_id,name:p.name,description:p.description,price_minor:Math.round(Number(p.price||0)*100),is_available:p.is_available}))
+          products:(remote.products||[]).map(p=>({id:p.id,category_id:p.category_id,name:p.name,description:p.description,price_minor:Math.round(Number(p.price||0)*100),preparation_station:p.preparation_station||"kitchen",is_available:p.is_available}))
         });
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
-    res.json({categories:db.prepare("SELECT id,name,sort_order,is_active FROM menu_categories WHERE is_active=1 ORDER BY sort_order,name").all(),products:db.prepare("SELECT id,category_id,name,description,price_minor,is_available FROM menu_items WHERE is_available=1 ORDER BY name").all()});
+    res.json({categories:db.prepare("SELECT id,name,sort_order,is_active FROM menu_categories WHERE is_active=1 ORDER BY sort_order,name").all(),products:db.prepare("SELECT id,category_id,name,description,price_minor,preparation_station,is_available FROM menu_items WHERE is_available=1 ORDER BY name").all()});
   });
   app.post("/api/admin/categories", async (req,res) => {
     const name=String(req.body?.name||"").trim().slice(0,100);
@@ -308,24 +308,47 @@ function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
       res.json({ok:true});
     } catch(e){res.status(e.status||400).json({error:e.message});}
   });
+  app.delete("/api/admin/categories/:id", async (req,res) => {
+    const id=String(req.params.id);
+    try {
+      if(supabase.getSession().authenticated) {
+        const menu=await supabase.getAdminMenu();
+        if((menu.products||[]).some(p=>String(p.category_id)===id)) return res.status(409).json({error:"انقل الأصناف إلى قسم آخر قبل حذف هذا القسم."});
+        await supabase.deleteRecord("categories",id);
+      }
+      const linked=db.prepare("SELECT COUNT(*) AS count FROM menu_items WHERE category_id=?").get(id).count;
+      if(linked) return res.status(409).json({error:"انقل الأصناف إلى قسم آخر قبل حذف هذا القسم."});
+      db.prepare("DELETE FROM menu_categories WHERE id=?").run(id);
+      res.json({ok:true});
+    } catch(e){res.status(e.status||400).json({error:e.message});}
+  });
   app.post("/api/admin/products", async (req,res) => {
     const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price);
     const isAvailable=req.body?.is_available!==false;
     if(!name||!category||!Number.isFinite(price)||price<0||!Number.isSafeInteger(Math.round(price*100)))return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
     let id=randomUUID();
     try {
-      if(supabase.getSession().authenticated) { const saved=await supabase.insertRecord("products",{category_id:category,name,description:String(req.body?.description||""),price,is_available:isAvailable}); id=saved.id; }
-      if(!supabase.getSession().authenticated) db.prepare("INSERT OR REPLACE INTO menu_items(id,category_id,name,description,price_minor,is_available) VALUES(?,?,?,?,?,?)").run(id,category,name,String(req.body?.description||""),Math.round(price*100),isAvailable?1:0);
+      const station=String(req.body?.preparation_station||"kitchen");
+      if(!["kitchen","hall","bar"].includes(station)) return res.status(400).json({error:"اختار مكان تحضير صحيح."});
+      if(supabase.getSession().authenticated) { const saved=await supabase.insertRecord("products",{category_id:category,name,description:String(req.body?.description||""),price,is_available:isAvailable,preparation_station:station}); id=saved.id; }
+      if(!supabase.getSession().authenticated) db.prepare("INSERT OR REPLACE INTO menu_items(id,category_id,name,description,price_minor,preparation_station,is_available) VALUES(?,?,?,?,?,?,?)").run(id,category,name,String(req.body?.description||""),Math.round(price*100),station,isAvailable?1:0);
       res.status(201).json({id,name,is_available:isAvailable});
     } catch(e){res.status(e.status||400).json({error:e.message});}
   });
   app.patch("/api/admin/products/:id", async (req,res) => {
-    const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price);
-    if(!name||!category||!Number.isFinite(price)||price<0||!Number.isSafeInteger(Math.round(price*100)))return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
+    const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price),station=String(req.body?.preparation_station||"kitchen");
+    if(!name||!category||!Number.isFinite(price)||price<0||!Number.isSafeInteger(Math.round(price*100))||!["kitchen","hall","bar"].includes(station))return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر ومكان التحضير."});
     try {
-      if(supabase.getSession().authenticated) await supabase.updateRecord("products",req.params.id,{name,category_id:category,description:String(req.body?.description||"").slice(0,500),price,is_available:req.body?.is_available!==false});
-      const r=db.prepare("UPDATE menu_items SET name=?,category_id=?,description=?,price_minor=?,is_available=? WHERE id=?").run(name,category,String(req.body?.description||"").slice(0,500),Math.round(price*100),req.body?.is_available===false?0:1,req.params.id);
+      if(supabase.getSession().authenticated) await supabase.updateRecord("products",req.params.id,{name,category_id:category,description:String(req.body?.description||"").slice(0,500),price,is_available:req.body?.is_available!==false,preparation_station:station});
+      const r=db.prepare("UPDATE menu_items SET name=?,category_id=?,description=?,price_minor=?,preparation_station=?,is_available=? WHERE id=?").run(name,category,String(req.body?.description||"").slice(0,500),Math.round(price*100),station,req.body?.is_available===false?0:1,req.params.id);
       if(!r.changes && !supabase.getSession().authenticated)return res.status(404).json({error:"المنتج غير موجود."});
+      res.json({ok:true});
+    } catch(e){res.status(e.status||400).json({error:e.message});}
+  });
+  app.delete("/api/admin/products/:id", async (req,res) => {
+    try {
+      if(supabase.getSession().authenticated) await supabase.deleteRecord("products",req.params.id);
+      db.prepare("UPDATE menu_items SET is_available=0 WHERE id=?").run(req.params.id);
       res.json({ok:true});
     } catch(e){res.status(e.status||400).json({error:e.message});}
   });
