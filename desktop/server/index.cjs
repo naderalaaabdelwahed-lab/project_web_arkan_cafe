@@ -152,7 +152,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
 
 
 
-  const adminModules = new Set(["reservations","business_days","cash_transactions","printers","preparation_screens","inventory_units","inventory_suppliers","inventory_items","inventory_movements","inventory_recipes","inventory_purchases","hr_employees","hr_shifts","hr_attendance","hr_leave_balances","hr_payroll_runs","audit_logs"]);
+  const adminModules = new Set(["reservations","business_days","cash_transactions","printers","preparation_screens","inventory_units","inventory_suppliers","inventory_items","inventory_movements","inventory_recipes","inventory_purchases","hr_employees","hr_shifts","hr_attendance","hr_leave_balances","hr_payroll_runs","hr_payroll_adjustments","hr_payroll_items","hr_employee_shift_assignments","inventory_purchase_items","inventory_recipe_items","restaurant_tables","preparation_screen_categories","audit_logs"]);
   app.get("/api/admin/records/:module", async (req,res) => {
     const module=req.params.module;
     if(!adminModules.has(module)) return res.status(404).json({error:"القسم غير موجود."});
