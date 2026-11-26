@@ -328,18 +328,55 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     res.json(db.prepare("SELECT id,order_number,order_type,status,total_minor,created_at,sync_status FROM orders ORDER BY created_at DESC LIMIT 300").all());
   });
 
+  function cacheAdminRecords(module, rows) {
+    const now=new Date().toISOString();
+    const replace=db.transaction(()=>{
+      db.prepare("DELETE FROM admin_records WHERE module=?").run(module);
+      const add=db.prepare("INSERT INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)");
+      for(const row of rows||[]) {
+        const {id,created_at,updated_at,...data}=row;
+        if(id==null) continue;
+        add.run(module,String(id),JSON.stringify(data),created_at||now,updated_at||now);
+      }
+    });
+    replace();
+  }
+  function getCachedAdminRecords(module) {
+    return db.prepare("SELECT id,data_json,created_at,updated_at FROM admin_records WHERE module=? ORDER BY updated_at DESC")
+      .all(module).map(row=>({id:row.id,...JSON.parse(row.data_json),created_at:row.created_at,updated_at:row.updated_at}));
+  }
+
   app.get("/api/tables", async (_req,res) => {
-    if(!supabase.getSession().authenticated) return res.json([]);
-    try { return res.json(await supabase.listRecords("restaurant_tables")); }
-    catch(error) { return res.status(error.status||503).json({error:error.message}); }
+    if(supabase.getSession().authenticated) {
+      try {
+        const rows=await supabase.listRecords("restaurant_tables");
+        cacheAdminRecords("restaurant_tables",rows||[]);
+        return res.json(rows||[]);
+      } catch(error) {
+        if(error.status===401||error.status===403) return res.status(error.status).json({error:error.message});
+      }
+    }
+    return res.json(getCachedAdminRecords("restaurant_tables"));
   });
   app.get("/api/reservations", async (_req,res) => {
-    if(!supabase.getSession().authenticated) return res.json([]);
-    try {
-      const [reservations,tables]=await Promise.all([supabase.listRecords("reservations"),supabase.listRecords("restaurant_tables")]);
-      const tableMap=new Map((tables||[]).map(t=>[String(t.id),t]));
-      return res.json((reservations||[]).map(r=>{const table=tableMap.get(String(r.table_id));return {...r,area:table?.area||"indoor",table_number:r.table_number||table?.table_number||null};}));
-    } catch(error) { return res.status(error.status||503).json({error:error.message}); }
+    let reservations=getCachedAdminRecords("reservations");
+    let tables=getCachedAdminRecords("restaurant_tables");
+    if(supabase.getSession().authenticated) {
+      try {
+        const remote=await Promise.all([supabase.listRecords("reservations"),supabase.listRecords("restaurant_tables")]);
+        reservations=remote[0]||[];
+        tables=remote[1]||[];
+        cacheAdminRecords("reservations",reservations);
+        cacheAdminRecords("restaurant_tables",tables);
+      } catch(error) {
+        if(error.status===401||error.status===403) return res.status(error.status).json({error:error.message});
+      }
+    }
+    const tableMap=new Map(tables.map(t=>[String(t.id),t]));
+    return res.json(reservations.map(r=>{
+      const table=tableMap.get(String(r.table_id));
+      return {...r,area:table?.area||"indoor",table_number:r.table_number||table?.table_number||null};
+    }));
   });
 
   app.get("/api/orders", async (_req, res) => {
