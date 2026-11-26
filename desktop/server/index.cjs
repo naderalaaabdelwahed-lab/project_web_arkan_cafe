@@ -226,6 +226,19 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     res.json({ok:true});
   });
 
+  app.get("/api/admin/restaurant-settings", async (_req,res) => {
+    try {
+      const rows=await supabase.listRecords("restaurant_settings");
+      res.json(rows?.[0]||{id:1,indoor_tables:10,outdoor_tables:6,seats_per_table:4});
+    } catch(error) { res.status(error.status||503).json({error:error.message}); }
+  });
+  app.put("/api/admin/restaurant-settings", async (req,res) => {
+    const values={indoor_tables:Number(req.body?.indoor_tables),outdoor_tables:Number(req.body?.outdoor_tables),seats_per_table:Number(req.body?.seats_per_table),updated_at:new Date().toISOString()};
+    if(!Number.isInteger(values.indoor_tables)||values.indoor_tables<0||!Number.isInteger(values.outdoor_tables)||values.outdoor_tables<0||!Number.isInteger(values.seats_per_table)||values.seats_per_table<1) return res.status(400).json({error:"راجع عدد الطاولات والمقاعد."});
+    try { const saved=await supabase.updateRecord("restaurant_settings","1",values); res.json(saved||values); }
+    catch(error) { res.status(error.status||503).json({error:error.message}); }
+  });
+
   app.get("/api/admin/summary", async (_req,res) => {
     const count = table => db.prepare("SELECT COUNT(*) AS n FROM "+table).get().n;
     let categories=count("menu_categories"), products=count("menu_items"), orders=count("orders");
