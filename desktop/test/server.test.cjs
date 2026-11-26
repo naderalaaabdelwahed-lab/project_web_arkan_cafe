@@ -138,8 +138,8 @@ test("order creation validates items and persists money in integer piastres", as
   const listed = await request("/api/orders");
   const saved = listed.body.find((order) => order.id === result.body.id);
   assert.ok(saved, "created order must be returned by the orders endpoint");
-  assert.equal(saved.total_minor, 11000);
-  assert.equal(saved.table_number, 9);
+  assert.equal(saved.total_minor, 16000);
+  assert.equal(saved.table_number, 7);
   assert.equal(saved.items[0].line_total_minor, 17000);
 });
 
@@ -276,7 +276,8 @@ test("SQLite orders survive a complete local service restart", async () => {
   const listed = await request("/api/orders");
   const saved = listed.body.find((order) => order.id === createdOrderId);
   assert.ok(saved, "the order must still exist after reopening SQLite");
-  assert.equal(saved.total_minor, 16000);
+  assert.equal(saved.total_minor, 11000);
+  assert.equal(saved.table_number, 9);
   assert.equal(saved.status, "pending");
   const paid = listed.body.find((order) => order.id === paidOrderId);
   assert.ok(paid, "paid order must survive a database restart");
