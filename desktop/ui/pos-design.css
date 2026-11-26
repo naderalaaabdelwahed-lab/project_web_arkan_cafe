@@ -1622,3 +1622,9 @@
 .admin-pos-return { border-top:1px solid rgba(255,255,255,.15) !important; margin-top:8px; color:#f3d7b2 !important; }
 .admin-pos-return:hover { background:#514638 !important; }
 .admin-workspace { height:100% !important; min-height:0 !important; }
+
+/* Correct RTL admin placement: navigation explicitly occupies the right track. */
+.admin-layout { direction:rtl !important; grid-template-columns:260px minmax(0,1fr) !important; }
+.admin-sidebar { grid-column:1 !important; grid-row:1 !important; }
+.admin-workspace { grid-column:2 !important; grid-row:1 !important; }
+@media(max-width:700px){ .admin-layout { grid-template-columns:230px minmax(0,1fr) !important; } }
