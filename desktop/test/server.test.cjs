@@ -15,7 +15,7 @@ let paidOrderId;
 
 before(async () => {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "egsoft-pos-test-"));
-  server = await startLocalServer({ userDataPath: tempDir, port: 0 });
+  server = await startLocalServer({ userDataPath: tempDir, port: 0, apiToken: "test-egsoft-token" });
   baseUrl = `http://127.0.0.1:${server.port}`;
 });
 
@@ -27,7 +27,7 @@ after(async () => {
 async function request(route, options = {}) {
   const response = await fetch(baseUrl + route, {
     ...options,
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+    headers: { "Content-Type": "application/json", "X-Egsoft-Api-Token": "test-egsoft-token", ...(options.headers || {}) }
   });
   const body = await response.json().catch(() => null);
   return { response, body };
@@ -38,6 +38,13 @@ test("health endpoint reports a working local service", async () => {
   assert.equal(response.status, 200);
   assert.equal(body.ok, true);
   assert.equal(body.database, "connected");
+});
+
+test("local API rejects requests without the per-launch Electron token", async () => {
+  const response = await fetch(baseUrl + "/api/health");
+  assert.equal(response.status, 401);
+  const body = await response.json();
+  assert.equal(body.error, "Local application token is missing or invalid.");
 });
 
 test("loopback API rejects browser requests from untrusted origins", async () => {
@@ -279,7 +286,7 @@ test("full payments are validated, recorded once and close the order", async () 
 test("SQLite orders survive a complete local service restart", async () => {
   assert.ok(createdOrderId, "an order must have been created by the earlier integration test");
   await server.close();
-  server = await startLocalServer({ userDataPath: tempDir, port: 0 });
+  server = await startLocalServer({ userDataPath: tempDir, port: 0, apiToken: "test-egsoft-token" });
   baseUrl = `http://127.0.0.1:${server.port}`;
   const listed = await request("/api/orders");
   const saved = listed.body.find((order) => order.id === createdOrderId);
