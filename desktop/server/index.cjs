@@ -302,11 +302,25 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     res.json(db.prepare("SELECT id,order_number,order_type,status,total_minor,created_at,sync_status FROM orders ORDER BY created_at DESC LIMIT 300").all());
   });
 
+  app.get("/api/tables", async (_req,res) => {
+    if(!supabase.getSession().authenticated) return res.json([]);
+    try { return res.json(await supabase.listRecords("restaurant_tables")); }
+    catch(error) { return res.status(error.status||503).json({error:error.message}); }
+  });
+  app.get("/api/reservations", async (_req,res) => {
+    if(!supabase.getSession().authenticated) return res.json([]);
+    try {
+      const [reservations,tables]=await Promise.all([supabase.listRecords("reservations"),supabase.listRecords("restaurant_tables")]);
+      const tableMap=new Map((tables||[]).map(t=>[String(t.id),t]));
+      return res.json((reservations||[]).map(r=>({...r,area:tableMap.get(String(r.table_id))?.area||"indoor"})));
+    } catch(error) { return res.status(error.status||503).json({error:error.message}); }
+  });
+
   app.get("/api/orders", async (_req, res) => {
     if(supabase.getSession().authenticated) {
       try {
         const remote=await supabase.getOrders();
-        return res.json((remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total||0)*100),notes:i.item_note||i.notes||""}))})));
+        return res.json((remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total||0)*100),notes:i.item_note||i.notes||""}))})));
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
     const orders = db.prepare(
