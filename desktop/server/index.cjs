@@ -135,6 +135,41 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   });
 
 
+
+  const adminModules = new Set(["reservations","business_days","cash_transactions","printers","preparation_screens","inventory_units","inventory_suppliers","inventory_items","inventory_movements","inventory_recipes","inventory_purchases","hr_employees","hr_shifts","hr_attendance","hr_payroll_runs","audit_logs"]);
+  app.get("/api/admin/records/:module", (req,res) => {
+    const module=req.params.module;
+    if(!adminModules.has(module)) return res.status(404).json({error:"القسم غير موجود."});
+    const rows=db.prepare("SELECT id,data_json,created_at,updated_at FROM admin_records WHERE module=? ORDER BY updated_at DESC").all(module);
+    res.json(rows.map(r=>({id:r.id,...JSON.parse(r.data_json),created_at:r.created_at,updated_at:r.updated_at})));
+  });
+  app.post("/api/admin/records/:module", (req,res) => {
+    const module=req.params.module, data=req.body||{};
+    if(!adminModules.has(module)) return res.status(404).json({error:"القسم غير موجود."});
+    const id=randomUUID(), now=new Date().toISOString(), clean={};
+    for(const [k,v] of Object.entries(data)) if(/^[a-zA-Z_][a-zA-Z0-9_]{0,60}$/.test(k) && !["id","created_at","updated_at"].includes(k)) clean[k]=v;
+    if(!Object.keys(clean).length) return res.status(400).json({error:"أدخل بيانات السجل."});
+    db.prepare("INSERT INTO admin_records(module,id,data_json,created_at,updated_at) VALUES(?,?,?,?,?)").run(module,id,JSON.stringify(clean),now,now);
+    res.status(201).json({id,...clean,created_at:now,updated_at:now});
+  });
+  app.patch("/api/admin/records/:module/:id", (req,res) => {
+    const module=req.params.module, data=req.body||{};
+    if(!adminModules.has(module)) return res.status(404).json({error:"القسم غير موجود."});
+    const old=db.prepare("SELECT data_json FROM admin_records WHERE module=? AND id=?").get(module,req.params.id);
+    if(!old) return res.status(404).json({error:"السجل غير موجود."});
+    const clean={...JSON.parse(old.data_json)};
+    for(const [k,v] of Object.entries(data)) if(/^[a-zA-Z_][a-zA-Z0-9_]{0,60}$/.test(k) && !["id","created_at","updated_at"].includes(k)) clean[k]=v;
+    const now=new Date().toISOString();
+    db.prepare("UPDATE admin_records SET data_json=?,updated_at=? WHERE module=? AND id=?").run(JSON.stringify(clean),now,module,req.params.id);
+    res.json({ok:true,id:req.params.id,...clean,updated_at:now});
+  });
+  app.delete("/api/admin/records/:module/:id", (req,res) => {
+    if(!adminModules.has(req.params.module)) return res.status(404).json({error:"القسم غير موجود."});
+    const result=db.prepare("DELETE FROM admin_records WHERE module=? AND id=?").run(req.params.module,req.params.id);
+    if(!result.changes) return res.status(404).json({error:"السجل غير موجود."});
+    res.json({ok:true});
+  });
+
   app.get("/api/admin/summary", (_req,res) => {
     const count = table => db.prepare("SELECT COUNT(*) AS n FROM "+table).get().n;
     const sales = db.prepare("SELECT COALESCE(SUM(total_minor),0) AS total FROM orders WHERE status <> 'cancelled'").get().total;
