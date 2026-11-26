@@ -459,10 +459,15 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     if(supabase.getSession().authenticated) {
       try {
         const remote=await supabase.updateRecord("orders",req.params.id,{status,updated_at:now});
-        if(!remote) return res.status(404).json({error:"الطلب غير موجود."});
-        io.emit("kitchen:order-updated",{id:req.params.id,status});
-        db.prepare("UPDATE orders SET status=?,updated_at=?,sync_status='synced' WHERE id=?").run(status,now,req.params.id);
-        return res.json({ok:true,id:req.params.id,status,sync_status:"cloud"});
+        if(remote) {
+          db.prepare("UPDATE orders SET status=?,updated_at=?,sync_status='synced' WHERE id=?").run(status,now,req.params.id);
+          io.emit("kitchen:order-updated",{id:req.params.id,status});
+          return res.json({ok:true,id:req.params.id,status,sync_status:"cloud"});
+        }
+        // A local order may still be waiting for its first cloud insert.
+        // Keep the status change in SQLite/outbox instead of losing the action.
+        const local=db.prepare("SELECT id FROM orders WHERE id=?").get(req.params.id);
+        if(!local) return res.status(404).json({error:"الطلب غير موجود."});
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
     const result = db.prepare(
