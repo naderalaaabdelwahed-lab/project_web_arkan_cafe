@@ -345,7 +345,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     if(supabase.getSession().authenticated) {
       try {
         const remote=await supabase.getOrders();
-        const remoteRows=(remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total||0)*100),notes:i.item_note||i.notes||""}))}));
+        const remoteRows=(remote||[]).map(o=>({id:o.id,order_number:o.order_number,order_type:o.order_type,status:o.status,table_number:o.table_number,table_area:o.table_area,subtotal_minor:Math.round(Number(o.subtotal||0)*100),discount_minor:Math.round(Number(o.discount||0)*100),total_minor:Math.round(Number(o.total||0)*100),created_at:o.created_at,updated_at:o.updated_at,items:(o.order_items||[]).map(i=>({id:i.id,item_name_snapshot:i.product_name||i.item_name_snapshot||"صنف",unit_price_minor:Math.round(Number(i.unit_price||0)*100),quantity:i.quantity,line_total_minor:Math.round(Number(i.line_total ?? (Number(i.unit_price||0)*Number(i.quantity||0)))*100),notes:i.item_note||i.notes||""}))}));
         const remoteIds=new Set(remoteRows.map(o=>String(o.id)));
         const pending=db.prepare("SELECT * FROM orders WHERE sync_status <> 'synced' ORDER BY created_at DESC").all();
         const getLocalItems=db.prepare("SELECT * FROM order_items WHERE order_id=?");
@@ -403,7 +403,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
       phone: String(body.phone || "").slice(0, 30),
       address: String(body.address || "").slice(0, 500),
       table_id: body.table_id ? String(body.table_id) : null,
-      table_number: body.table_number != null && body.table_number !== "" && Number.isInteger(Number(body.table_number)) ? Number(body.table_number) : null,
+      table_number: body.table_number != null && body.table_number !== "" && Number.isInteger(Number(body.table_number)) && Number(body.table_number) > 0 ? Number(body.table_number) : null,
       table_area: ["indoor","outdoor"].includes(body.table_area) ? body.table_area : null,
       payment_method: ["cash", "card", "wallet"].includes(body.payment_method) ? body.payment_method : "cash",
       created_at: createdAt, updated_at: createdAt, sync_status: "pending"
@@ -461,6 +461,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
         const remote=await supabase.updateRecord("orders",req.params.id,{status,updated_at:now});
         if(!remote) return res.status(404).json({error:"الطلب غير موجود."});
         io.emit("kitchen:order-updated",{id:req.params.id,status});
+        db.prepare("UPDATE orders SET status=?,updated_at=?,sync_status='synced' WHERE id=?").run(status,now,req.params.id);
         return res.json({ok:true,id:req.params.id,status,sync_status:"cloud"});
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
@@ -491,6 +492,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
             delivery_fee:0,total:Number(order.total_minor||0)/100,notes:order.notes||null,
             customer_name:order.customer_name||null,customer_phone:order.phone||null,
             delivery_address:order.address||null,payment_method:order.payment_method||"cash",
+            table_id:order.table_id||null,table_number:order.table_number||null,table_area:order.table_area||null,
             created_at:order.created_at,updated_at:order.updated_at
           });
           const remoteItems=await supabase.getOrderItems(task.aggregate_id);
@@ -501,7 +503,14 @@ function startLocalServer({ userDataPath, port = 4317 }) {
           })));
           db.prepare("UPDATE orders SET order_number=?,sync_status='synced',updated_at=? WHERE id=?").run(String(remote.order_number),new Date().toISOString(),task.aggregate_id);
         } else if(task.operation==="update_status") {
-          await supabase.updateRecord("orders",task.aggregate_id,{status:payload.status,updated_at:new Date().toISOString()});
+          const localOrder=db.prepare("SELECT sync_status FROM orders WHERE id=?").get(task.aggregate_id);
+          // Do not mark a status update as synced while the order itself has
+          // not yet been created in the cloud.
+          if(localOrder && localOrder.sync_status!=="synced") {
+            throw new Error("Order creation is still waiting to sync.");
+          }
+          const updated=await supabase.updateRecord("orders",task.aggregate_id,{status:payload.status,updated_at:new Date().toISOString()});
+          if(!updated) throw new Error("Cloud order does not exist yet.");
           db.prepare("UPDATE orders SET sync_status='synced' WHERE id=?").run(task.aggregate_id);
         } else if(task.aggregate_type.startsWith("admin:")) {
           const module=task.aggregate_type.slice(6);
