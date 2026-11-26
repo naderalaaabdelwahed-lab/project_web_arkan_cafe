@@ -71,7 +71,8 @@ function openDatabase(userDataPath) {
     ["customer_name", "TEXT"], ["phone", "TEXT"], ["address", "TEXT"],
     ["payment_method", "TEXT NOT NULL DEFAULT 'cash'"],
     ["table_id", "TEXT"], ["table_number", "INTEGER"], ["table_area", "TEXT"],
-    ["closed_at", "TEXT"]
+    ["closed_at", "TEXT"], ["payment_status", "TEXT NOT NULL DEFAULT 'unpaid'"],
+    ["paid_at", "TEXT"]
   ]) {
     if (!columns.has(name)) db.exec(`ALTER TABLE orders ADD COLUMN ${name} ${type}`);
   }
