@@ -399,8 +399,10 @@ function startLocalServer({ userDataPath, port = 4317, apiToken = null }) {
         return res.json([...merged.values()]);
       } catch(error) { if(error.status) return res.status(error.status).json({error:error.message}); }
     }
+    // The All tab is a history view, not an active-orders view. Return
+    // every locally stored order regardless of channel, payment, or status.
     const orders = db.prepare(
-      "SELECT * FROM orders ORDER BY created_at DESC LIMIT 200"
+      "SELECT * FROM orders ORDER BY created_at DESC, id DESC"
     ).all();
     const getItems = db.prepare("SELECT * FROM order_items WHERE order_id = ?");
     res.json(orders.map((order) => ({ ...order, items: getItems.all(order.id) })));
