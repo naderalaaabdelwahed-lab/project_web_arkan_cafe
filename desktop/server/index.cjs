@@ -435,6 +435,16 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const createdAt = new Date().toISOString();
     const orderType = ["dine_in", "takeaway", "delivery"].includes(body.order_type)
       ? body.order_type : "takeaway";
+    const tableNumber = body.table_number != null && body.table_number !== "" && Number.isInteger(Number(body.table_number)) && Number(body.table_number) > 0
+      ? Number(body.table_number) : null;
+    const tableArea = ["indoor","outdoor"].includes(body.table_area) ? body.table_area : null;
+    if(orderType==="dine_in" && (!tableNumber || !tableArea)) {
+      return res.status(400).json({error:"حدد رقم الطاولة والصالة للطلب الداخلي."});
+    }
+    if(orderType==="dine_in") {
+      const occupied=db.prepare("SELECT id FROM orders WHERE order_type='dine_in' AND table_number=? AND table_area=? AND status<>'cancelled' AND payment_status<>'paid' LIMIT 1").get(tableNumber,tableArea);
+      if(occupied) return res.status(409).json({error:"الطاولة عليها طلب مفتوح بالفعل."});
+    }
     const orderNumber = "LOCAL-" + createdAt.replace(/\D/g, "").slice(0, 14) +
       "-" + id.slice(0, 6).toUpperCase();
     const order = {
@@ -446,8 +456,8 @@ function startLocalServer({ userDataPath, port = 4317 }) {
       phone: String(body.phone || "").slice(0, 30),
       address: String(body.address || "").slice(0, 500),
       table_id: body.table_id ? String(body.table_id) : null,
-      table_number: body.table_number != null && body.table_number !== "" && Number.isInteger(Number(body.table_number)) && Number(body.table_number) > 0 ? Number(body.table_number) : null,
-      table_area: ["indoor","outdoor"].includes(body.table_area) ? body.table_area : null,
+      table_number: tableNumber,
+      table_area: tableArea,
       payment_method: ["cash", "card", "wallet"].includes(body.payment_method) ? body.payment_method : "cash",
       created_at: createdAt, updated_at: createdAt, sync_status: "pending"
     };
@@ -535,6 +545,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     if (!current) return res.status(404).json({ error: "الطلب غير موجود." });
 
     const body = req.body || {};
+    if(current.payment_status==="paid") return res.status(409).json({error:"لا يمكن تعديل طلب تم تحصيله."});
     const existingItems = db.prepare("SELECT * FROM order_items WHERE order_id=?").all(req.params.id);
     const requestedItems = Array.isArray(body.items)
       ? body.items
@@ -586,6 +597,16 @@ function startLocalServer({ userDataPath, port = 4317 }) {
       ? current.table_area
       : (["indoor", "outdoor"].includes(body.table_area) ? body.table_area : null);
     const tableId = body.table_id === undefined ? current.table_id : (body.table_id ? String(body.table_id) : null);
+    if(body.table_number!==undefined && (!Number.isInteger(Number(body.table_number)) || Number(body.table_number)<=0)) {
+      return res.status(400).json({error:"رقم الطاولة غير صحيح."});
+    }
+    if(body.table_area!==undefined && !["indoor","outdoor"].includes(body.table_area)) {
+      return res.status(400).json({error:"الصالة غير صحيحة."});
+    }
+    if(tableNumber!==null && tableArea!==null && (tableNumber!==current.table_number || tableArea!==current.table_area)) {
+      const occupied=db.prepare("SELECT id FROM orders WHERE order_type='dine_in' AND table_number=? AND table_area=? AND status<>'cancelled' AND payment_status<>'paid' AND id<>? LIMIT 1").get(tableNumber,tableArea,req.params.id);
+      if(occupied) return res.status(409).json({error:"الطاولة المستهدفة عليها طلب مفتوح بالفعل."});
+    }
     const paymentMethod = body.payment_method === undefined
       ? current.payment_method
       : (["cash", "card", "wallet"].includes(body.payment_method) ? body.payment_method : null);
