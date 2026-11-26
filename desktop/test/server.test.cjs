@@ -307,7 +307,7 @@ test("invalid menu imports are rejected without damaging the existing menu", asy
 
   const afterMenu = await request("/api/menu");
   assert.equal(afterMenu.body.items.length, beforeMenu.body.items.length);
-  assert.ok(afterMenu.body.items.some((item) => item.id === "test-fatir-cheese"));
+  assert.ok(afterMenu.body.items.some((item) => item.id === "test-tea"));
 
   const unsafePrice = await request("/api/menu/import", {
     method: "PUT",
@@ -318,7 +318,7 @@ test("invalid menu imports are rejected without damaging the existing menu", asy
   });
   assert.equal(unsafePrice.response.status, 400);
   const finalMenu = await request("/api/menu");
-  assert.ok(finalMenu.body.items.some((item) => item.id === "test-fatir-cheese"));
+  assert.ok(finalMenu.body.items.some((item) => item.id === "test-tea"));
 
   const validImport = await request("/api/menu/import", {
     method: "PUT",
