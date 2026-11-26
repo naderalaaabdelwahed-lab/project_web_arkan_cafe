@@ -145,6 +145,29 @@ async function loadConnectedMenu(){
 }
 loadConnectedMenu();
 
+async function loadConnectedFloorData(){
+ try{
+  const [tableResponse,orderResponse,reservationResponse]=await Promise.all([
+   fetch("http://127.0.0.1:4317/api/tables"),
+   fetch("http://127.0.0.1:4317/api/orders"),
+   fetch("http://127.0.0.1:4317/api/reservations")
+  ]);
+  if(!tableResponse.ok||!orderResponse.ok||!reservationResponse.ok)return;
+  const remoteTables=await tableResponse.json(),remoteOrders=await orderResponse.json(),remoteReservations=await reservationResponse.json();
+  if(Array.isArray(remoteTables)&&remoteTables.length){
+   tables.splice(0,tables.length,...remoteTables.filter(t=>t.is_active!==false).map(t=>({area:t.area||"indoor",number:Number(t.table_number),capacity:t.capacity,status:t.status})));
+  }
+  if(Array.isArray(remoteOrders)){
+   const dineIn=remoteOrders.filter(o=>o.order_type==="dine_in"&&o.table_number!=null&&o.status!=="cancelled");
+   orders.splice(0,orders.length,...dineIn.map(o=>({id:o.id,area:o.table_area||"indoor",number:Number(o.table_number),total:Number(o.total_minor||0)/100,printed:["ready","delivered"].includes(o.status),closed:false,status:o.status,items:(o.items||[]).map(i=>({id:i.id,name:i.item_name_snapshot,qty:Number(i.quantity),price:Number(i.unit_price_minor||0)/100}))})));
+  }
+  if(Array.isArray(remoteReservations)){
+   reservations.splice(0,reservations.length,...remoteReservations.filter(r=>["pending","confirmed"].includes(r.status)).map(r=>({area:r.area||"indoor",number:Number(r.table_number)})));
+  }
+  render();
+ }catch(error){console.error("Could not load cloud floor data:",error);}
+}
+
 
 // Navigate between two independent full-screen views: POS and administration.
 const posPage=document.querySelector(".egsoft-pos-page");
@@ -223,7 +246,7 @@ shifts:{title:"الورديات",db:"hr_shifts",fields:[["name","اسم الور
    const session=await api("/api/auth/session");
    if(!session.authenticated){
     workspace.innerHTML=heading("تسجيل الدخول","استخدم حسابك الإداري في نظام أركان")+'<form id="admin-login" class="admin-panel" style="max-width:460px;display:grid;gap:14px"><label>البريد الإلكتروني<input name="email" type="email" required autocomplete="username" style="width:100%;padding:12px;margin-top:6px"></label><label>كلمة المرور<input name="password" type="password" required autocomplete="current-password" style="width:100%;padding:12px;margin-top:6px"></label><button class="admin-primary" type="submit">دخول</button><p id="login-error" class="admin-error"></p></form>';
-    workspace.querySelector("#admin-login").onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.currentTarget);try{await api("/api/auth/login",{method:"POST",body:JSON.stringify({email:fd.get("email"),password:fd.get("password")})});guardedRender(section);}catch(err){workspace.querySelector("#login-error").textContent=err.message;}};
+    workspace.querySelector("#admin-login").onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.currentTarget);try{await api("/api/auth/login",{method:"POST",body:JSON.stringify({email:fd.get("email"),password:fd.get("password")})});await loadConnectedFloorData();guardedRender(section);}catch(err){workspace.querySelector("#login-error").textContent=err.message;}};
     return;
    }
    await render(section);
