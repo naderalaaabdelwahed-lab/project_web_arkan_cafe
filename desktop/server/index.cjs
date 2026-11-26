@@ -122,7 +122,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     for (const item of items) {
       const price = Number(item?.price);
       if (!item || item.id == null || !String(item.name || "").trim() ||
-          !Number.isFinite(price) || price < 0 ||
+          !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(Math.round(price * 100)) ||
           !categoryIds.has(String(item.category_id))) {
         return res.status(400).json({ error: "Invalid menu item or category reference." });
       }
@@ -305,7 +305,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   app.post("/api/admin/products", async (req,res) => {
     const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price);
     const isAvailable=req.body?.is_available!==false;
-    if(!name||!category||!Number.isFinite(price)||price<0)return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
+    if(!name||!category||!Number.isFinite(price)||price<0||!Number.isSafeInteger(Math.round(price*100)))return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
     let id=randomUUID();
     try {
       if(supabase.getSession().authenticated) { const saved=await supabase.insertRecord("products",{category_id:category,name,description:String(req.body?.description||""),price,is_available:isAvailable}); id=saved.id; }
@@ -315,7 +315,7 @@ function startLocalServer({ userDataPath, port = 4317 }) {
   });
   app.patch("/api/admin/products/:id", async (req,res) => {
     const name=String(req.body?.name||"").trim().slice(0,150),category=String(req.body?.category_id||""),price=Number(req.body?.price);
-    if(!name||!category||!Number.isFinite(price)||price<0)return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
+    if(!name||!category||!Number.isFinite(price)||price<0||!Number.isSafeInteger(Math.round(price*100)))return res.status(400).json({error:"راجع اسم المنتج والفئة والسعر."});
     try {
       if(supabase.getSession().authenticated) await supabase.updateRecord("products",req.params.id,{name,category_id:category,description:String(req.body?.description||"").slice(0,500),price,is_available:req.body?.is_available!==false});
       const r=db.prepare("UPDATE menu_items SET name=?,category_id=?,description=?,price_minor=?,is_available=? WHERE id=?").run(name,category,String(req.body?.description||"").slice(0,500),Math.round(price*100),req.body?.is_available===false?0:1,req.params.id);
@@ -384,6 +384,9 @@ function startLocalServer({ userDataPath, port = 4317 }) {
     const subtotal = preparedItems.reduce(
       (sum, item) => sum + Math.round(item.menuItem.price_minor * item.quantity), 0
     );
+    if (!Number.isSafeInteger(subtotal)) {
+      return res.status(400).json({ error: "إجمالي الطلب أكبر من الحد المسموح." });
+    }
     const discount = Math.round(Number(body.discount_minor || 0));
     if (!Number.isSafeInteger(discount) || discount < 0 || discount > subtotal) {
       return res.status(400).json({ error: "قيمة الخصم غير صحيحة." });
